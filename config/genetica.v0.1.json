@@ -1,0 +1,553 @@
+{
+  "_doc": "Configuración de genética v0.1 de Proyecto Genoma. Fuente: docs/spec/genetica-v0.1.md. Todo número de la spec está aquí y viceversa. Probabilidades en [0,1]; valores de genes en puntos (escala 0-100).",
+  "version": "0.1",
+  "orden_loci": [
+    "cabeza",
+    "cuerpo",
+    "extremidades",
+    "cola"
+  ],
+  "orden_valores": [
+    "potencia",
+    "velocidad",
+    "resistencia"
+  ],
+  "orden_slots_padres": {
+    "_doc": "Orden fijo de los 6 slots de un locus al heredar. A = padre con id menor (comparación de strings).",
+    "slots": [
+      "A.D",
+      "A.R1",
+      "A.R2",
+      "B.D",
+      "B.R1",
+      "B.R2"
+    ]
+  },
+  "familias": {
+    "_doc": "Base: capturables. Híbridas: solo por mutación en breeding (sec. 5). El orden de 'base' es el usado por los sorteos uniformes.",
+    "base": [
+      "llama",
+      "marea",
+      "brote",
+      "roca",
+      "voltio",
+      "sombra"
+    ],
+    "hibridas": [
+      {
+        "id": "vapor",
+        "nombre": "Vapor",
+        "componentes": [
+          "llama",
+          "marea"
+        ]
+      },
+      {
+        "id": "magma",
+        "nombre": "Magma",
+        "componentes": [
+          "llama",
+          "roca"
+        ]
+      },
+      {
+        "id": "tormenta",
+        "nombre": "Tormenta",
+        "componentes": [
+          "voltio",
+          "marea"
+        ]
+      },
+      {
+        "id": "plasma",
+        "nombre": "Plasma",
+        "componentes": [
+          "llama",
+          "voltio"
+        ]
+      },
+      {
+        "id": "espora",
+        "nombre": "Espora",
+        "componentes": [
+          "brote",
+          "sombra"
+        ]
+      },
+      {
+        "id": "abismo",
+        "nombre": "Abismo",
+        "componentes": [
+          "marea",
+          "sombra"
+        ]
+      },
+      {
+        "id": "liquen",
+        "nombre": "Liquen",
+        "componentes": [
+          "brote",
+          "roca"
+        ]
+      }
+    ]
+  },
+  "normal": {
+    "_doc": "Normal aproximada Irwin-Hall: N = (u1+u2+u3+u4 - 2) * factor. 4 tiradas. Rango [-3.4641, +3.4641]. No usar rng.normal (Box-Muller usa Math.log/Math.cos, no garantizados idénticos entre motores).",
+    "n_uniformes": 4,
+    "centro": 2,
+    "factor": 1.7320508075688772
+  },
+  "redondeo_decimales": 2,
+  "valores": {
+    "_doc": "Cada gen tiene 'ancla' (fija por gen-instancia, heredada sin cambio) y 'valores' (varían por individuo).",
+    "suma_ancla": 90,
+    "ancla_min": 12,
+    "ancla_max": 50,
+    "absoluto_min": 5,
+    "absoluto_max": 60,
+    "desviacion_max": 10,
+    "_doc_desviacion_max": "|valor - ancla| <= desviacion_max en cada valor, siempre."
+  },
+  "forma": {
+    "_doc": "4 parámetros en [0,1] sobre rejilla de paso 0.25 (5 niveles). Firma = 4 dígitos round(s*4).",
+    "parametros": [
+      "tamano",
+      "alargamiento",
+      "angulosidad",
+      "ornamento"
+    ],
+    "paso_rejilla": 0.25,
+    "niveles": 5
+  },
+  "salvaje": {
+    "_doc": "Generación de criatura salvaje (sec. 2). 181 tiradas por criatura.",
+    "prob_D_familia_principal": 0.7,
+    "prob_R_familia_principal": 0.4,
+    "sigma_valores": 2.0,
+    "variantes_por_familia_y_locus": 3,
+    "tiradas_por_criatura": 181
+  },
+  "herencia": {
+    "_doc": "Pesos por slot de CADA padre (suman 0.5 por padre). D se sortea con pesos_D; R1 y R2 con pesos_R sin repetir slot.",
+    "pesos_D": {
+      "D": 0.375,
+      "R1": 0.094,
+      "R2": 0.031
+    },
+    "pesos_R": {
+      "D": 0.2,
+      "R1": 0.17,
+      "R2": 0.13
+    },
+    "tiradas_por_locus": 70,
+    "tiradas_por_cria": 280
+  },
+  "mutacion": {
+    "prob_por_locus": 0.02,
+    "prob_hibrida_nueva": 0.5,
+    "_doc_prob_hibrida_nueva": "Padres base de un par de la tabla -> híbrida con esta prob.",
+    "prob_hibrida_afinidad": 0.75,
+    "_doc_prob_hibrida_afinidad": "Híbrida H + base componente de H -> H con esta prob.",
+    "prob_eleccion_padre_A": 0.5,
+    "sigma_ancla": 3.0,
+    "sigma_forma": 0.15,
+    "reintentos_reparto_suma": 3,
+    "epsilon_suma": 1e-9
+  },
+  "deriva": {
+    "_doc": "v' = v + kappa*(ancla - v) + sigma*N, después recorte (sec. 6).",
+    "kappa": 0.05,
+    "sigma": 1.0
+  },
+  "limites_sim": {
+    "max_crias_por_criatura": 5,
+    "edad_minima_generaciones": 1
+  },
+  "catalogo_base": {
+    "_doc": "72 genes base (6 familias x 4 loci x 3 variantes). La lista 'genes' es la autoridad; se generó con la fórmula de 'generador' (sec. 2.1).",
+    "generador": {
+      "perfil_familia": {
+        "llama": [
+          40,
+          28,
+          22
+        ],
+        "marea": [
+          27,
+          27,
+          36
+        ],
+        "brote": [
+          30,
+          30,
+          30
+        ],
+        "roca": [
+          32,
+          18,
+          40
+        ],
+        "voltio": [
+          28,
+          42,
+          20
+        ],
+        "sombra": [
+          35,
+          35,
+          20
+        ]
+      },
+      "mod_locus": {
+        "cabeza": [
+          3,
+          0,
+          -3
+        ],
+        "cuerpo": [
+          -2,
+          -2,
+          4
+        ],
+        "extremidades": [
+          -1,
+          3,
+          -2
+        ],
+        "cola": [
+          0,
+          -1,
+          1
+        ]
+      },
+      "mod_variante": {
+        "1": [
+          0,
+          0,
+          0
+        ],
+        "2": [
+          4,
+          -2,
+          -2
+        ],
+        "3": [
+          -2,
+          4,
+          -2
+        ]
+      },
+      "forma_familia": {
+        "llama": [
+          0.5,
+          0.75,
+          0.75,
+          0.5
+        ],
+        "marea": [
+          0.5,
+          0.5,
+          0.25,
+          0.25
+        ],
+        "brote": [
+          0.25,
+          0.5,
+          0.25,
+          0.75
+        ],
+        "roca": [
+          0.75,
+          0.25,
+          0.75,
+          0.25
+        ],
+        "voltio": [
+          0.25,
+          0.75,
+          1.0,
+          0.5
+        ],
+        "sombra": [
+          0.5,
+          0.75,
+          0.5,
+          0.75
+        ]
+      },
+      "forma_locus": {
+        "cabeza": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "cuerpo": [
+          0.25,
+          -0.25,
+          0,
+          0
+        ],
+        "extremidades": [
+          0,
+          0.25,
+          0,
+          -0.25
+        ],
+        "cola": [
+          -0.25,
+          0.25,
+          0,
+          0
+        ]
+      },
+      "forma_variante": {
+        "1": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "2": [
+          0.25,
+          0,
+          -0.25,
+          0.25
+        ],
+        "3": [
+          -0.25,
+          0,
+          0.25,
+          -0.25
+        ]
+      }
+    },
+    "genes": [
+      {"id": "llama.cabeza.1", "familia": "llama", "locus": "cabeza", "forma": [0.5, 0.75, 0.75, 0.5], "firma": "2332", "ancla": {"potencia": 43, "velocidad": 28, "resistencia": 19}, "movimiento": "mov:llama.cabeza.1"},
+      {"id": "llama.cabeza.2", "familia": "llama", "locus": "cabeza", "forma": [0.75, 0.75, 0.5, 0.75], "firma": "3323", "ancla": {"potencia": 47, "velocidad": 26, "resistencia": 17}, "movimiento": "mov:llama.cabeza.2"},
+      {"id": "llama.cabeza.3", "familia": "llama", "locus": "cabeza", "forma": [0.25, 0.75, 1.0, 0.25], "firma": "1341", "ancla": {"potencia": 41, "velocidad": 32, "resistencia": 17}, "movimiento": "mov:llama.cabeza.3"},
+      {"id": "llama.cuerpo.1", "familia": "llama", "locus": "cuerpo", "forma": [0.75, 0.5, 0.75, 0.5], "firma": "3232", "ancla": {"potencia": 38, "velocidad": 26, "resistencia": 26}, "movimiento": "mov:llama.cuerpo.1"},
+      {"id": "llama.cuerpo.2", "familia": "llama", "locus": "cuerpo", "forma": [1.0, 0.5, 0.5, 0.75], "firma": "4223", "ancla": {"potencia": 42, "velocidad": 24, "resistencia": 24}, "movimiento": "mov:llama.cuerpo.2"},
+      {"id": "llama.cuerpo.3", "familia": "llama", "locus": "cuerpo", "forma": [0.5, 0.5, 1.0, 0.25], "firma": "2241", "ancla": {"potencia": 36, "velocidad": 30, "resistencia": 24}, "movimiento": "mov:llama.cuerpo.3"},
+      {"id": "llama.extremidades.1", "familia": "llama", "locus": "extremidades", "forma": [0.5, 1.0, 0.75, 0.25], "firma": "2431", "ancla": {"potencia": 39, "velocidad": 31, "resistencia": 20}, "movimiento": "mov:llama.extremidades.1"},
+      {"id": "llama.extremidades.2", "familia": "llama", "locus": "extremidades", "forma": [0.75, 1.0, 0.5, 0.5], "firma": "3422", "ancla": {"potencia": 43, "velocidad": 29, "resistencia": 18}, "movimiento": "mov:llama.extremidades.2"},
+      {"id": "llama.extremidades.3", "familia": "llama", "locus": "extremidades", "forma": [0.25, 1.0, 1.0, 0.0], "firma": "1440", "ancla": {"potencia": 37, "velocidad": 35, "resistencia": 18}, "movimiento": "mov:llama.extremidades.3"},
+      {"id": "llama.cola.1", "familia": "llama", "locus": "cola", "forma": [0.25, 1.0, 0.75, 0.5], "firma": "1432", "ancla": {"potencia": 40, "velocidad": 27, "resistencia": 23}, "movimiento": "mov:llama.cola.1"},
+      {"id": "llama.cola.2", "familia": "llama", "locus": "cola", "forma": [0.5, 1.0, 0.5, 0.75], "firma": "2423", "ancla": {"potencia": 44, "velocidad": 25, "resistencia": 21}, "movimiento": "mov:llama.cola.2"},
+      {"id": "llama.cola.3", "familia": "llama", "locus": "cola", "forma": [0.0, 1.0, 1.0, 0.25], "firma": "0441", "ancla": {"potencia": 38, "velocidad": 31, "resistencia": 21}, "movimiento": "mov:llama.cola.3"},
+      {"id": "marea.cabeza.1", "familia": "marea", "locus": "cabeza", "forma": [0.5, 0.5, 0.25, 0.25], "firma": "2211", "ancla": {"potencia": 30, "velocidad": 27, "resistencia": 33}, "movimiento": "mov:marea.cabeza.1"},
+      {"id": "marea.cabeza.2", "familia": "marea", "locus": "cabeza", "forma": [0.75, 0.5, 0.0, 0.5], "firma": "3202", "ancla": {"potencia": 34, "velocidad": 25, "resistencia": 31}, "movimiento": "mov:marea.cabeza.2"},
+      {"id": "marea.cabeza.3", "familia": "marea", "locus": "cabeza", "forma": [0.25, 0.5, 0.5, 0.0], "firma": "1220", "ancla": {"potencia": 28, "velocidad": 31, "resistencia": 31}, "movimiento": "mov:marea.cabeza.3"},
+      {"id": "marea.cuerpo.1", "familia": "marea", "locus": "cuerpo", "forma": [0.75, 0.25, 0.25, 0.25], "firma": "3111", "ancla": {"potencia": 25, "velocidad": 25, "resistencia": 40}, "movimiento": "mov:marea.cuerpo.1"},
+      {"id": "marea.cuerpo.2", "familia": "marea", "locus": "cuerpo", "forma": [1.0, 0.25, 0.0, 0.5], "firma": "4102", "ancla": {"potencia": 29, "velocidad": 23, "resistencia": 38}, "movimiento": "mov:marea.cuerpo.2"},
+      {"id": "marea.cuerpo.3", "familia": "marea", "locus": "cuerpo", "forma": [0.5, 0.25, 0.5, 0.0], "firma": "2120", "ancla": {"potencia": 23, "velocidad": 29, "resistencia": 38}, "movimiento": "mov:marea.cuerpo.3"},
+      {"id": "marea.extremidades.1", "familia": "marea", "locus": "extremidades", "forma": [0.5, 0.75, 0.25, 0.0], "firma": "2310", "ancla": {"potencia": 26, "velocidad": 30, "resistencia": 34}, "movimiento": "mov:marea.extremidades.1"},
+      {"id": "marea.extremidades.2", "familia": "marea", "locus": "extremidades", "forma": [0.75, 0.75, 0.0, 0.25], "firma": "3301", "ancla": {"potencia": 30, "velocidad": 28, "resistencia": 32}, "movimiento": "mov:marea.extremidades.2"},
+      {"id": "marea.extremidades.3", "familia": "marea", "locus": "extremidades", "forma": [0.25, 0.75, 0.5, 0.0], "firma": "1320", "ancla": {"potencia": 24, "velocidad": 34, "resistencia": 32}, "movimiento": "mov:marea.extremidades.3"},
+      {"id": "marea.cola.1", "familia": "marea", "locus": "cola", "forma": [0.25, 0.75, 0.25, 0.25], "firma": "1311", "ancla": {"potencia": 27, "velocidad": 26, "resistencia": 37}, "movimiento": "mov:marea.cola.1"},
+      {"id": "marea.cola.2", "familia": "marea", "locus": "cola", "forma": [0.5, 0.75, 0.0, 0.5], "firma": "2302", "ancla": {"potencia": 31, "velocidad": 24, "resistencia": 35}, "movimiento": "mov:marea.cola.2"},
+      {"id": "marea.cola.3", "familia": "marea", "locus": "cola", "forma": [0.0, 0.75, 0.5, 0.0], "firma": "0320", "ancla": {"potencia": 25, "velocidad": 30, "resistencia": 35}, "movimiento": "mov:marea.cola.3"},
+      {"id": "brote.cabeza.1", "familia": "brote", "locus": "cabeza", "forma": [0.25, 0.5, 0.25, 0.75], "firma": "1213", "ancla": {"potencia": 33, "velocidad": 30, "resistencia": 27}, "movimiento": "mov:brote.cabeza.1"},
+      {"id": "brote.cabeza.2", "familia": "brote", "locus": "cabeza", "forma": [0.5, 0.5, 0.0, 1.0], "firma": "2204", "ancla": {"potencia": 37, "velocidad": 28, "resistencia": 25}, "movimiento": "mov:brote.cabeza.2"},
+      {"id": "brote.cabeza.3", "familia": "brote", "locus": "cabeza", "forma": [0.0, 0.5, 0.5, 0.5], "firma": "0222", "ancla": {"potencia": 31, "velocidad": 34, "resistencia": 25}, "movimiento": "mov:brote.cabeza.3"},
+      {"id": "brote.cuerpo.1", "familia": "brote", "locus": "cuerpo", "forma": [0.5, 0.25, 0.25, 0.75], "firma": "2113", "ancla": {"potencia": 28, "velocidad": 28, "resistencia": 34}, "movimiento": "mov:brote.cuerpo.1"},
+      {"id": "brote.cuerpo.2", "familia": "brote", "locus": "cuerpo", "forma": [0.75, 0.25, 0.0, 1.0], "firma": "3104", "ancla": {"potencia": 32, "velocidad": 26, "resistencia": 32}, "movimiento": "mov:brote.cuerpo.2"},
+      {"id": "brote.cuerpo.3", "familia": "brote", "locus": "cuerpo", "forma": [0.25, 0.25, 0.5, 0.5], "firma": "1122", "ancla": {"potencia": 26, "velocidad": 32, "resistencia": 32}, "movimiento": "mov:brote.cuerpo.3"},
+      {"id": "brote.extremidades.1", "familia": "brote", "locus": "extremidades", "forma": [0.25, 0.75, 0.25, 0.5], "firma": "1312", "ancla": {"potencia": 29, "velocidad": 33, "resistencia": 28}, "movimiento": "mov:brote.extremidades.1"},
+      {"id": "brote.extremidades.2", "familia": "brote", "locus": "extremidades", "forma": [0.5, 0.75, 0.0, 0.75], "firma": "2303", "ancla": {"potencia": 33, "velocidad": 31, "resistencia": 26}, "movimiento": "mov:brote.extremidades.2"},
+      {"id": "brote.extremidades.3", "familia": "brote", "locus": "extremidades", "forma": [0.0, 0.75, 0.5, 0.25], "firma": "0321", "ancla": {"potencia": 27, "velocidad": 37, "resistencia": 26}, "movimiento": "mov:brote.extremidades.3"},
+      {"id": "brote.cola.1", "familia": "brote", "locus": "cola", "forma": [0.0, 0.75, 0.25, 0.75], "firma": "0313", "ancla": {"potencia": 30, "velocidad": 29, "resistencia": 31}, "movimiento": "mov:brote.cola.1"},
+      {"id": "brote.cola.2", "familia": "brote", "locus": "cola", "forma": [0.25, 0.75, 0.0, 1.0], "firma": "1304", "ancla": {"potencia": 34, "velocidad": 27, "resistencia": 29}, "movimiento": "mov:brote.cola.2"},
+      {"id": "brote.cola.3", "familia": "brote", "locus": "cola", "forma": [0.0, 0.75, 0.5, 0.5], "firma": "0322", "ancla": {"potencia": 28, "velocidad": 33, "resistencia": 29}, "movimiento": "mov:brote.cola.3"},
+      {"id": "roca.cabeza.1", "familia": "roca", "locus": "cabeza", "forma": [0.75, 0.25, 0.75, 0.25], "firma": "3131", "ancla": {"potencia": 35, "velocidad": 18, "resistencia": 37}, "movimiento": "mov:roca.cabeza.1"},
+      {"id": "roca.cabeza.2", "familia": "roca", "locus": "cabeza", "forma": [1.0, 0.25, 0.5, 0.5], "firma": "4122", "ancla": {"potencia": 39, "velocidad": 16, "resistencia": 35}, "movimiento": "mov:roca.cabeza.2"},
+      {"id": "roca.cabeza.3", "familia": "roca", "locus": "cabeza", "forma": [0.5, 0.25, 1.0, 0.0], "firma": "2140", "ancla": {"potencia": 33, "velocidad": 22, "resistencia": 35}, "movimiento": "mov:roca.cabeza.3"},
+      {"id": "roca.cuerpo.1", "familia": "roca", "locus": "cuerpo", "forma": [1.0, 0.0, 0.75, 0.25], "firma": "4031", "ancla": {"potencia": 30, "velocidad": 16, "resistencia": 44}, "movimiento": "mov:roca.cuerpo.1"},
+      {"id": "roca.cuerpo.2", "familia": "roca", "locus": "cuerpo", "forma": [1.0, 0.0, 0.5, 0.5], "firma": "4022", "ancla": {"potencia": 34, "velocidad": 14, "resistencia": 42}, "movimiento": "mov:roca.cuerpo.2"},
+      {"id": "roca.cuerpo.3", "familia": "roca", "locus": "cuerpo", "forma": [0.75, 0.0, 1.0, 0.0], "firma": "3040", "ancla": {"potencia": 28, "velocidad": 20, "resistencia": 42}, "movimiento": "mov:roca.cuerpo.3"},
+      {"id": "roca.extremidades.1", "familia": "roca", "locus": "extremidades", "forma": [0.75, 0.5, 0.75, 0.0], "firma": "3230", "ancla": {"potencia": 31, "velocidad": 21, "resistencia": 38}, "movimiento": "mov:roca.extremidades.1"},
+      {"id": "roca.extremidades.2", "familia": "roca", "locus": "extremidades", "forma": [1.0, 0.5, 0.5, 0.25], "firma": "4221", "ancla": {"potencia": 35, "velocidad": 19, "resistencia": 36}, "movimiento": "mov:roca.extremidades.2"},
+      {"id": "roca.extremidades.3", "familia": "roca", "locus": "extremidades", "forma": [0.5, 0.5, 1.0, 0.0], "firma": "2240", "ancla": {"potencia": 29, "velocidad": 25, "resistencia": 36}, "movimiento": "mov:roca.extremidades.3"},
+      {"id": "roca.cola.1", "familia": "roca", "locus": "cola", "forma": [0.5, 0.5, 0.75, 0.25], "firma": "2231", "ancla": {"potencia": 32, "velocidad": 17, "resistencia": 41}, "movimiento": "mov:roca.cola.1"},
+      {"id": "roca.cola.2", "familia": "roca", "locus": "cola", "forma": [0.75, 0.5, 0.5, 0.5], "firma": "3222", "ancla": {"potencia": 36, "velocidad": 15, "resistencia": 39}, "movimiento": "mov:roca.cola.2"},
+      {"id": "roca.cola.3", "familia": "roca", "locus": "cola", "forma": [0.25, 0.5, 1.0, 0.0], "firma": "1240", "ancla": {"potencia": 30, "velocidad": 21, "resistencia": 39}, "movimiento": "mov:roca.cola.3"},
+      {"id": "voltio.cabeza.1", "familia": "voltio", "locus": "cabeza", "forma": [0.25, 0.75, 1.0, 0.5], "firma": "1342", "ancla": {"potencia": 31, "velocidad": 42, "resistencia": 17}, "movimiento": "mov:voltio.cabeza.1"},
+      {"id": "voltio.cabeza.2", "familia": "voltio", "locus": "cabeza", "forma": [0.5, 0.75, 0.75, 0.75], "firma": "2333", "ancla": {"potencia": 35, "velocidad": 40, "resistencia": 15}, "movimiento": "mov:voltio.cabeza.2"},
+      {"id": "voltio.cabeza.3", "familia": "voltio", "locus": "cabeza", "forma": [0.0, 0.75, 1.0, 0.25], "firma": "0341", "ancla": {"potencia": 29, "velocidad": 46, "resistencia": 15}, "movimiento": "mov:voltio.cabeza.3"},
+      {"id": "voltio.cuerpo.1", "familia": "voltio", "locus": "cuerpo", "forma": [0.5, 0.5, 1.0, 0.5], "firma": "2242", "ancla": {"potencia": 26, "velocidad": 40, "resistencia": 24}, "movimiento": "mov:voltio.cuerpo.1"},
+      {"id": "voltio.cuerpo.2", "familia": "voltio", "locus": "cuerpo", "forma": [0.75, 0.5, 0.75, 0.75], "firma": "3233", "ancla": {"potencia": 30, "velocidad": 38, "resistencia": 22}, "movimiento": "mov:voltio.cuerpo.2"},
+      {"id": "voltio.cuerpo.3", "familia": "voltio", "locus": "cuerpo", "forma": [0.25, 0.5, 1.0, 0.25], "firma": "1241", "ancla": {"potencia": 24, "velocidad": 44, "resistencia": 22}, "movimiento": "mov:voltio.cuerpo.3"},
+      {"id": "voltio.extremidades.1", "familia": "voltio", "locus": "extremidades", "forma": [0.25, 1.0, 1.0, 0.25], "firma": "1441", "ancla": {"potencia": 27, "velocidad": 45, "resistencia": 18}, "movimiento": "mov:voltio.extremidades.1"},
+      {"id": "voltio.extremidades.2", "familia": "voltio", "locus": "extremidades", "forma": [0.5, 1.0, 0.75, 0.5], "firma": "2432", "ancla": {"potencia": 31, "velocidad": 43, "resistencia": 16}, "movimiento": "mov:voltio.extremidades.2"},
+      {"id": "voltio.extremidades.3", "familia": "voltio", "locus": "extremidades", "forma": [0.0, 1.0, 1.0, 0.0], "firma": "0440", "ancla": {"potencia": 25, "velocidad": 49, "resistencia": 16}, "movimiento": "mov:voltio.extremidades.3"},
+      {"id": "voltio.cola.1", "familia": "voltio", "locus": "cola", "forma": [0.0, 1.0, 1.0, 0.5], "firma": "0442", "ancla": {"potencia": 28, "velocidad": 41, "resistencia": 21}, "movimiento": "mov:voltio.cola.1"},
+      {"id": "voltio.cola.2", "familia": "voltio", "locus": "cola", "forma": [0.25, 1.0, 0.75, 0.75], "firma": "1433", "ancla": {"potencia": 32, "velocidad": 39, "resistencia": 19}, "movimiento": "mov:voltio.cola.2"},
+      {"id": "voltio.cola.3", "familia": "voltio", "locus": "cola", "forma": [0.0, 1.0, 1.0, 0.25], "firma": "0441", "ancla": {"potencia": 26, "velocidad": 45, "resistencia": 19}, "movimiento": "mov:voltio.cola.3"},
+      {"id": "sombra.cabeza.1", "familia": "sombra", "locus": "cabeza", "forma": [0.5, 0.75, 0.5, 0.75], "firma": "2323", "ancla": {"potencia": 38, "velocidad": 35, "resistencia": 17}, "movimiento": "mov:sombra.cabeza.1"},
+      {"id": "sombra.cabeza.2", "familia": "sombra", "locus": "cabeza", "forma": [0.75, 0.75, 0.25, 1.0], "firma": "3314", "ancla": {"potencia": 42, "velocidad": 33, "resistencia": 15}, "movimiento": "mov:sombra.cabeza.2"},
+      {"id": "sombra.cabeza.3", "familia": "sombra", "locus": "cabeza", "forma": [0.25, 0.75, 0.75, 0.5], "firma": "1332", "ancla": {"potencia": 36, "velocidad": 39, "resistencia": 15}, "movimiento": "mov:sombra.cabeza.3"},
+      {"id": "sombra.cuerpo.1", "familia": "sombra", "locus": "cuerpo", "forma": [0.75, 0.5, 0.5, 0.75], "firma": "3223", "ancla": {"potencia": 33, "velocidad": 33, "resistencia": 24}, "movimiento": "mov:sombra.cuerpo.1"},
+      {"id": "sombra.cuerpo.2", "familia": "sombra", "locus": "cuerpo", "forma": [1.0, 0.5, 0.25, 1.0], "firma": "4214", "ancla": {"potencia": 37, "velocidad": 31, "resistencia": 22}, "movimiento": "mov:sombra.cuerpo.2"},
+      {"id": "sombra.cuerpo.3", "familia": "sombra", "locus": "cuerpo", "forma": [0.5, 0.5, 0.75, 0.5], "firma": "2232", "ancla": {"potencia": 31, "velocidad": 37, "resistencia": 22}, "movimiento": "mov:sombra.cuerpo.3"},
+      {"id": "sombra.extremidades.1", "familia": "sombra", "locus": "extremidades", "forma": [0.5, 1.0, 0.5, 0.5], "firma": "2422", "ancla": {"potencia": 34, "velocidad": 38, "resistencia": 18}, "movimiento": "mov:sombra.extremidades.1"},
+      {"id": "sombra.extremidades.2", "familia": "sombra", "locus": "extremidades", "forma": [0.75, 1.0, 0.25, 0.75], "firma": "3413", "ancla": {"potencia": 38, "velocidad": 36, "resistencia": 16}, "movimiento": "mov:sombra.extremidades.2"},
+      {"id": "sombra.extremidades.3", "familia": "sombra", "locus": "extremidades", "forma": [0.25, 1.0, 0.75, 0.25], "firma": "1431", "ancla": {"potencia": 32, "velocidad": 42, "resistencia": 16}, "movimiento": "mov:sombra.extremidades.3"},
+      {"id": "sombra.cola.1", "familia": "sombra", "locus": "cola", "forma": [0.25, 1.0, 0.5, 0.75], "firma": "1423", "ancla": {"potencia": 35, "velocidad": 34, "resistencia": 21}, "movimiento": "mov:sombra.cola.1"},
+      {"id": "sombra.cola.2", "familia": "sombra", "locus": "cola", "forma": [0.5, 1.0, 0.25, 1.0], "firma": "2414", "ancla": {"potencia": 39, "velocidad": 32, "resistencia": 19}, "movimiento": "mov:sombra.cola.2"},
+      {"id": "sombra.cola.3", "familia": "sombra", "locus": "cola", "forma": [0.0, 1.0, 0.75, 0.5], "firma": "0432", "ancla": {"potencia": 33, "velocidad": 38, "resistencia": 19}, "movimiento": "mov:sombra.cola.3"}
+    ]
+  },
+  "escenarios_sim": {
+    "_doc": "Escenarios de validación (sec. 10). semillas = nº de ejecuciones independientes.",
+    "E1_cerrada": {
+      "poblacion": 500,
+      "generaciones": 300,
+      "crias_por_pareja": 2,
+      "semillas": 20
+    },
+    "E2_con_capturas": {
+      "poblacion": 500,
+      "generaciones": 300,
+      "crias_por_pareja": 2,
+      "fraccion_salvajes_por_generacion": 0.1,
+      "semillas": 20
+    },
+    "E3a_deriva_pura": {
+      "poblacion": 100,
+      "parejas": 50,
+      "crias_por_pareja": 5,
+      "generaciones": 100,
+      "prob_mutacion_override": 0.0,
+      "semillas": 20
+    },
+    "E3b_seleccion_completa": {
+      "poblacion": 100,
+      "parejas": 50,
+      "crias_por_pareja": 5,
+      "generaciones": 100,
+      "semillas": 20
+    },
+    "E4_primera_hibrida": {
+      "familia_A": "llama",
+      "familia_B": "marea",
+      "hibrida_objetivo": "vapor",
+      "crias_por_pareja": 5,
+      "ensayos": 10000
+    }
+  },
+  "criterios_sim": {
+    "sorpresa": {
+      "_doc": "E1, media de generaciones 1-20. % de crías con algún D cuya identidad no es ninguno de los 2 D de sus padres en ese locus.",
+      "min": 0.15,
+      "max": 0.3,
+      "generaciones": [
+        1,
+        20
+      ]
+    },
+    "diversidad": {
+      "_doc": "E1 en generación 300, cada locus.",
+      "min_identidades_distintas_todos": 12,
+      "min_entropia_bits_todos": 2.5,
+      "min_entropia_bits_D": 2.0,
+      "min_fraccion_entropia_gen0": 0.5,
+      "max_frecuencia_identidad_D": 0.4
+    },
+    "mutacion": {
+      "_doc": "Mutaciones por 1000 crías = 4000*p con tolerancia relativa; % crías con >=1 mutación en rango.",
+      "tolerancia_relativa": 0.1,
+      "min_frac_crias_mutadas": 0.05,
+      "max_frac_crias_mutadas": 0.12
+    },
+    "genedex": {
+      "_doc": "E2.",
+      "min_nuevas_por_1000_crias_gen_1_10": 40,
+      "min_nuevas_por_1000_crias_gen_291_300": 5,
+      "min_frac_mutaciones_repetidas_gen_291_300": 0.1,
+      "max_frac_mutaciones_repetidas_gen_291_300": 0.8,
+      "min_hibridas_distintas_vistas": 7
+    },
+    "primera_hibrida": {
+      "_doc": "E4: crías hasta el primer gen de la híbrida objetivo.",
+      "mediana_min": 10,
+      "mediana_max": 40,
+      "p90_max": 100
+    },
+    "deriva": {
+      "_doc": "E3a: variación relativa de la velocidad total media (suma de velocidad de los 4 D).",
+      "gen20_min": 0.05,
+      "gen20_max": 0.3,
+      "gen100_max": 0.4,
+      "control_gen100_max_abs": 0.05
+    },
+    "invariantes": {
+      "_doc": "Todas las escenas: violaciones permitidas.",
+      "max_violaciones": 0,
+      "tolerancia_suma_ancla": 0.01
+    }
+  },
+  "barridos_sim": {
+    "mutacion.prob_por_locus": [
+      0.01,
+      0.02,
+      0.03,
+      0.04
+    ],
+    "herencia.pesos_D": {
+      "A_doc": {
+        "D": 0.375,
+        "R1": 0.094,
+        "R2": 0.031
+      },
+      "B": {
+        "D": 0.45,
+        "R1": 0.04,
+        "R2": 0.01
+      },
+      "C": {
+        "D": 0.47,
+        "R1": 0.025,
+        "R2": 0.005
+      }
+    },
+    "herencia.pesos_R": {
+      "R0": {
+        "D": 0.2,
+        "R1": 0.17,
+        "R2": 0.13
+      },
+      "R_uniforme": {
+        "D": 0.1667,
+        "R1": 0.1667,
+        "R2": 0.1666
+      },
+      "R_igual_D": "=pesos_D"
+    },
+    "mutacion.prob_hibrida_nueva": [
+      0.25,
+      0.5,
+      1.0
+    ],
+    "deriva.kappa": [
+      0.02,
+      0.05,
+      0.1
+    ],
+    "deriva.sigma": [
+      0.5,
+      1.0,
+      1.5
+    ],
+    "valores.desviacion_max": [
+      6,
+      10,
+      14
+    ],
+    "mutacion.sigma_forma": [
+      0.1,
+      0.15,
+      0.25
+    ]
+  }
+}
