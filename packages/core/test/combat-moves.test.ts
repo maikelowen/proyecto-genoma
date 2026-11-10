@@ -27,13 +27,14 @@ describe("parsers de config (combate y movimientos)", () => {
     assert.equal(BCFG.combat.stats.betaQuality, 0.04);
     assert.equal(BCFG.combat.draws.perTurn, 24);
     assert.equal(BCFG.combat.families.table["llama"]?.["brote"], 1.25);
-    assert.deepEqual(MC.budget, [0, 11, 20, 30, 41, 53]);
+    // el presupuesto se lee de la config cruda: aquí se comprueba el parseo, no un valor de balance
+    assert.deepEqual(MC.budget, [0, ...[1, 2, 3, 4, 5].map((c) => rawMovesClone().presupuesto_por_coste[String(c)])]);
     assert.equal(MC.drawsPerMove, 8);
     assert.equal(MC.scalables.minFraction, 0.4);
     assert.equal(MC.archetypes.maldicion.minCost, 2);
     assert.equal(BCFG.combat.energy.perTurn, 3);
     assert.equal(BCFG.combat.order.allyPriority, 1);
-    assert.equal(BCFG.combat.statuses.escudo.value, 200);
+    assert.equal(BCFG.combat.statuses.escudo.value, rawCombatClone().estados.escudo.maximo);
     assert.equal(BCFG.combat.ai.kappa, 0.9);
     assert.equal(BCFG.combat.ai.statusValue.quemadura, 36);
   });
@@ -97,7 +98,7 @@ describe("parsers de config (combate y movimientos)", () => {
   it("movimientos: rechaza configs incoherentes (movimientos §3)", () => {
     const bad: [string, (r: any) => void][] = [
       ["tiradas_por_movimiento", (r) => (r.tiradas_por_movimiento = 7)],
-      ["presupuesto_por_coste.3", (r) => (r.presupuesto_por_coste["3"] = 18)],
+      ["presupuesto_por_coste.3", (r) => (r.presupuesto_por_coste["3"] = r.presupuesto_por_coste["2"])], // no creciente
       ["pesos_familia.arquetipo.llama", (r) => (r.pesos_familia.arquetipo.llama = [0, 0, 0, 0, 0, 0])],
       ["pesos_familia.condicion.roca[1]", (r) => (r.pesos_familia.condicion.roca[1] = -1)],
       ["nombres.raiz.vapor", (r) => r.nombres.raiz.vapor.pop()],
@@ -108,8 +109,8 @@ describe("parsers de config (combate y movimientos)", () => {
       ["version", (r) => (r.version = "0.1")],
       ["escalables.fraccion_minima", (r) => (r.escalables.fraccion_minima = 0)],
       ["escalables.fraccion_minima", (r) => (r.escalables.fraccion_minima = 1)],
-      ["presupuesto_por_coste.1", (r) => (r.escalables.fraccion_minima = 0.9)], // 0,9·11 > 11 − 1,75: respaldo sin salida
-      ["escalables.minimo_puntos", (r) => (r.escalables.minimo_puntos = 7)], // > floor(11 / 1,75)
+      ["presupuesto_por_coste.1", (r) => (r.escalables.fraccion_minima = 0.9)], // 0,9·B1 > B1 − 1,75: respaldo sin salida
+      ["escalables.minimo_puntos", (r) => (r.escalables.minimo_puntos = 7)], // > floor(B1 / 1,75)
       ["arquetipos.maldicion.coste_min", (r) => (r.arquetipos.maldicion.coste_min = 6)],
       ["arquetipos.golpe_estado.coste_min", (r) => (r.arquetipos.golpe_estado.coste_min = 2)],
       ["arquetipos.curacion.modificadores", (r) => r.arquetipos.curacion.modificadores.push("prioridad")],
@@ -264,7 +265,18 @@ describe("generación de movimientos (movimientos §4)", () => {
   });
 
   it("ejemplos de la spec (movimientos §8) y cuotas del catálogo (§5.1)", () => {
-    const ex = (k: string): Move => generateMoveForKey(k, MC);
+    // Los ejemplos de la spec §8 se calcularon con los presupuestos y topes de la spec (11/20/30/41/53;
+    // daño 250/125, cura 180, escudo 200, sin sales). Son una fuente independiente: se anclan a esos valores aunque
+    // el balance de config cambie (v0.2.1), fijándolos en una copia de la config.
+    const specCfg = loadBattleConfig(undefined, (r) => {
+      r.presupuesto_por_coste = { "1": 11, "2": 20, "3": 30, "4": 41, "5": 53 };
+      r.escalables.dano.max_individual = 250;
+      r.escalables.dano.max_area_por_objetivo = 125;
+      r.escalables.cura.max = 180;
+      r.escalables.escudo.max = 200;
+      r.overrides_catalogo.sales = {}; // sin sales: los ejemplos son claves puras (v0.2.1 añadió sales sobre esas claves)
+    }).moves;
+    const ex = (k: string): Move => generateMoveForKey(k, specCfg);
     const a = ex("brote|cabeza|0222");
     assert.deepEqual([a.cost, a.archetype, a.power, a.area, a.status, a.condition], [2, "maldicion", 45, true, "debilitar", "reserva"]);
     const b = ex("brote|extremidades|0321");
@@ -281,7 +293,7 @@ describe("generación de movimientos (movimientos §4)", () => {
       for (const a of ARCHETYPE_IDS) assert.ok(n(a) <= q.max_por_arquetipo, `${f}: ${a} ${n(a)}`);
       assert.ok(n("golpe") >= q.golpe_min && n("golpe_estado") >= q.golpe_estado_min, f);
     }
-    assert.equal(Object.keys(MC.salts).length, 17);
+    assert.equal(Object.keys(MC.salts).length, Object.keys(rawMovesClone().overrides_catalogo.sales).length);
   });
 
   it("sal de revisión: cambia solo ese movimiento (movimientos §5)", () => {

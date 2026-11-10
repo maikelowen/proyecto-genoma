@@ -333,7 +333,7 @@
       "tipo": "positivo",
       "duracion": 2,
       "apilado": "suma",
-      "maximo": 200
+      "maximo": 300
     },
     "prisa": {
       "tipo": "positivo",

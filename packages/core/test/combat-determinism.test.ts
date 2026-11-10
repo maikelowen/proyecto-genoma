@@ -82,7 +82,9 @@ describe("determinismo (combate §11)", () => {
 // Vector dorado (combate §11). Si falla, ha cambiado el algoritmo, el orden de
 // tiradas, la IA o la generación de movimientos: rompe repeticiones guardadas.
 // Regenerado en v0.2 (energía +3, estadísticas por matriz, prioridad de aliado, IA con λ, movimientos v0.2).
-const GOLDEN = { result: "B", turns: 13, hash: "563c18fa1c0207688c1e5ef4af0071ae" };
+// Regenerado otra vez con la propuesta de balance v0.2.1 (presupuestos, topes y sales de movimientos; escudo máx. 300):
+// el algoritmo no cambia, solo los datos de config (mismas 24 tiradas por turno y 8 por movimiento).
+const GOLDEN = { result: "A", turns: 12, hash: "424eb410a64fdf1ca58e5304c4aa2dac" };
 
 describe("vector dorado", () => {
   it("partida completa con semilla fija: resultado, turnos y hash del registro", () => {

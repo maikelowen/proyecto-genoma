@@ -250,26 +250,30 @@ describe("daño, escudo, cura y drenaje (combate §5)", () => {
       assert.ok(amt >= 80 && amt <= 120, `${amt}`);
     }
   });
-  it("escudo absorbe primero, suma con máximo 200 [v0.2], perforar lo ignora", () => {
-    const shield = mkMove({ archetype: "proteccion", scalable: "escudo", target: "aliado", power: 100 });
-    const hit = mkMove({ power: 150 });
+  it("escudo absorbe primero, suma con el máximo de la config [v0.2], perforar lo ignora", () => {
+    // El máximo sale de la config (los ajustes de balance no deben romper este test de reglas).
+    // Dos escudos suman más que el máximo (S = 0,6·M ⇒ 2S > M), y el golpe supera al escudo en 50.
+    const M = FLAT.combat.statuses.escudo.value;
+    const S = Math.round(M * 0.6);
+    const shield = mkMove({ archetype: "proteccion", scalable: "escudo", target: "aliado", power: S });
+    const hit = mkMove({ power: S + 50 });
     const pierce = mkMove({ power: 150, modifier: "perforar" });
     // B es más rápido: el escudo llega antes solo por la prioridad de los movimientos de aliado
     let s = createBattle(mkTeam("a", "llama", [shield]), mkTeam("b", "llama", [hit, pierce]).map((c) => ({ ...c, initiative: 150 })), FLAT);
     let r = play(s, lead(1, 1), lead(1, 1));
-    assert.deepEqual(evs(r, "shield")[0], { type: "shield", side: "A", pos: 1, amount: 100, total: 100, condition: false });
+    assert.deepEqual(evs(r, "shield")[0], { type: "shield", side: "A", pos: 1, amount: S, total: S, condition: false });
     const dm = evs(r, "damage").find((e) => e.side === "A" && e.pos === 1);
-    assert.deepEqual([dm?.amount, dm?.absorbed, dm?.hp], [150, 100, 170]);
+    assert.deepEqual([dm?.amount, dm?.absorbed, dm?.hp], [S + 50, S, 170]);
     assert.equal(fighter(r.state, 0, 1).statuses.length, 0); // escudo agotado
     s = { ...r.state, energy: [10, 10] };
-    r = play(s, lead(1, 1), basics()); // escudo 100
-    r = play({ ...r.state, energy: [10, 10] }, lead(1, 1), lead(2, 1)); // +100 ⇒ 200; perforar
-    assert.equal(evs(r, "shield")[0]?.total, 200);
+    r = play(s, lead(1, 1), basics()); // escudo S
+    r = play({ ...r.state, energy: [10, 10] }, lead(1, 1), lead(2, 1)); // +S ⇒ min(2S, M) = M; perforar
+    assert.equal(evs(r, "shield")[0]?.total, M);
     const pd = evs(r, "damage").find((e) => e.side === "A" && e.pos === 1);
     assert.deepEqual([pd?.absorbed, pd?.hp], [0, 20]);
-    assert.equal(fighter(r.state, 0, 1).statuses.find((x) => x.id === "escudo")?.value, 200);
-    r = play({ ...r.state, energy: [10, 10] }, lead(1, 1), basics()); // +100 con 200 ⇒ sigue 200
-    assert.equal(evs(r, "shield")[0]?.total, 200);
+    assert.equal(fighter(r.state, 0, 1).statuses.find((x) => x.id === "escudo")?.value, M);
+    r = play({ ...r.state, energy: [10, 10] }, lead(1, 1), basics()); // +S con M ⇒ sigue M
+    assert.equal(evs(r, "shield")[0]?.total, M);
   });
   it("cura hasta el máximo y drenaje = round(0,30 · vida perdida)", () => {
     const heal = mkMove({ archetype: "curacion", scalable: "cura", target: "aliado", power: 100 });

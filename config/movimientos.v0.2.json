@@ -7,34 +7,34 @@
   },
   "tiradas_por_movimiento": 8,
   "presupuesto_por_coste": {
-    "1": 11,
-    "2": 20,
-    "3": 30,
-    "4": 41,
-    "5": 53
+    "1": 6,
+    "2": 15,
+    "3": 27,
+    "4": 42,
+    "5": 60
   },
   "coste_energia": {
     "min": 1,
     "max": 5,
     "_doc": "[v0.2] c = clamp(1 + floor(desplazamiento + forma[0]*escala_tamano + u*escala_azar), min, max).",
     "desplazamiento": 0.25,
-    "escala_tamano": 2.0,
+    "escala_tamano": 2,
     "escala_azar": 2.5
   },
   "escalables": {
     "_doc": "Potencia por punto. La potencia se redondea hacia abajo a múltiplo de 'paso'. [v0.2] fraccion_minima: fac·fEsc·pts ≥ fraccion_minima·presupuesto.",
     "dano": {
       "potencia_por_punto": 5,
-      "max_individual": 250,
-      "max_area_por_objetivo": 125
+      "max_individual": 350,
+      "max_area_por_objetivo": 175
     },
     "cura": {
       "potencia_por_punto": 5.5,
-      "max": 180
+      "max": 330
     },
     "escudo": {
       "potencia_por_punto": 7.5,
-      "max": 200
+      "max": 300
     },
     "paso": 5,
     "minimo_puntos": 2,
@@ -578,11 +578,11 @@
     "sales": {
       "llama.cabeza.1": "r6",
       "marea.cabeza.3": "r3",
-      "marea.cuerpo.3": "r1",
+      "marea.cuerpo.3": "c2",
       "brote.cabeza.1": "r4",
       "roca.cabeza.3": "r1",
       "voltio.cuerpo.2": "r2",
-      "sombra.cabeza.1": "r4",
+      "sombra.cabeza.1": "c1",
       "sombra.cabeza.2": "r1",
       "sombra.cuerpo.1": "r2",
       "brote.cola.1": "c4",
@@ -592,7 +592,12 @@
       "roca.cuerpo.3": "c2",
       "voltio.cola.3": "c3",
       "brote.cabeza.2": "c1",
-      "sombra.cola.3": "c1"
+      "sombra.cola.3": "c1",
+      "brote.extremidades.2": "c4",
+      "brote.cabeza.3": "c1",
+      "roca.cola.1": "c2",
+      "brote.cola.3": "c4",
+      "sombra.cabeza.3": "c2"
     }
   },
   "criterios_sim": {
