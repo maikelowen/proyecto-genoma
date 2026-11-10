@@ -4,7 +4,12 @@ Definida por Miguel (dueño del juego) el 2026-11-10. Es la referencia obligator
 
 ## Tono general
 - Criaturas agradables y simpáticas, que apetezca coleccionar y cuidar.
-- Escala de 1 (muy mona) a 10 (bestia): **3**.
+- Escala de 1 (muy mona) a 10 (bestia): **4** (ajustado el 2026-11-10 tras ver el primer boceto: "algo menos cute y un pelín más definidos").
+- Qué significa en la práctica (interpretación del director, a validar con el visor):
+  - Menos "bebé": proporciones algo menos infantiles (la cabeza sigue siendo grande, pero no exagerada), menos mofletes y rubor.
+  - Más definidas: siluetas más marcadas y distintas por familia, rasgos anatómicos propios (hocicos, crestas, garras pequeñas, colas con forma) en lugar de una misma "bola con ojos" para todas.
+  - Expresiones con más carácter: cejas y párpados que transmitan actitud (decididas, pícaras, despistadas).
+  - Las formas siguen siendo curvas y amables; las puntas, solo en detalles.
 - Con personalidad y algo de carácter, no solo ternura: un poco traviesas, valientes o despistadas. **Nunca agresivas ni grotescas.**
 
 ## Proporciones
