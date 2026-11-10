@@ -33,3 +33,10 @@
 - La velocidad es la estadística más amplificadora (quien actúa primero consigue el KO). Siempre jitter o desempates rotatorios, nunca orden puro.
 - Las tablas de ventajas se generan con una regla simétrica (anillos) y se comprueba que la ventaja media neta sea 0 por familia. Si una regla "derivada" (p. ej. medias) depende de la frecuencia de componentes, desequilibra.
 - Lo que deba ser idéntico para el mismo gen (movimiento, aspecto) se deriva de la clave del gen, no de los padres ni del orden de descubrimiento.
+
+## Lecciones de combate v0.2
+- Mide el valor de cada pieza con "pieza gratis" (X la tiene sin perder potencia, Y no) y conviértelo a puntos con una equivalencia (±10 % de daño ⇒ ±12 puntos de victoria). La regresión por equipos sale colineal y engaña.
+- Una estadística que solo da orden (iniciativa) satura: dale un segundo canal pequeño (vida/ataque) y comprueba moviendo un 10 % de cuota entre estadísticas.
+- Presupuesto convexo + energía escasa = los kits baratos pierden. Paga el hueco de acción (término fijo) y cuenta el rendimiento neto del golpe básico.
+- Una IA que valora estados por encima de rematar juega peor con ellos: valida cada heurística con "pieza gratis" (si añadirla baja el WR, el fallo es de la IA). No metas los estados en el precio de la energía.
+- C2 con catálogos de 12 movimientos es muy sensible: un movimiento cambia ±10–15 puntos. Equilibra primero con kits aleatorios y luego el catálogo con sales, siguiendo un procedimiento fijo.

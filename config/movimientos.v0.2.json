@@ -1,0 +1,618 @@
+{
+  "_doc": "Configuración de movimientos v0.2. Fuente: docs/spec/movimientos-v0.2.md. Todo número de la spec está aquí y viceversa.",
+  "version": "0.2",
+  "semilla": {
+    "prefijo": "mov|v0.1|",
+    "_doc": "rng = createRng(prefijo + clave_gen [+ '|' + sal si hay override]). [v0.2] El prefijo NO cambia con la versión: identifica el flujo de tiradas, no las reglas."
+  },
+  "tiradas_por_movimiento": 8,
+  "presupuesto_por_coste": {
+    "1": 11,
+    "2": 20,
+    "3": 30,
+    "4": 41,
+    "5": 53
+  },
+  "coste_energia": {
+    "min": 1,
+    "max": 5,
+    "_doc": "[v0.2] c = clamp(1 + floor(desplazamiento + forma[0]*escala_tamano + u*escala_azar), min, max).",
+    "desplazamiento": 0.25,
+    "escala_tamano": 2.0,
+    "escala_azar": 2.5
+  },
+  "escalables": {
+    "_doc": "Potencia por punto. La potencia se redondea hacia abajo a múltiplo de 'paso'. [v0.2] fraccion_minima: fac·fEsc·pts ≥ fraccion_minima·presupuesto.",
+    "dano": {
+      "potencia_por_punto": 5,
+      "max_individual": 250,
+      "max_area_por_objetivo": 125
+    },
+    "cura": {
+      "potencia_por_punto": 5.5,
+      "max": 180
+    },
+    "escudo": {
+      "potencia_por_punto": 7.5,
+      "max": 200
+    },
+    "paso": 5,
+    "minimo_puntos": 2,
+    "fraccion_minima": 0.4
+  },
+  "estados": {
+    "_doc": "Coste fijo en puntos. Los parámetros de cada estado están en combate.v0.1.json.",
+    "ofensivos": {
+      "quemadura": 6,
+      "ralentizar": 1,
+      "aturdir": 2,
+      "marca": 1,
+      "debilitar": 1
+    },
+    "positivos": {
+      "prisa": 2,
+      "regenerar": 5,
+      "ninguno": 0
+    },
+    "aturdir_coste_min": 3
+  },
+  "energia_extra": {
+    "coste": 8,
+    "cantidad": 1,
+    "coste_min": 3,
+    "_doc": "+1 energía al bando al ejecutarse el movimiento (máx. 10); solo sirve para turnos siguientes."
+  },
+  "modificadores": {
+    "alcance": {
+      "coste": 0,
+      "_doc": "Puede elegir objetivo en cualquier fila."
+    },
+    "prioridad": {
+      "coste": 8,
+      "_doc": "Nivel de prioridad 1."
+    },
+    "perforar": {
+      "coste": 1.5,
+      "_doc": "Ignora el escudo del objetivo."
+    },
+    "area": {
+      "factor": 1.75,
+      "_doc": "Afecta a toda una fila (enemiga o aliada según el objetivo). Multiplica el coste de estado, energía y escalable."
+    },
+    "drenaje": {
+      "factor": 1.1,
+      "fraccion": 0.3,
+      "_doc": "Cura al usuario 30 % del daño infligido. Multiplica el coste del escalable de daño."
+    }
+  },
+  "condiciones": {
+    "_doc": "Si se cumple al ejecutar: potencia escalable * (1 + bonus). Coste del escalable * (1 + bonus*factor).",
+    "bonus": 0.5,
+    "objetivo_con_estado": {
+      "factor": 0.35,
+      "_doc": "El objetivo tiene algún estado negativo."
+    },
+    "vida_baja": {
+      "factor": 0.3,
+      "umbral": 0.5,
+      "_doc": "Vida del usuario < 50 % de su máximo."
+    },
+    "combo_familia": {
+      "factor": 0.3,
+      "_doc": "Otra criatura del mismo grupo de familia usa un movimiento este turno."
+    },
+    "reserva": {
+      "factor": 0.15,
+      "umbral": 3,
+      "_doc": "Energía del equipo tras pagar el plan del turno ≥ 3."
+    },
+    "antes_que_objetivo": {
+      "factor": 0.4,
+      "_doc": "El objetivo no ha actuado aún este turno."
+    }
+  },
+  "probabilidades": {
+    "_doc": "p_mod = base + escala*forma[1]; p_cond = base + escala*forma[3].",
+    "mod_base": 0.15,
+    "mod_escala": 0.4,
+    "cond_base": 0.1,
+    "cond_escala": 0.4
+  },
+  "arquetipos": {
+    "_doc": "Piezas permitidas por arquetipo. 'estado' = lista de la que se sortea; 'objetivo' del escalable.",
+    "golpe": {
+      "escalable": "dano",
+      "objetivo": "enemigo",
+      "estados": [],
+      "modificadores": [
+        "alcance",
+        "prioridad",
+        "perforar",
+        "area",
+        "drenaje"
+      ],
+      "area_forzada": false
+    },
+    "golpe_estado": {
+      "escalable": "dano",
+      "objetivo": "enemigo",
+      "estados": "ofensivos",
+      "modificadores": [
+        "alcance",
+        "prioridad",
+        "area"
+      ],
+      "area_forzada": false
+    },
+    "maldicion": {
+      "escalable": "dano",
+      "objetivo": "enemigo",
+      "estados": "ofensivos",
+      "modificadores": [
+        "alcance",
+        "prioridad"
+      ],
+      "area_forzada": true,
+      "coste_min": 2,
+      "_doc_coste_min": "[v0.2] Si c < coste_min, el arquetipo pasa a golpe_estado antes de sortear el estado (sin tiradas extra)."
+    },
+    "proteccion": {
+      "escalable": "escudo",
+      "objetivo": "aliado",
+      "estados": "positivos",
+      "modificadores": [
+        "area"
+      ],
+      "area_forzada": false
+    },
+    "curacion": {
+      "escalable": "cura",
+      "objetivo": "aliado",
+      "estados": [
+        "regenerar",
+        "ninguno"
+      ],
+      "modificadores": [
+        "area"
+      ],
+      "area_forzada": false
+    },
+    "tactico": {
+      "escalable": "dano",
+      "objetivo": "enemigo",
+      "estados": [
+        "prisa"
+      ],
+      "energia_si_coste_min": true,
+      "modificadores": [
+        "alcance",
+        "prioridad"
+      ],
+      "area_forzada": false,
+      "_doc_tactico": "Con c >= energia_extra.coste_min lleva +1 energía en vez de prisa (sobre el usuario)."
+    }
+  },
+  "orden_arquetipos": [
+    "golpe",
+    "golpe_estado",
+    "maldicion",
+    "proteccion",
+    "curacion",
+    "tactico"
+  ],
+  "orden_estados_ofensivos": [
+    "quemadura",
+    "ralentizar",
+    "aturdir",
+    "marca",
+    "debilitar"
+  ],
+  "orden_estados_positivos": [
+    "prisa",
+    "regenerar",
+    "ninguno"
+  ],
+  "orden_modificadores": [
+    "alcance",
+    "prioridad",
+    "perforar",
+    "area",
+    "drenaje"
+  ],
+  "orden_condiciones": [
+    "objetivo_con_estado",
+    "vida_baja",
+    "combo_familia",
+    "reserva",
+    "antes_que_objetivo"
+  ],
+  "pesos_familia": {
+    "_doc": "Pesos por familia base. Híbridas: suma de los pesos de sus dos componentes. Orden de cada lista = orden_* correspondiente. [v0.2] arquetipo: 9 de daño y 3 de apoyo por familia.",
+    "arquetipo": {
+      "llama": [
+        4,
+        3,
+        1,
+        2,
+        1,
+        1
+      ],
+      "marea": [
+        3,
+        2,
+        2,
+        1,
+        2,
+        2
+      ],
+      "brote": [
+        3,
+        3,
+        1,
+        1,
+        2,
+        2
+      ],
+      "roca": [
+        3,
+        3,
+        1,
+        2,
+        1,
+        2
+      ],
+      "voltio": [
+        3,
+        2,
+        1,
+        2,
+        1,
+        3
+      ],
+      "sombra": [
+        2,
+        3,
+        3,
+        2,
+        1,
+        1
+      ]
+    },
+    "estado_ofensivo": {
+      "llama": [
+        5,
+        1,
+        1,
+        1,
+        1
+      ],
+      "marea": [
+        0,
+        4,
+        1,
+        1,
+        2
+      ],
+      "brote": [
+        0,
+        2,
+        1,
+        1,
+        3
+      ],
+      "roca": [
+        0,
+        3,
+        2,
+        1,
+        2
+      ],
+      "voltio": [
+        1,
+        1,
+        5,
+        1,
+        0
+      ],
+      "sombra": [
+        1,
+        1,
+        1,
+        5,
+        3
+      ]
+    },
+    "estado_positivo": {
+      "llama": [
+        2,
+        0,
+        2
+      ],
+      "marea": [
+        1,
+        3,
+        2
+      ],
+      "brote": [
+        0,
+        5,
+        1
+      ],
+      "roca": [
+        0,
+        1,
+        3
+      ],
+      "voltio": [
+        4,
+        0,
+        2
+      ],
+      "sombra": [
+        2,
+        1,
+        2
+      ]
+    },
+    "modificador": {
+      "llama": [
+        1,
+        1,
+        1,
+        3,
+        1
+      ],
+      "marea": [
+        2,
+        1,
+        1,
+        2,
+        2
+      ],
+      "brote": [
+        1,
+        0,
+        1,
+        2,
+        4
+      ],
+      "roca": [
+        1,
+        0,
+        3,
+        2,
+        1
+      ],
+      "voltio": [
+        2,
+        4,
+        1,
+        1,
+        0
+      ],
+      "sombra": [
+        4,
+        1,
+        2,
+        0,
+        3
+      ]
+    },
+    "condicion": {
+      "llama": [
+        3,
+        2,
+        2,
+        1,
+        1
+      ],
+      "marea": [
+        2,
+        1,
+        3,
+        2,
+        1
+      ],
+      "brote": [
+        1,
+        3,
+        2,
+        3,
+        0
+      ],
+      "roca": [
+        1,
+        3,
+        2,
+        3,
+        0
+      ],
+      "voltio": [
+        1,
+        0,
+        2,
+        1,
+        5
+      ],
+      "sombra": [
+        4,
+        2,
+        1,
+        1,
+        2
+      ]
+    }
+  },
+  "pesos_locus_arquetipo": {
+    "cabeza": [
+      2,
+      1,
+      0,
+      0,
+      0,
+      0
+    ],
+    "cuerpo": [
+      0,
+      0,
+      0,
+      2,
+      1,
+      0
+    ],
+    "extremidades": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      2
+    ],
+    "cola": [
+      0,
+      1,
+      2,
+      0,
+      0,
+      0
+    ]
+  },
+  "pesos_forma_arquetipo": {
+    "_doc": "Se suma forma[2]*ofensivo a golpe y golpe_estado, y (1-forma[2])*defensivo a proteccion y curacion.",
+    "ofensivo": 1,
+    "defensivo": 1
+  },
+  "nombres": {
+    "_doc": "nombre = nucleo[arquetipo] + ' de ' + raiz[familia][floor(u*4)]. 100 % originales.",
+    "nucleo": {
+      "golpe": "Embate",
+      "golpe_estado": "Mordida",
+      "maldicion": "Maleficio",
+      "proteccion": "Égida",
+      "curacion": "Bálsamo",
+      "tactico": "Ardid"
+    },
+    "raiz": {
+      "llama": [
+        "Ascua",
+        "Brasa",
+        "Chispa",
+        "Pira"
+      ],
+      "marea": [
+        "Oleaje",
+        "Resaca",
+        "Rocío",
+        "Corriente"
+      ],
+      "brote": [
+        "Raíz",
+        "Savia",
+        "Zarcillo",
+        "Polen"
+      ],
+      "roca": [
+        "Peña",
+        "Lasca",
+        "Grava",
+        "Risco"
+      ],
+      "voltio": [
+        "Arco",
+        "Destello",
+        "Chasquido",
+        "Pulso"
+      ],
+      "sombra": [
+        "Penumbra",
+        "Velo",
+        "Umbría",
+        "Eco"
+      ],
+      "vapor": [
+        "Bruma",
+        "Hervor",
+        "Niebla",
+        "Vaho"
+      ],
+      "magma": [
+        "Lava",
+        "Escoria",
+        "Fundición",
+        "Ceniza"
+      ],
+      "tormenta": [
+        "Trueno",
+        "Ráfaga",
+        "Aguacero",
+        "Centella"
+      ],
+      "plasma": [
+        "Fulgor",
+        "Nova",
+        "Incandescencia",
+        "Radiante"
+      ],
+      "espora": [
+        "Moho",
+        "Micelio",
+        "Esporada",
+        "Hifa"
+      ],
+      "abismo": [
+        "Fosa",
+        "Sima",
+        "Hondura",
+        "Negrura"
+      ],
+      "liquen": [
+        "Costra",
+        "Talo",
+        "Pátina",
+        "Musgo"
+      ]
+    }
+  },
+  "overrides_catalogo": {
+    "_doc": "[v0.2] id de gen -> sal. 'r*' = cuotas de arquetipo del catálogo (§5.1); 'c*' = búsqueda dirigida por C2 (§5.2).",
+    "sales": {
+      "llama.cabeza.1": "r6",
+      "marea.cabeza.3": "r3",
+      "marea.cuerpo.3": "r1",
+      "brote.cabeza.1": "r4",
+      "roca.cabeza.3": "r1",
+      "voltio.cuerpo.2": "r2",
+      "sombra.cabeza.1": "r4",
+      "sombra.cabeza.2": "r1",
+      "sombra.cuerpo.1": "r2",
+      "brote.cola.1": "c4",
+      "llama.extremidades.1": "c4",
+      "voltio.cabeza.2": "c2",
+      "sombra.cuerpo.3": "c3",
+      "roca.cuerpo.3": "c2",
+      "voltio.cola.3": "c3",
+      "brote.cabeza.2": "c1",
+      "sombra.cola.3": "c1"
+    }
+  },
+  "criterios_sim": {
+    "_doc": "Prueba de sustitución (sec. 7). WR = victorias del equipo con el movimiento m frente al de referencia.",
+    "combates_por_movimiento": 2000,
+    "muestra_mutados": 500,
+    "roto_wr": 0.58,
+    "inutil_wr": 0.42,
+    "roto_grave_wr": 0.65,
+    "max_frac_rotos_catalogo": 0.02,
+    "max_rotos_graves": 0,
+    "uso_sospechoso": 0.85,
+    "min_arquetipos_por_familia_catalogo": 3,
+    "cuotas_catalogo": {
+      "_doc": "[v0.2] Por familia base, sobre sus 12 genes de catálogo.",
+      "apoyo_min": 2,
+      "apoyo_max": 4,
+      "max_por_arquetipo": 4,
+      "golpe_min": 2,
+      "golpe_estado_min": 2
+    }
+  }
+}

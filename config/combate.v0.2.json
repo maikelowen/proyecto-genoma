@@ -1,0 +1,489 @@
+{
+  "_doc": "Configuración de combate v0.2. Fuente: docs/spec/combate-v0.2.md. Todo número de la spec está aquí y viceversa. Movimientos: config/movimientos.v0.2.json. [v0.2] marca los cambios en la spec.",
+  "version": "0.2",
+  "equipo": {
+    "tamano": 4,
+    "_doc_filas": "Posiciones 1-2 delantera, 3-4 trasera. Si la delantera cae entera, la trasera pasa a ser objetivo por defecto.",
+    "delantera": [
+      1,
+      2
+    ],
+    "trasera": [
+      3,
+      4
+    ]
+  },
+  "estadisticas": {
+    "_doc": "[v0.2] Derivadas por cuotas σ = stat/T con una matriz de coeficientes: derivada = base·(1 + Σ_s coef[s]·(3σs − 1))·q (vida, ataque) o base + Σ_s coef[s]·(3σs − 1) (iniciativa). La velocidad aporta además un poco de vida y ataque para que los tres perfiles valgan lo mismo.",
+    "total_ref": 360,
+    "vida": {
+      "base": 220,
+      "coef": {
+        "potencia": 0,
+        "velocidad": 0.1,
+        "resistencia": 0.45
+      }
+    },
+    "ataque": {
+      "base": 1,
+      "coef": {
+        "potencia": 0.5,
+        "velocidad": 0.1,
+        "resistencia": 0
+      }
+    },
+    "iniciativa": {
+      "base": 100,
+      "coef": {
+        "potencia": 0,
+        "velocidad": 50,
+        "resistencia": 0
+      }
+    },
+    "beta_calidad": 0.04,
+    "nivel": false
+  },
+  "energia": {
+    "inicial": 3,
+    "por_turno": 3,
+    "maximo": 10
+  },
+  "orden": {
+    "_doc": "iniciativa = base + Σ coef·(3σ−1) + estados + jitter*(2u-1). Desempate: prioridad, iniciativa, lado favorecido (A en turnos impares, B en pares), posición. [v0.2] Los movimientos de aliado (curación y protección) actúan con prioridad 1.",
+    "jitter": 30,
+    "niveles_prioridad": [
+      0,
+      1
+    ],
+    "prioridad_movimientos_aliado": 1
+  },
+  "dano": {
+    "_doc": "daño = round(pot*(1+sinergia)*fA*familia*marca*debilitar*var*desgaste); var = 1-varianza + 2*varianza*u.",
+    "varianza": 0.2,
+    "minimo": 1,
+    "golpe_basico": {
+      "coste": 0,
+      "potencia": 10,
+      "_doc": "Acción universal de 0 energía, familia = familia de la criatura, objetivo delantera."
+    }
+  },
+  "familias": {
+    "_doc": "Dos anillos: cada familia es fuerte contra la siguiente de su anillo y débil contra la anterior. Entre anillos, neutral. Atacante = familia del movimiento; defensor = familia de la criatura.",
+    "anillo_base": [
+      "marea",
+      "llama",
+      "brote",
+      "roca",
+      "voltio",
+      "sombra"
+    ],
+    "anillo_hibridas": [
+      "vapor",
+      "magma",
+      "espora",
+      "liquen",
+      "plasma",
+      "tormenta",
+      "abismo"
+    ],
+    "fuerte": 1.25,
+    "debil": 0.8,
+    "neutral": 1.0,
+    "tabla": {
+      "marea": {
+        "marea": 1.0,
+        "llama": 1.25,
+        "brote": 1.0,
+        "roca": 1.0,
+        "voltio": 1.0,
+        "sombra": 0.8,
+        "vapor": 1.0,
+        "magma": 1.0,
+        "espora": 1.0,
+        "liquen": 1.0,
+        "plasma": 1.0,
+        "tormenta": 1.0,
+        "abismo": 1.0
+      },
+      "llama": {
+        "marea": 0.8,
+        "llama": 1.0,
+        "brote": 1.25,
+        "roca": 1.0,
+        "voltio": 1.0,
+        "sombra": 1.0,
+        "vapor": 1.0,
+        "magma": 1.0,
+        "espora": 1.0,
+        "liquen": 1.0,
+        "plasma": 1.0,
+        "tormenta": 1.0,
+        "abismo": 1.0
+      },
+      "brote": {
+        "marea": 1.0,
+        "llama": 0.8,
+        "brote": 1.0,
+        "roca": 1.25,
+        "voltio": 1.0,
+        "sombra": 1.0,
+        "vapor": 1.0,
+        "magma": 1.0,
+        "espora": 1.0,
+        "liquen": 1.0,
+        "plasma": 1.0,
+        "tormenta": 1.0,
+        "abismo": 1.0
+      },
+      "roca": {
+        "marea": 1.0,
+        "llama": 1.0,
+        "brote": 0.8,
+        "roca": 1.0,
+        "voltio": 1.25,
+        "sombra": 1.0,
+        "vapor": 1.0,
+        "magma": 1.0,
+        "espora": 1.0,
+        "liquen": 1.0,
+        "plasma": 1.0,
+        "tormenta": 1.0,
+        "abismo": 1.0
+      },
+      "voltio": {
+        "marea": 1.0,
+        "llama": 1.0,
+        "brote": 1.0,
+        "roca": 0.8,
+        "voltio": 1.0,
+        "sombra": 1.25,
+        "vapor": 1.0,
+        "magma": 1.0,
+        "espora": 1.0,
+        "liquen": 1.0,
+        "plasma": 1.0,
+        "tormenta": 1.0,
+        "abismo": 1.0
+      },
+      "sombra": {
+        "marea": 1.25,
+        "llama": 1.0,
+        "brote": 1.0,
+        "roca": 1.0,
+        "voltio": 0.8,
+        "sombra": 1.0,
+        "vapor": 1.0,
+        "magma": 1.0,
+        "espora": 1.0,
+        "liquen": 1.0,
+        "plasma": 1.0,
+        "tormenta": 1.0,
+        "abismo": 1.0
+      },
+      "vapor": {
+        "marea": 1.0,
+        "llama": 1.0,
+        "brote": 1.0,
+        "roca": 1.0,
+        "voltio": 1.0,
+        "sombra": 1.0,
+        "vapor": 1.0,
+        "magma": 1.25,
+        "espora": 1.0,
+        "liquen": 1.0,
+        "plasma": 1.0,
+        "tormenta": 1.0,
+        "abismo": 0.8
+      },
+      "magma": {
+        "marea": 1.0,
+        "llama": 1.0,
+        "brote": 1.0,
+        "roca": 1.0,
+        "voltio": 1.0,
+        "sombra": 1.0,
+        "vapor": 0.8,
+        "magma": 1.0,
+        "espora": 1.25,
+        "liquen": 1.0,
+        "plasma": 1.0,
+        "tormenta": 1.0,
+        "abismo": 1.0
+      },
+      "espora": {
+        "marea": 1.0,
+        "llama": 1.0,
+        "brote": 1.0,
+        "roca": 1.0,
+        "voltio": 1.0,
+        "sombra": 1.0,
+        "vapor": 1.0,
+        "magma": 0.8,
+        "espora": 1.0,
+        "liquen": 1.25,
+        "plasma": 1.0,
+        "tormenta": 1.0,
+        "abismo": 1.0
+      },
+      "liquen": {
+        "marea": 1.0,
+        "llama": 1.0,
+        "brote": 1.0,
+        "roca": 1.0,
+        "voltio": 1.0,
+        "sombra": 1.0,
+        "vapor": 1.0,
+        "magma": 1.0,
+        "espora": 0.8,
+        "liquen": 1.0,
+        "plasma": 1.25,
+        "tormenta": 1.0,
+        "abismo": 1.0
+      },
+      "plasma": {
+        "marea": 1.0,
+        "llama": 1.0,
+        "brote": 1.0,
+        "roca": 1.0,
+        "voltio": 1.0,
+        "sombra": 1.0,
+        "vapor": 1.0,
+        "magma": 1.0,
+        "espora": 1.0,
+        "liquen": 0.8,
+        "plasma": 1.0,
+        "tormenta": 1.25,
+        "abismo": 1.0
+      },
+      "tormenta": {
+        "marea": 1.0,
+        "llama": 1.0,
+        "brote": 1.0,
+        "roca": 1.0,
+        "voltio": 1.0,
+        "sombra": 1.0,
+        "vapor": 1.0,
+        "magma": 1.0,
+        "espora": 1.0,
+        "liquen": 1.0,
+        "plasma": 0.8,
+        "tormenta": 1.0,
+        "abismo": 1.25
+      },
+      "abismo": {
+        "marea": 1.0,
+        "llama": 1.0,
+        "brote": 1.0,
+        "roca": 1.0,
+        "voltio": 1.0,
+        "sombra": 1.0,
+        "vapor": 1.25,
+        "magma": 1.0,
+        "espora": 1.0,
+        "liquen": 1.0,
+        "plasma": 1.0,
+        "tormenta": 0.8,
+        "abismo": 1.0
+      }
+    }
+  },
+  "sinergia": {
+    "_doc": "Bonus a la potencia de los movimientos (no golpe básico) de criaturas de un mismo grupo de familia que usan movimiento en el turno. Una híbrida pertenece a su familia y a sus 2 componentes; se toma el mayor grupo.",
+    "bonus_por_n": {
+      "2": 0.1,
+      "3": 0.2,
+      "4": 0.3
+    },
+    "hibridas_cuentan_componentes": true
+  },
+  "estados": {
+    "_doc": "Lista cerrada. duracion = nº de finales de turno que dura (incluido el de aplicación). apilado: refresca | pilas | suma.",
+    "quemadura": {
+      "tipo": "negativo",
+      "duracion": 3,
+      "apilado": "pilas",
+      "max_pilas": 3,
+      "dano_por_pila": 12
+    },
+    "ralentizar": {
+      "tipo": "negativo",
+      "duracion": 2,
+      "apilado": "refresca",
+      "iniciativa": -30
+    },
+    "aturdir": {
+      "tipo": "negativo",
+      "duracion": 1,
+      "apilado": "refresca",
+      "inmunidad_turnos": 2
+    },
+    "marca": {
+      "tipo": "negativo",
+      "duracion": 2,
+      "apilado": "refresca",
+      "dano_recibido": 1.2
+    },
+    "debilitar": {
+      "tipo": "negativo",
+      "duracion": 2,
+      "apilado": "refresca",
+      "dano_infligido": 0.8
+    },
+    "escudo": {
+      "tipo": "positivo",
+      "duracion": 2,
+      "apilado": "suma",
+      "maximo": 200
+    },
+    "prisa": {
+      "tipo": "positivo",
+      "duracion": 2,
+      "apilado": "refresca",
+      "iniciativa": 30
+    },
+    "regenerar": {
+      "tipo": "positivo",
+      "duracion": 3,
+      "apilado": "refresca",
+      "cura_por_turno": 15
+    }
+  },
+  "desgaste": {
+    "_doc": "Desde el turno desde_turno+1, el daño de movimientos y golpes se multiplica por 1 + por_turno*(t - desde_turno).",
+    "desde_turno": 10,
+    "por_turno": 0.25
+  },
+  "fin": {
+    "turnos_max": 20,
+    "_doc": "Al acabar el turno turnos_max sin vencedor: empate. Si ambos equipos caen en el mismo turno: empate."
+  },
+  "tiradas": {
+    "_doc": "Por turno, fijas: 8 de jitter (A1..A4, B1..B4) + 2 de varianza por posición en el mismo orden.",
+    "jitter_por_turno": 8,
+    "varianza_por_accion": 2,
+    "por_turno": 24
+  },
+  "semilla": {
+    "prefijo": "combate|"
+  },
+  "ia": {
+    "_doc": "[v0.2] IA de referencia determinista (sin tiradas): enumera planes y maximiza valor del turno + precio sombra de la energía guardada. Unidades: puntos de vida equivalentes.",
+    "reserva_por_defecto": 0,
+    "bonus_ko": 50,
+    "kappa": 0.9,
+    "_doc_kappa": "precio sombra λ = kappa · máx (valor estimado − golpe básico)/coste sobre los movimientos de las criaturas vivas.",
+    "valor_estado": {
+      "quemadura": 36,
+      "ralentizar": 5,
+      "aturdir": 40,
+      "marca": 15,
+      "debilitar": 15,
+      "prisa": 5,
+      "regenerar": 45
+    },
+    "holgura_regenerar": 15,
+    "valor_max_escudo": 90,
+    "objetivos_area_estimados": 1.5,
+    "factor_cura_estimada": 0.6,
+    "prob_condicion_estimada": 0.5,
+    "penalizacion_coste": 0.001
+  },
+  "escenarios_sim": {
+    "C1_aleatorio": {
+      "_doc": "Equipos de 4 salvajes (genética v0.2), formación por orden de generación; IA reserva 0 en ambos.",
+      "combates": 20000,
+      "semillas": 5
+    },
+    "C2_familias": {
+      "_doc": "Equipos monofamilia de cada una de las 13 familias contra cada otra (todas las parejas, lados alternos). Base: salvajes 'puro' de F. Híbridas: cada criatura con 2 D híbridos (claves con forma aleatoria) y 2 D de sus componentes.",
+      "combates_por_pareja": 1000
+    },
+    "C3_calidad": {
+      "_doc": "D-008. Equipos espejo; X con todos los genes a calidad max (94,5) e Y a min (85,5), ancla y valores = catálogo escalado con repartir.",
+      "combates": 10000
+    },
+    "C4_energia": {
+      "_doc": "Equipos C1; IA con reserva u contra IA reserva 0, lados alternos.",
+      "reservas": [
+        0,
+        3,
+        5,
+        7
+      ],
+      "combates_por_pareja": 5000
+    }
+  },
+  "criterios_sim": {
+    "duracion": {
+      "_doc": "C1, turnos.",
+      "media_min": 7,
+      "media_max": 12,
+      "mediana_min": 7,
+      "mediana_max": 11,
+      "p90_max": 15,
+      "max_empates": 0.03,
+      "segundos_por_turno_estimados": 25
+    },
+    "familias": {
+      "_doc": "C2: tasa de victoria de cada familia contra el conjunto de las otras 12.",
+      "min": 0.45,
+      "max": 0.55
+    },
+    "lado": {
+      "_doc": "C1: victorias del lado A.",
+      "min": 0.485,
+      "max": 0.515
+    },
+    "calidad_D008": {
+      "_doc": "C3: victorias de X.",
+      "objetivo_max": 0.55,
+      "limite_max": 0.6
+    },
+    "energia": {
+      "_doc": "[v0.2] C4 redefinido (la IA ya ahorra sola). Ninguna reserva externa domina y los movimientos caros se usan.",
+      "min_reserva0_vs_cualquiera": 0.45,
+      "max_mejor_reserva_vs_0": 0.55,
+      "min_uso_coste_4_5_si_pagable": 0.05
+    },
+    "iniciativa": {
+      "_doc": "Informativo C1: % de veces que actúa primero la criatura con más iniciativa base, para parejas con diferencia ≤ 5.",
+      "rango_informativo": [
+        0.5,
+        0.65
+      ]
+    }
+  },
+  "barridos_sim": {
+    "estadisticas.beta_calidad": [
+      0,
+      0.04,
+      0.06
+    ],
+    "estadisticas.vida.coef.velocidad": [
+      0.05,
+      0.1,
+      0.15
+    ],
+    "ia.kappa": [
+      0,
+      0.6,
+      0.8,
+      0.9
+    ],
+    "orden.jitter": [
+      20,
+      30,
+      45
+    ],
+    "dano.golpe_basico.potencia": [
+      0,
+      10,
+      15
+    ],
+    "estadisticas.vida.base": [
+      200,
+      220,
+      240
+    ]
+  }
+}
