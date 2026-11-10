@@ -29,3 +29,7 @@
 
 ## Balance
 - El presupuesto de estadísticas es fijo por gen (D-008). Ninguna regla nueva puede crear puntos: solo redistribuirlos. El valor viene de la rareza, la especialización, los genes ocultos y la estética.
+- Los combates espejo entre IAs amplifican cualquier ventaja: un +1 % de daño y vida dio ≈ 58 % de victorias. Con escalas lineales, el efecto de especializarse es ~10 veces el de la calidad, así que no se pueden ajustar por separado. Para que la calidad no pese y la especialización sí, deriva de cuotas (stat/total) y deja la calidad en un término aparte y pequeño.
+- La velocidad es la estadística más amplificadora (quien actúa primero consigue el KO). Siempre jitter o desempates rotatorios, nunca orden puro.
+- Las tablas de ventajas se generan con una regla simétrica (anillos) y se comprueba que la ventaja media neta sea 0 por familia. Si una regla "derivada" (p. ej. medias) depende de la frecuencia de componentes, desequilibra.
+- Lo que deba ser idéntico para el mismo gen (movimiento, aspecto) se deriva de la clave del gen, no de los padres ni del orden de descubrimiento.
