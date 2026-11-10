@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { merge, runJob, type Job } from "./jobs.ts";
-import { BASE_VARIANT } from "./setup.ts";
+import { BASE_VARIANT, loadProposal } from "./setup.ts";
 
 const c1: Job = { kind: "C1", variant: BASE_VARIANT, seed: "test-det", from: 0, to: 6 };
 
@@ -22,6 +22,13 @@ test("sim combate: otra semilla ⇒ otro resultado", () => {
   const a = merge([runJob(c1)]);
   const b = merge([runJob({ ...c1, seed: "test-det-2" })]);
   assert.notDeepEqual(a, b);
+});
+
+test("sim combate: C4 con IA configurables y propuesta reproducibles", () => {
+  const p = loadProposal("config/propuestas/combate-balance-v0.2.1.json");
+  const j: Job = { kind: "C4", variant: p.variant, seed: "test-det", from: 0, to: 3, aiX: { id: "lambda" }, aiY: { id: "gastador", kappa: 0, reserve: 0 } };
+  assert.deepEqual(merge([runJob(j)]), merge([runJob(j)]));
+  assert.notDeepEqual(merge([runJob({ ...c1, variant: p.variant })]), merge([runJob(c1)]));
 });
 
 test("sim combate: sustitución de movimiento reproducible", () => {

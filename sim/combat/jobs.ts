@@ -22,7 +22,14 @@ import {
   type FamilyId,
   type Move,
 } from "../../packages/core/src/index.ts";
-import { atQuality, battleConfig, monoFamilyTeam, qualityExtremes, referenceMove, substitutionSlot, wildCreatures, wildTeam, type Variant } from "./setup.ts";
+import { atQuality, battleConfig, monoFamilyTeam, qualityExtremes, rawMovesFor, referenceMove, substitutionSlot, wildCreatures, wildTeam, type Variant } from "./setup.ts";
+
+/** IA de un bando en C4: reserva fija (§10.2) y κ (§10.1); sin κ, la de la config. */
+export interface AiSpec {
+  readonly id: string;
+  readonly reserve?: number;
+  readonly kappa?: number;
+}
 
 export type JobKind = "C1" | "C2" | "C3" | "C4" | "MOV";
 
@@ -32,9 +39,10 @@ export interface Job {
   readonly seed: string;
   readonly from: number;
   readonly to: number;
-  /** C2: [F, G]; C4: reserva u; MOV: clave del gen e id; C3: nada (β va en la variante). */
+  /** C2: [F, G]; C4: IA de X (la que se mide) e IA de Y; MOV: clave del gen e id; C3: nada (β va en la variante). */
   readonly pair?: readonly [FamilyId, FamilyId];
-  readonly reserve?: number;
+  readonly aiX?: AiSpec;
+  readonly aiY?: AiSpec;
   readonly moveKey?: string;
   readonly moveId?: string;
   /** Diagnóstico C2: todas las criaturas con el mismo perfil (P = V = R, T = total_ref). */
@@ -63,10 +71,13 @@ export interface JobResult {
   /** MOV: turnos en que la criatura 1 de X podía pagar m y veces que lo usó. */
   usable: number;
   used: number;
+  /** C1 [v0.2]: por coste c (1–5; 6 = "4 o 5"), acciones de criaturas que podían pagar un movimiento suyo de ese coste y veces que lo pagaron. */
+  payable: number[];
+  paid: number[];
 }
 
 function emptyResult(job: Job): JobResult {
-  return { job, n: 0, xWins: 0, yWins: 0, draws: 0, drawsCap: 0, aWins: 0, bWins: 0, turnsHist: [], basic: 0, byArchetype: {}, initPairs: 0, initHigherFirst: 0, usable: 0, used: 0 };
+  return { job, n: 0, xWins: 0, yWins: 0, draws: 0, drawsCap: 0, aWins: 0, bWins: 0, turnsHist: [], basic: 0, byArchetype: {}, initPairs: 0, initHigherFirst: 0, usable: 0, used: 0, payable: [0, 0, 0, 0, 0, 0, 0], paid: [0, 0, 0, 0, 0, 0, 0] };
 }
 
 function tally(r: JobResult, rec: BattleRecord, xIsA: boolean, cfg: BattleConfig, A: readonly Combatant[], B: readonly Combatant[], detail: boolean): void {
@@ -125,11 +136,39 @@ function countingAi(base: Ai, slot: number, cost: number, r: JobResult): Ai {
   };
 }
 
+/** IA de referencia que cuenta, por coste, si cada criatura podía pagar un movimiento suyo y si lo pagó (uso de lo caro, C1). */
+function costUseAi(base: Ai, r: JobResult): Ai {
+  return (state, side, cfg) => {
+    const plan = base(state, side, cfg);
+    const s = side === "A" ? 0 : 1;
+    const e = state.energy[s];
+    for (const actor of eligibleActors(state, side)) {
+      const c = state.teams[s][actor - 1]!;
+      const act = plan.find((a) => a.actor === actor);
+      const usedCost = act && act.move > 0 ? c.moves[act.move - 1]!.cost : 0;
+      let any45 = false;
+      for (let k = 1; k <= 5; k++) {
+        if (k > e || !c.moves.some((m) => m.cost === k)) continue;
+        r.payable[k]!++;
+        if (usedCost === k) r.paid[k]!++;
+        if (k >= 4) any45 = true;
+      }
+      if (any45) {
+        r.payable[6]!++;
+        if (usedCost >= 4) r.paid[6]!++;
+      }
+    }
+    return plan;
+  };
+}
+
+const aiOf = (spec: AiSpec | undefined, fallback: Ai): Ai => (spec ? createReferenceAi({ ...(spec.reserve !== undefined ? { reserve: spec.reserve } : {}), ...(spec.kappa !== undefined ? { kappa: spec.kappa } : {}) }) : fallback);
+
 export function runJob(job: Job): JobResult {
   const cfg = battleConfig(job.variant);
   const r = emptyResult(job);
   const ref = createReferenceAi();
-  const sc = job.kind === "C2" ? `C2|${job.pair![0]}|${job.pair![1]}` : job.kind === "C4" ? `C4|u${job.reserve}` : job.kind === "MOV" ? `MOV|${job.moveKey}` : job.kind;
+  const sc = job.kind === "C2" ? `C2|${job.pair![0]}|${job.pair![1]}` : job.kind === "C4" ? `C4|${job.aiX!.id}|${job.aiY!.id}` : job.kind === "MOV" ? `MOV|${job.moveKey}` : job.kind;
   // Los equipos de C1/C4/MOV salen del mismo flujo "C1" (mismos equipos para comparar)
   const teamScope = job.kind === "C2" ? sc : job.kind === "C3" ? "C3" : "C1";
   let move: Move | null = null;
@@ -147,7 +186,8 @@ export function runJob(job: Job): JobResult {
         X = wildTeam(trng, cfg, "a");
         Y = wildTeam(trng, cfg, "b");
         // C1: formación por orden de generación; A = primer equipo generado (sin alternar)
-        const rec = runBattle(X, Y, bseed, cfg);
+        const ai = costUseAi(ref, r);
+        const rec = runBattle(X, Y, bseed, cfg, ai, ai);
         tally(r, rec, true, cfg, X, Y, true);
         continue;
       }
@@ -172,7 +212,8 @@ export function runJob(job: Job): JobResult {
         X = wildTeam(trng, cfg, "a");
         Y = wildTeam(trng, cfg, "b");
         if (!xIsA) [X, Y] = [Y, X]; // el equipo no va ligado a la IA
-        aiX = createReferenceAi({ reserve: job.reserve! });
+        aiX = aiOf(job.aiX, ref);
+        aiY = aiOf(job.aiY, ref);
         break;
       case "MOV": {
         const team = wildTeam(trng, cfg, "m");
@@ -180,7 +221,7 @@ export function runJob(job: Job): JobResult {
         X = team.slice();
         Y = team.slice();
         X[0] = withMove(team[0]!, slot, move!);
-        Y[0] = withMove(team[0]!, slot, referenceMove(move!.cost, move!.family, cfg));
+        Y[0] = withMove(team[0]!, slot, referenceMove(move!.cost, move!.family, cfg, rawMovesFor(job.variant)));
         aiX = countingAi(ref, slot, move!.cost, r);
         break;
       }
@@ -210,6 +251,8 @@ export function merge(rs: readonly JobResult[]): Omit<JobResult, "job"> {
     r.turnsHist.forEach((c, t) => {
       if (c) out.turnsHist[t] = (out.turnsHist[t] ?? 0) + c;
     });
+    r.payable.forEach((x, k) => (out.payable[k]! += x));
+    r.paid.forEach((x, k) => (out.paid[k]! += x));
     for (const [k, v] of Object.entries(r.byArchetype)) out.byArchetype[k] = (out.byArchetype[k] ?? 0) + v;
   }
   const { job: _j, ...rest } = out;

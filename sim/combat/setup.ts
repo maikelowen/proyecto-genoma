@@ -1,14 +1,18 @@
 /**
  * Configuración y construcción de equipos del simulador de combate (configs v0.2).
- * [v0.2] Solo se ha adaptado la carga de config; el estudio (study/report) sigue siendo el de v0.1.
+ * Variantes = cambios por ruta en combate y movimientos + sales de catálogo (forma de la propuesta).
  * Carga los JSON (combate, movimientos, genética v0.2) y aplica cambios por
  * ruta sobre una COPIA; nunca modifica los ficheros de config/.
  */
 import rawCombat from "../../config/combate.v0.2.json" with { type: "json" };
 import rawMoves from "../../config/movimientos.v0.2.json" with { type: "json" };
 import rawGenetics from "../../config/genetica.v0.2.json" with { type: "json" };
+import { readFileSync } from "node:fs";
 import {
+  buildBattleConfig,
   buildCombatant,
+  patchRawConfig,
+  type ConfigChanges,
   createRng,
   createWildCreature,
   deriveStats,
@@ -16,9 +20,7 @@ import {
   expressedGenes,
   generateMoveForKey,
   LOCUS_IDS,
-  parseCombatConfig,
   parseGeneticsConfig,
-  parseMovesConfig,
   synergyGroups,
   type BattleConfig,
   type Combatant,
@@ -35,31 +37,50 @@ export const RAW_MOVES: RawConfig = rawMoves as RawConfig;
 export const RAW_GENETICS: RawConfig = rawGenetics as RawConfig;
 export const GCFG: GeneticsConfig = parseGeneticsConfig(RAW_GENETICS);
 
-/** Variante: id corto + cambios por ruta en el JSON de combate ("energia.por_turno"). */
+/** Cambios por ruta (forma corta de `patchRawConfig`: "energia.por_turno"). */
+export type Changes = Readonly<Record<string, unknown>>;
+
+/**
+ * Variante: id corto + cambios por ruta en el JSON de combate y en el de movimientos,
+ * y sales de catálogo (`overrides_catalogo.sales[id]`, forma larga porque los ids llevan puntos).
+ */
 export interface Variant {
   readonly id: string;
   readonly label: string;
-  readonly set: Readonly<Record<string, unknown>>;
+  readonly combat?: Changes;
+  readonly moves?: Changes;
+  readonly salts?: Readonly<Record<string, string | null>>;
 }
 
-export const BASE_VARIANT: Variant = { id: "v02", label: "v0.2 (JSON sin cambios)", set: {} };
+export const BASE_VARIANT: Variant = { id: "v02", label: "v0.2 (JSON sin cambios)" };
 
-function setPath(obj: RawConfig, path: string, value: unknown): void {
-  const parts = path.split(".");
-  let o: RawConfig = obj;
-  for (const p of parts.slice(0, -1)) {
-    if (typeof o[p] !== "object" || o[p] === null) throw new Error(`ruta desconocida: ${path}`);
-    o = o[p];
-  }
-  const last = parts[parts.length - 1] as string;
-  if (!(last in o)) throw new Error(`ruta desconocida: ${path}`);
-  o[last] = structuredClone(value);
+/** Une variantes: los cambios de `b` pisan los de `a`. */
+export function extend(a: Variant, b: Omit<Variant, "label"> & { label?: string }): Variant {
+  return {
+    id: b.id,
+    label: b.label ?? a.label,
+    combat: { ...a.combat, ...b.combat },
+    moves: { ...a.moves, ...b.moves },
+    salts: { ...a.salts, ...b.salts },
+  };
+}
+
+function movesChanges(v: Variant): ConfigChanges | undefined {
+  // QA K-02: la forma larga crea claves; una sal con id mal escrito no haría nada. Se exige que el gen exista.
+  for (const id of Object.keys(v.salts ?? {})) if (!GCFG.catalogById.has(id)) throw new Error(`sal para un gen que no existe en el catálogo: ${id}`);
+  const sets = Object.entries(v.moves ?? {}).map(([p, x]) => [p.split("."), x] as const);
+  // sal null = quitar la sal del JSON (vuelve al flujo sin sal)
+  const salts = Object.entries(v.salts ?? {}).map(([id, x]) => [["overrides_catalogo", "sales", id], x === null ? undefined : x] as const);
+  const all = [...sets, ...salts];
+  return all.length ? all : undefined;
 }
 
 export function rawCombatFor(v: Variant): RawConfig {
-  const raw = structuredClone(RAW_COMBAT);
-  for (const [p, val] of Object.entries(v.set)) setPath(raw, p, val);
-  return raw;
+  return v.combat && Object.keys(v.combat).length ? patchRawConfig(RAW_COMBAT, v.combat) : RAW_COMBAT;
+}
+export function rawMovesFor(v: Variant): RawConfig {
+  const ch = movesChanges(v);
+  return ch ? patchRawConfig(RAW_MOVES, ch) : RAW_MOVES;
 }
 
 /** Valor de una ruta en el JSON efectivo de la variante (para que el informe cite la config, no el código). */
@@ -69,13 +90,33 @@ export function readPath(raw: RawConfig, path: string): unknown {
 
 const cache = new Map<string, BattleConfig>();
 export function battleConfig(v: Variant): BattleConfig {
-  const k = JSON.stringify(v.set);
+  const k = JSON.stringify([v.combat ?? {}, v.moves ?? {}, v.salts ?? {}]);
   let c = cache.get(k);
   if (!c) {
-    c = { combat: parseCombatConfig(rawCombatFor(v)), moves: parseMovesConfig(RAW_MOVES, GCFG) };
+    const mc = movesChanges(v);
+    c = buildBattleConfig(RAW_COMBAT, RAW_MOVES, GCFG, { ...(v.combat && Object.keys(v.combat).length ? { combat: v.combat } : {}), ...(mc ? { moves: mc } : {}) });
     cache.set(k, c);
   }
   return c;
+}
+
+/**
+ * Fichero de propuesta (`config/propuestas/*.json`): parche de palancas, sin tocar config/.
+ * { "combate": {ruta: valor}, "movimientos": {ruta: valor}, "sales": {id: sal|null}, "criterios": {...} }.
+ * `criterios` son los del estudio (decisión del director); se aplican a la base y a la propuesta.
+ */
+export interface Proposal {
+  readonly path: string;
+  readonly variant: Variant;
+  readonly criteria: RawConfig;
+  readonly raw: RawConfig;
+}
+
+export function loadProposal(path: string): Proposal {
+  const raw = JSON.parse(readFileSync(path, "utf8")) as RawConfig;
+  const variant: Variant = { id: "propuesta", label: raw["_titulo"] ?? path, combat: raw["combate"] ?? {}, moves: raw["movimientos"] ?? {}, salts: raw["sales"] ?? {} };
+  battleConfig(variant); // valida con los parsers del núcleo (lanza ConfigError si algo no cuadra)
+  return { path, variant, criteria: raw["criterios"] ?? {}, raw };
 }
 
 /** Familias: 6 base + 7 híbridas, en el orden de los anillos de la config de combate. */
@@ -185,8 +226,7 @@ export function atQuality(c: Creature, Q: number, cfg: BattleConfig): Combatant 
 }
 
 /** Movimiento de referencia (movimientos §7): golpe puro con todo el presupuesto de coste c, con tope. */
-export function referenceMove(cost: number, family: FamilyId, cfg: BattleConfig): Move {
-  const M = RAW_MOVES;
+export function referenceMove(cost: number, family: FamilyId, cfg: BattleConfig, M: RawConfig = RAW_MOVES): Move {
   const budget = M.presupuesto_por_coste[String(cost)] as number;
   const ppp = M.escalables.dano.potencia_por_punto as number;
   const step = M.escalables.paso as number;
@@ -222,8 +262,8 @@ export function substitutionSlot(c: Combatant, m: Move): number {
 }
 
 /** Claves de los 72 genes del catálogo base. */
-export function catalogKeys(): { key: string; id: string }[] {
-  return [...GCFG.catalogById.values()].map((t) => ({ key: `${t.family}|${t.locus}|${t.signature}`, id: t.move }));
+export function catalogKeys(): { key: string; id: string; gene: string }[] {
+  return [...GCFG.catalogById.values()].map((t) => ({ key: `${t.family}|${t.locus}|${t.signature}`, id: t.move, gene: t.id }));
 }
 
 /** Muestra de claves mutadas (familia de las 13, locus y firma al azar, fuera del catálogo, sin repetir). */

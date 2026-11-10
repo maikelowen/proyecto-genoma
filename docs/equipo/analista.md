@@ -38,3 +38,9 @@
 - **Separar la causa con un diagnóstico que anule un factor** (estadísticas iguales en C2, tope de 40 turnos, IA con reserva) antes de proponer arreglos; así se vio que la duración es energía y no vida, y las familias son sobre todo perfil.
 - Prueba de sustitución en 2 tandas (400, y +1600 solo si el IC cruza un umbral) para caber en el presupuesto; el informe declara cada reducción frente a la spec.
 - Un arreglo puede mover otro criterio al borde (energía 3 deja "guardar compensa" en el límite): validar la combinación en todos los escenarios, como en genética.
+
+## Lecciones (combate v0.2 → v0.2.1)
+- **Maldición del ganador en búsquedas con muchas candidatas:** la mejor de 34 sales con 60 combates por pareja prometía 50 % y validó en 44,5 %. Para elegir, ≥ 120 por candidata y una banda de búsqueda con margen (46,5–53,5 %); siempre revalidar con semillas nuevas, y las semillas que motivaron un refinado pasan a ser de elegir (`valida02`).
+- **Mirar los topes antes de mover una curva:** la convexidad no hacía nada porque los topes de potencia (daño 250, cura 180, escudo 200) recortaban justo los costes altos (QA K-01). Con una curva nueva, comprobar qué fracción de cada coste llega al tope.
+- **Población entera ≠ muestra:** el catálogo (72) se cuenta exacto; un IC de Wilson sobre "0 de 72" marca "frágil" un criterio que se cumple. La incertidumbre de cada movimiento va en su veredicto "dudoso".
+- Parches por ruta: la forma larga crea claves (QA K-02); el simulador exige que cada sal apunte a un gen del catálogo y la CLI rechaza las semillas con que se eligió.

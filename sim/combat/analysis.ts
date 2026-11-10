@@ -1,6 +1,7 @@
 /**
- * Métricas y criterios del combate v0.1 (combate §12, movimientos §7).
- * Los umbrales se leen de `criterios_sim` de las configs; aquí no hay números de criterio.
+ * Métricas y criterios del combate v0.2 (combate §12, movimientos §7).
+ * Los umbrales se leen de `criterios_sim` de las configs, con la sección `criterios` del fichero de
+ * propuesta por encima (criterios del director, iguales para base y propuesta); aquí no hay números de criterio.
  */
 import { quantile, quantileCI } from "../genetics/stats.ts";
 import type { JobResult } from "./jobs.ts";
@@ -93,8 +94,17 @@ export interface Criterion {
   readonly fmt: "pct" | "num";
 }
 
-const CC = RAW_COMBAT.criterios_sim;
-const MC = RAW_MOVES.criterios_sim;
+let CC: Record<string, any> = RAW_COMBAT.criterios_sim;
+let MC: Record<string, any> = RAW_MOVES.criterios_sim;
+
+/** Aplica los criterios del estudio (sección `criterios` de la propuesta) sobre los de las configs. */
+export function setStudyCriteria(over: Record<string, any>): void {
+  CC = { ...RAW_COMBAT.criterios_sim, ...(over["lado"] ? { lado: { ...RAW_COMBAT.criterios_sim.lado, ...over["lado"] } } : {}), ...(over["energia"] ? { energia: over["energia"] } : {}), ...(over["duracion"] ? { duracion: { ...RAW_COMBAT.criterios_sim.duracion, ...over["duracion"] } } : {}) };
+  MC = { ...RAW_MOVES.criterios_sim, ...(over["movimientos"] ?? {}) };
+}
+export function studyCriteria(): { combat: Record<string, any>; moves: Record<string, any> } {
+  return { combat: CC, moves: MC };
+}
 
 function between(id: string, group: string, label: string, iv: Interval, min: number, max: number, fmt: "pct" | "num", seedsOk?: [number, number], informative = false): Criterion {
   const pass = iv.value >= min && iv.value <= max;
@@ -169,16 +179,26 @@ export function qualityCriteria(beta: number, a: Agg, informative: boolean): Cri
   ];
 }
 
-export function energyCriteria(byReserve: readonly { u: number; a: Agg }[]): Criterion[] {
+/**
+ * Energía C4 (+ uso en C1). Con criterios del director (`min_mejor_ahorro_vs_gastador`): la mejor IA que ahorra
+ * gana a la que no ahorra, la que no ahorra gana a su peor rival un mínimo y lo caro se usa. Sin ellos, los de la
+ * config v0.2 (ninguna reserva domina).
+ */
+export function energyCriteria(savers: readonly { id: string; label: string; wr: Interval }[], use45: Interval): Criterion[] {
   const E = CC.energia;
-  const rates = byReserve.map((r) => ({ u: r.u, wr: winRate(r.a.xWins, r.a.draws, r.a.n) }));
-  const best = [...rates].sort((x, y) => y.wr.value - x.wr.value)[0]!;
-  const worstForZero = [...rates].sort((x, y) => y.wr.value - x.wr.value)[0]!;
-  const zero = { value: 1 - worstForZero.wr.value, lo: 1 - worstForZero.wr.hi, hi: 1 - worstForZero.wr.lo };
+  const best = [...savers].sort((x, y) => y.wr.value - x.wr.value)[0]!;
+  const zero = { value: 1 - best.wr.value, lo: 1 - best.wr.hi, hi: 1 - best.wr.lo };
+  const use = between("energia_uso", "Energía C1", "Uso de coste 4–5 cuando se puede pagar (IA de referencia)", use45, E.min_uso_coste_4_5_si_pagable, Infinity, "pct");
+  if (E.min_mejor_ahorro_vs_gastador !== undefined)
+    return [
+      between("energia_mejor", "Energía C4", `Mejor IA que ahorra contra la que no (${best.label})`, best.wr, E.min_mejor_ahorro_vs_gastador, Infinity, "pct"),
+      between("energia_cero", "Energía C4", `IA sin reserva contra su peor rival (${best.label})`, zero, E.min_gastador_vs_peor, Infinity, "pct"),
+      use,
+    ];
   return [
-    // [v0.2] criterio invertido: ninguna reserva u > 0 debe dominar (max_mejor_reserva_vs_0). Falta el de uso de coste 4–5 (min_uso_coste_4_5_si_pagable).
-    between("energia_mejor", "Energía C4", `Mejor reserva u > 0 contra u = 0 (u = ${best.u})`, best.wr, -Infinity, E.max_mejor_reserva_vs_0, "pct"),
-    between("energia_cero", "Energía C4", `u = 0 contra su peor rival (u = ${worstForZero.u})`, zero, E.min_reserva0_vs_cualquiera, Infinity, "pct"),
+    between("energia_mejor", "Energía C4", `Mejor IA que ahorra contra la que no (${best.label})`, best.wr, -Infinity, E.max_mejor_reserva_vs_0, "pct"),
+    between("energia_cero", "Energía C4", `IA sin reserva contra su peor rival (${best.label})`, zero, E.min_reserva0_vs_cualquiera, Infinity, "pct"),
+    use,
   ];
 }
 
@@ -217,15 +237,21 @@ export function needsMore(a: Agg): boolean {
   return moveVerdict(winRate(a.xWins, a.draws, a.n)).uncertain;
 }
 
-export function moveCriteria(rows: readonly MoveRow[]): Criterion[] {
+const exact = (x: number): Interval => ({ value: x, lo: x, hi: x });
+
+export function moveCriteria(rows: readonly MoveRow[], valid: readonly [number, number]): Criterion[] {
   const cat = rows.filter((r) => r.source === "catálogo");
   const broken = cat.filter((r) => r.verdict === "roto" || r.verdict === "roto grave").length;
+  const useless = cat.filter((r) => r.verdict === "inútil").length;
   const graves = rows.filter((r) => r.verdict === "roto grave").length;
-  const frac = wilson(broken, cat.length);
-  return [
-    between("mov_rotos_catalogo", "Movimientos §7", `Catálogo roto (${broken} de ${cat.length})`, frac, -Infinity, MC.max_frac_rotos_catalogo, "pct"),
+  const out = [
+    // el catálogo es la población entera (no una muestra): fracción exacta; la incertidumbre de cada veredicto va en "dudoso"
+    between("mov_rotos_catalogo", "Movimientos §7", `Catálogo roto (${broken} de ${cat.length})`, exact(broken / cat.length), -Infinity, MC.max_frac_rotos_catalogo, "pct"),
     between("mov_rotos_graves", "Movimientos §7", "Rotos graves (catálogo + muestra)", { value: graves, lo: graves, hi: graves }, -Infinity, MC.max_rotos_graves, "num"),
   ];
+  if (MC.max_frac_inutiles_catalogo !== undefined) out.push(between("mov_inutiles_catalogo", "Movimientos §7", `Catálogo inútil (${useless} de ${cat.length})`, exact(useless / cat.length), -Infinity, MC.max_frac_inutiles_catalogo, "pct"));
+  out.push(between("mov_validos", "Movimientos §3", `Catálogo válido y con cuotas §5.1 (${valid[0]} de ${valid[1]})`, { value: valid[0], lo: valid[0], hi: valid[0] }, valid[1], Infinity, "num"));
+  return out;
 }
 
 export function archetypeCriterion(perFamily: readonly { family: string; n: number }[]): Criterion {

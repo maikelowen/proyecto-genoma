@@ -1,0 +1,44 @@
+{
+  "_titulo": "Propuesta de balance v0.2.1 (analista)",
+  "_doc": "Parche de palancas sobre config/combate.v0.2.json y config/movimientos.v0.2.json (no los modifica). Se aplica con `npm run sim:combat -- --patch config/propuestas/combate-balance-v0.2.1.json`. Informe: docs/informes/combate-v0.2.md.",
+  "combate": {
+    "estados.escudo.maximo": 300
+  },
+  "movimientos": {
+    "presupuesto_por_coste.1": 6,
+    "presupuesto_por_coste.2": 15,
+    "presupuesto_por_coste.3": 27,
+    "presupuesto_por_coste.4": 42,
+    "presupuesto_por_coste.5": 60,
+    "escalables.dano.max_individual": 350,
+    "escalables.dano.max_area_por_objetivo": 175,
+    "escalables.cura.max": 330,
+    "escalables.escudo.max": 300
+  },
+  "sales": {
+    "brote.extremidades.2": "c4",
+    "marea.cuerpo.3": "c2",
+    "brote.cabeza.3": "c1",
+    "roca.cola.1": "c2",
+    "brote.cola.3": "c4",
+    "sombra.cabeza.1": "c1",
+    "sombra.cabeza.3": "c2"
+  },
+  "criterios": {
+    "_doc": "Criterios del estudio v0.2.1 (decisión del director). Se aplican igual a la base v0.2 y a la propuesta.",
+    "lado": {
+      "min": 0.48,
+      "max": 0.52
+    },
+    "energia": {
+      "min_mejor_ahorro_vs_gastador": 0.52,
+      "min_gastador_vs_peor": 0.35,
+      "min_uso_coste_4_5_si_pagable": 0.15
+    },
+    "movimientos": {
+      "max_frac_rotos_catalogo": 0,
+      "max_rotos_graves": 0,
+      "max_frac_inutiles_catalogo": 0.05
+    }
+  }
+}
