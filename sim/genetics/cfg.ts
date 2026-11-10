@@ -1,9 +1,9 @@
 /**
  * Configuraciones del simulador: carga el JSON de genética, aplica
  * cambios por ruta ("mutacion.prob_por_locus") sobre una COPIA y vuelve a
- * validar con parseGeneticsConfig. Nunca modifica config/genetica.v0.1.json.
+ * validar con parseGeneticsConfig. Nunca modifica config/genetica.v0.2.json.
  */
-import rawConfig from "../../config/genetica.v0.1.json" with { type: "json" };
+import rawConfig from "../../config/genetica.v0.2.json" with { type: "json" };
 import { parseGeneticsConfig, type GeneticsConfig } from "../../packages/core/src/index.ts";
 
 export type RawConfig = Record<string, any>;

@@ -1,9 +1,9 @@
-/** spec §3 — herencia `criar(p1, p2, rng)`. Función pura. */
+/** spec §3 [v0.2] — herencia `criar(p1, p2, rng)`. Función pura. */
 import type { Rng } from "../rng.ts";
 import { creatureFamily } from "./creature.ts";
 import { copyWithDrift, geneKey } from "./gene.ts";
 import { sampleNormals } from "./math.ts";
-import { mutateGene } from "./mutation.ts";
+import { mutateGene, type ShapeFallbackLevel } from "./mutation.ts";
 import { LOCUS_IDS, type Creature, type FamilyId, type Gene, type GeneticsConfig, type Locus, type LocusId } from "./types.ts";
 
 export class BreedingError extends Error {
@@ -43,6 +43,10 @@ export interface MutationEvent {
   readonly matchesCatalog: boolean;
   /** Claves de los D de A y B en ese locus. */
   readonly parentDKeys: readonly [string, string];
+  /** Claves de los 6 genes de los padres en ese locus (orden de slots); la mutada nunca está aquí. */
+  readonly parentKeys: readonly string[];
+  /** Respaldo de forma usado (spec §4.5): 0 = f0, 1 = N1, 2 = N2, 3 = N3. */
+  readonly fallbackLevel: ShapeFallbackLevel;
 }
 
 export interface BreedResult {
@@ -61,6 +65,12 @@ export interface BreedResult {
  */
 export function breedingBlocker(p1: Creature, p2: Creature, config: GeneticsConfig, birth: number): string | null {
   const { maxOffspring, minAgeGenerations } = config.limits;
+  // [v0.2] QA-02: enteros validados (JSON del servidor puede traer NaN/undefined)
+  if (!Number.isInteger(birth)) return `nacimiento de la cría no entero: ${birth}`;
+  for (const p of [p1, p2]) {
+    if (!Number.isInteger(p.birth)) return `${p.id}: nacimiento no entero (${p.birth})`;
+    if (!Number.isInteger(p.offspringCount) || p.offspringCount < 0) return `${p.id}: nº de crías inválido (${p.offspringCount})`;
+  }
   if (p1.id === p2.id) return "los padres son la misma criatura";
   for (const p of [p1, p2]) {
     if (p.offspringCount >= maxOffspring) return `${p.id} ya tiene ${p.offspringCount} crías (máx ${maxOffspring})`;
@@ -70,7 +80,7 @@ export function breedingBlocker(p1: Creature, p2: Creature, config: GeneticsConf
 }
 
 /**
- * spec §3.2 `criar(p1, p2, rng)`. Consume exactamente
+ * spec §3.2 `criar(p1, p2, rng)` [v0.2]. Consume exactamente
  * `herencia.tiradas_por_cria` (280) tiradas, mute o no. No modifica los
  * padres: devuelve copias con el contador de crías incrementado.
  * Simétrica: breed(x, y) y breed(y, x) dan la misma cría.
@@ -109,15 +119,14 @@ export function breed(p1: Creature, p2: Creature, rng: Rng, config: GeneticsConf
     const nAn = sampleNormals(rng, 3, config); // t43–t54
     const nFo = sampleNormals(rng, 4, config); // t55–t70
 
-    const D = muta
-      ? mutateGene(la.D, lb.D, uh, up, nAn, nFo, config) // spec §4
-      : copyWithDrift(S[iD] as Gene, nDer.slice(0, 3), config); // spec §6
+    const mut = muta ? mutateGene(la.D, lb.D, S, uh, up, nAn, nFo, config) : null; // spec §4
+    const D = mut ? mut.gene : copyWithDrift(S[iD] as Gene, nDer.slice(0, 3), config); // spec §6
     const R1 = copyWithDrift(S[i1] as Gene, nDer.slice(3, 6), config);
     const R2 = copyWithDrift(S[i2] as Gene, nDer.slice(6, 9), config);
-    genome[L] = { D, R1, R2 };
+    genome[L] = Object.freeze({ D, R1, R2 });
 
     trace.push({ locus: L, mutated: muta, dSlot: iD, r1Slot: i1, r2Slot: i2 });
-    if (muta) {
+    if (mut) {
       const key = geneKey(D);
       mutations.push({
         locus: L,
@@ -126,6 +135,8 @@ export function breed(p1: Creature, p2: Creature, rng: Rng, config: GeneticsConf
         family: D.family,
         matchesCatalog: config.catalogByKey.has(key),
         parentDKeys: [geneKey(la.D), geneKey(lb.D)],
+        parentKeys: S.map(geneKey),
+        fallbackLevel: mut.fallbackLevel,
       });
     }
   }
@@ -133,7 +144,7 @@ export function breed(p1: Creature, p2: Creature, rng: Rng, config: GeneticsConf
   const child: Creature = {
     id: opts.id,
     genome,
-    family: creatureFamily(genome), // spec §7
+    family: creatureFamily(genome, config), // spec §7
     generation: Math.max(A.generation, B.generation) + 1,
     parents: [A.id, B.id],
     offspringCount: 0,

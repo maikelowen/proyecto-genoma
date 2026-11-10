@@ -1,11 +1,11 @@
 /**
- * Tipos de la genética v0.1 (spec docs/spec/genetica-v0.1.md).
+ * Tipos de la genética v0.2 (spec docs/spec/genetica-v0.2.md).
  *
  * Convención: los NOMBRES de campos van en inglés; los VALORES de datos
  * (ids de familia, locus y estadística) son los de la spec/config, en
  * español ("llama", "cabeza", "potencia"...). Equivalencias spec → código:
  *   familia→family, forma→shape, firma→signature, movimiento→move,
- *   ancla→anchor, valores→values, origen→origin, genoma→genome,
+ *   calidad→quality, ancla→anchor, valores→values, origen→origin, genoma→genome,
  *   generacion→generation, padres→parents, crias→offspringCount,
  *   nacimiento→birth.
  */
@@ -29,7 +29,7 @@ export type Shape = readonly [number, number, number, number];
 /** spec §1.2 — cómo nació esta línea del gen. */
 export type GeneOrigin = "base" | "mutacion";
 
-/** Tipo de gen del catálogo base (spec §2.1). */
+/** Tipo de gen del catálogo base (spec §2.1). `anchor` es la de calidad base (90). */
 export interface GeneType {
   readonly id: string;
   readonly family: FamilyId;
@@ -42,8 +42,10 @@ export interface GeneType {
 
 /**
  * Instancia de gen dentro de una criatura (spec §1.2).
- * id/family/locus/shape/signature/move son del TIPO; anchor/values/origin
- * son de la instancia.
+ * id/family/locus/shape/signature/move son del TIPO; quality/anchor/
+ * values/origin son de la instancia. Invariante (spec §1.4):
+ * Σanchor = Σvalues = quality. Los genes que crea el núcleo están
+ * congelados (spec §1.2, QA-08).
  */
 export interface Gene {
   readonly id: string;
@@ -52,6 +54,8 @@ export interface Gene {
   readonly shape: Shape;
   readonly signature: string;
   readonly move: string;
+  /** spec §1.4: total de estadísticas, fijado al nacer el gen. */
+  readonly quality: number;
   readonly anchor: Stats;
   readonly values: Stats;
   readonly origin: GeneOrigin;
@@ -101,8 +105,17 @@ export interface GeneticsConfig {
   readonly hybrids: readonly HybridFamily[];
   readonly normal: { readonly uniforms: number; readonly center: number; readonly factor: number };
   readonly decimals: number;
+  /** 10^decimals calculado por multiplicación (spec §9.1, QA-03). */
+  readonly roundFactor: number;
+  /** spec §1.4 `[calidad]`. */
+  readonly quality: {
+    readonly base: number;
+    readonly margin: number;
+    readonly min: number;
+    readonly max: number;
+    readonly wildDistribution: "triangular" | "uniforme";
+  };
   readonly values: {
-    readonly anchorSum: number;
     readonly anchorMin: number;
     readonly anchorMax: number;
     readonly absMin: number;
@@ -132,9 +145,14 @@ export interface GeneticsConfig {
     readonly sigmaShape: number;
     readonly sumRetries: number;
     readonly sumEpsilon: number;
+    readonly fallbackMaxStep: number;
   };
   readonly drift: { readonly kappa: number; readonly sigma: number };
   readonly limits: { readonly maxOffspring: number; readonly minAgeGenerations: number };
+  /** spec §7 `[familia_criatura]`. */
+  readonly familyWeights: { readonly base: number; readonly hybrid: number };
+  /** `criterios_sim.invariantes.tolerancia_suma` (QA-05). */
+  readonly invariantTolerance: number;
   readonly catalog: readonly GeneType[];
   /** Índices derivados. */
   readonly catalogById: ReadonlyMap<string, GeneType>;

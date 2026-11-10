@@ -1,8 +1,9 @@
 /** Utilidades compartidas por los tests de genética (no es un test). */
-import rawConfig from "../../../config/genetica.v0.1.json" with { type: "json" };
+import rawConfig from "../../../config/genetica.v0.2.json" with { type: "json" };
 import {
   createRng,
   creatureFamily,
+  makeGene,
   geneKey,
   parseGeneticsConfig,
   LOCUS_IDS,
@@ -37,11 +38,11 @@ export function drawsConsumed(seed: string, fn: (rng: Rng) => void, maxDraws = 2
   return -1;
 }
 
-/** Gen de catálogo con valores = ancla. */
+/** Gen de catálogo con calidad base y valores = ancla (congelado). */
 export function catalogGene(id: string, config: GeneticsConfig = CFG): Gene {
   const t = config.catalogById.get(id);
   if (!t) throw new Error(`no existe ${id}`);
-  return { ...t, values: t.anchor, origin: "base" };
+  return makeGene(t, config.quality.base, t.anchor, t.anchor, "base");
 }
 
 /** Gen híbrido artificial (las híbridas no tienen catálogo). */
@@ -49,7 +50,7 @@ export function hybridGene(family: FamilyId, locus: LocusId, shape: Shape): Gene
   const signature = shape.map((x) => String(Math.round(x * 4))).join("");
   const id = `${family}.${locus}.m${signature}`;
   const anchor = { potencia: 30, velocidad: 30, resistencia: 30 };
-  return { id, family, locus, shape, signature, move: `mov:prov:${id}`, anchor, values: anchor, origin: "mutacion" };
+  return makeGene({ id, family, locus, shape, signature, move: `mov:prov:${id}` }, 90, anchor, anchor, "mutacion");
 }
 
 /** Criatura con los 3 slots de cada locus dados por `slotGene(locus)`. */
@@ -62,7 +63,7 @@ export function makeCreature(
   return {
     id,
     genome,
-    family: creatureFamily(genome),
+    family: creatureFamily(genome, CFG),
     generation: extra.generation ?? 0,
     parents: null,
     offspringCount: extra.offspringCount ?? 0,

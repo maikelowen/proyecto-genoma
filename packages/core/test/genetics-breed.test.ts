@@ -14,11 +14,13 @@ import {
   geneKey,
   LOCUS_IDS,
   recordMutations,
-  STAT_IDS,
   type Creature,
+  type Gene,
   type GeneticsConfig,
 } from "../src/index.ts";
-import { CFG, drawsConsumed, hybridGene, keysOf, loadConfig, makeCreature, pureCreature, tol5 } from "./genetics-helpers.ts";
+import { mutateGene, mutationAnchor, mutationShape } from "../src/genetics/mutation.ts";
+import { distribute, valueBoundsOf } from "../src/genetics/math.ts";
+import { CFG, catalogGene, drawsConsumed, hybridGene, keysOf, loadConfig, makeCreature, pureCreature, tol5 } from "./genetics-helpers.ts";
 
 const ALWAYS = loadConfig((r) => (r.mutacion.prob_por_locus = 1));
 const NEVER = loadConfig((r) => (r.mutacion.prob_por_locus = 0));
@@ -34,6 +36,11 @@ function breedMany(p1: Creature, p2: Creature, n: number, config: GeneticsConfig
   const out = [];
   for (let i = 0; i < n; i++) out.push(breed(p1, p2, rng, config, { id: `c${i}`, birth: 1 }));
   return out;
+}
+
+/** Las 6 claves de los padres en un locus, calculadas a partir de sus genomas. */
+function parentKeySet(p: Creature, q: Creature, L: (typeof LOCUS_IDS)[number]): Set<string> {
+  return new Set([...keysOf(p, L), ...keysOf(q, L)]);
 }
 
 describe("determinismo y consumo (spec §9)", () => {
@@ -75,10 +82,10 @@ describe("determinismo y consumo (spec §9)", () => {
     assert.ok(compared > 400);
   });
 
-  it("no muta a los padres y devuelve copias con crías + 1", () => {
+  it("no muta a los padres, devuelve copias con crías + 1 y genes congelados", () => {
     const [a, b] = wildPair("par");
     const before = JSON.stringify([a, b]);
-    const res = breed(b, a, createRng("s"), CFG, { id: "c", birth: 3 });
+    const res = breed(b, a, createRng("s"), ALWAYS, { id: "c", birth: 3 });
     assert.equal(JSON.stringify([a, b]), before);
     assert.equal(res.parent1.id, "b");
     assert.equal(res.parent1.offspringCount, 1);
@@ -87,20 +94,31 @@ describe("determinismo y consumo (spec §9)", () => {
     assert.equal(res.child.generation, 1);
     assert.equal(res.child.birth, 3);
     assert.equal(res.child.offspringCount, 0);
+    for (const g of allGenes(res.child)) {
+      assert.ok(Object.isFrozen(g) && Object.isFrozen(g.anchor) && Object.isFrozen(g.values) && Object.isFrozen(g.shape));
+    }
   });
 });
 
-describe("precondiciones (spec §3.2)", () => {
+describe("precondiciones (spec §3.2, QA-02)", () => {
   const [a, b] = wildPair("pre");
-  it("misma criatura, 5 crías o edad < 1 => error sin consumir tiradas", () => {
+  it("misma criatura, 5 crías, edad < 1 o entradas no enteras => error sin consumir tiradas", () => {
     const cases: Array<[Creature, Creature, number]> = [
       [a, a, 1],
       [a, { ...b, offspringCount: 5 }, 1],
       [a, b, 0],
       [a, { ...b, birth: 4 }, 4],
+      [a, b, Number.NaN],
+      [a, b, 1.5],
+      [a, b, undefined as unknown as number],
+      [a, { ...b, birth: Number.NaN }, 1],
+      [a, { ...b, birth: undefined as unknown as number }, 1],
+      [a, { ...b, offspringCount: Number.NaN }, 1],
+      [a, { ...b, offspringCount: -1 }, 1],
+      [a, { ...b, offspringCount: 0.5 }, 1],
     ];
     for (const [p, q, birth] of cases) {
-      assert.notEqual(breedingBlocker(p, q, CFG, birth), null);
+      assert.notEqual(breedingBlocker(p, q, CFG, birth), null, `${birth} ${q.birth} ${q.offspringCount}`);
       const rng = createRng("e");
       assert.throws(() => breed(p, q, rng, CFG, { id: "c", birth }), BreedingError);
       assert.deepEqual(rng.getState(), createRng("e").getState());
@@ -115,7 +133,7 @@ describe("precondiciones (spec §3.2)", () => {
 });
 
 describe("estadística de herencia (spec §3)", () => {
-  it("origen del D ≈ pesos_D; R1 ≠ D ≠ R2 de slot; tasa de mutación ≈ 2 %/locus", () => {
+  it("origen del D ≈ pesos_D (C); R1 ≠ D ≠ R2 de slot; tasa de mutación ≈ 2 %/locus", () => {
     const [a, b] = wildPair("stats");
     const N = 15_000;
     const results = breedMany(a, b, N, CFG, "herencia");
@@ -143,8 +161,35 @@ describe("estadística de herencia (spec §3)", () => {
     });
     const pm = CFG.mutation.probPerLocus;
     assert.ok(Math.abs(mutated / loci - pm) < tol5(pm, loci), `mut/locus ${mutated / loci}`);
-    const pc = 1 - (1 - pm) ** 4; // spec §4: 7,8 %
+    const pc = 1 - (1 - pm) * (1 - pm) * (1 - pm) * (1 - pm); // spec §4: 7,8 %
     assert.ok(Math.abs(childrenMutated / N - pc) < tol5(pc, N), `crías mutadas ${childrenMutated / N}`);
+  });
+
+  it("calidad: se hereda intacta; la mutada = r2(media de los D de los padres)", () => {
+    const pop = createWildPopulation(createRng("qpop"), CFG, 20);
+    const rng = createRng("qual");
+    const hot = loadConfig((r) => (r.mutacion.prob_por_locus = 0.3));
+    let checked = 0;
+    for (let i = 0; i < 400; i++) {
+      const p = pop[i % 20] as Creature;
+      const q = pop[(i * 3 + 1) % 20] as Creature;
+      if (p.id === q.id) continue;
+      const r = breed(p, q, rng, hot, { id: `q${i}`, birth: 1 });
+      const [A, B] = p.id < q.id ? [p, q] : [q, p];
+      for (const t of r.trace) {
+        const la = A.genome[t.locus];
+        const lb = B.genome[t.locus];
+        const S: Gene[] = [la.D, la.R1, la.R2, lb.D, lb.R1, lb.R2];
+        const l = r.child.genome[t.locus];
+        const expD = t.mutated ? Math.round(((la.D.quality + lb.D.quality) / 2) * 100) / 100 : (S[t.dSlot] as Gene).quality;
+        assert.equal(l.D.quality, expD);
+        assert.equal(l.R1.quality, (S[t.r1Slot] as Gene).quality);
+        assert.equal(l.R2.quality, (S[t.r2Slot] as Gene).quality);
+        if (!t.mutated) assert.deepEqual(l.D.anchor, (S[t.dSlot] as Gene).anchor);
+        checked++;
+      }
+    }
+    assert.ok(checked > 1500);
   });
 
   it("puro llama × puro marea con mutación: ≈ 50 % Vapor (prob_hibrida_nueva)", () => {
@@ -163,7 +208,7 @@ describe("estadística de herencia (spec §3)", () => {
     assert.ok(Math.abs(vapor / n - p) < tol5(p, n), `${vapor / n}`);
   });
 
-  it("híbrida × su componente: ≈ 75 % híbrida, resto el componente", () => {
+  it("híbrida × su componente: ≈ 50 % híbrida [v0.2], resto el componente", () => {
     const hyb = makeCreature("a", (L) => {
       const g = hybridGene("vapor", L, [0.5, 0.5, 0.5, 0.5]);
       return { D: g, R1: g, R2: g };
@@ -179,10 +224,11 @@ describe("estadística de herencia (spec §3)", () => {
       }
     }
     const p = CFG.mutation.probHybridAffinity;
+    assert.equal(p, 0.5);
     assert.ok(Math.abs(h / n - p) < tol5(p, n), `${h / n}`);
   });
 
-  it("invariantes y Σancla = 90 tras 40 generaciones con mutación alta", () => {
+  it("invariantes v0.2 tras 40 generaciones con mutación alta: calidad ∈ [85,5; 94,5], Σancla = Σvalores = calidad", () => {
     const hot = loadConfig((r) => (r.mutacion.prob_por_locus = 0.25));
     const rng = createRng("evol");
     let pop = createWildPopulation(rng, hot, 120);
@@ -197,14 +243,16 @@ describe("estadística de herencia (spec §3)", () => {
           const r = breed(p, q, rng, hot, { id: `g${gen}-${i}-${k}`, birth: gen });
           next.push(r.child);
           mutatedGenes += r.mutations.length;
+          for (const m of r.mutations) assert.ok(!parentKeySet(p, q, m.locus).has(m.key), `${m.key} repite gen de padre`);
         }
       }
       for (const c of next) {
         assert.deepEqual(checkInvariants(c, hot), []);
         for (const g of allGenes(c)) {
-          const s = STAT_IDS.reduce((t, k) => t + g.anchor[k], 0);
-          assert.ok(Math.abs(s - 90) <= 0.01 + 1e-9, `Σancla ${s}`);
-          for (const k of STAT_IDS) assert.ok(Math.abs(g.values[k] - g.anchor[k]) <= 10 + 1e-9);
+          assert.ok(g.quality >= 85.5 && g.quality <= 94.5, `calidad ${g.quality}`);
+          const sa = g.anchor.potencia + g.anchor.velocidad + g.anchor.resistencia;
+          const sv = g.values.potencia + g.values.velocidad + g.values.resistencia;
+          assert.ok(Math.abs(sa - g.quality) < 1e-9 && Math.abs(sv - g.quality) < 1e-9, `${sa} ${sv} ${g.quality}`);
         }
       }
       pop = next;
@@ -212,7 +260,7 @@ describe("estadística de herencia (spec §3)", () => {
     assert.ok(mutatedGenes > 1000);
   });
 
-  it("deriva sin mutación: valores se alejan del ancla pero nunca rompen ±10 ni [5,60]", () => {
+  it("deriva sin mutación: valores se alejan del ancla, nunca rompen ±10 ni [5,60] y la calidad no cambia", () => {
     let pop = [pureCreature("a", "voltio"), pureCreature("b", "voltio")];
     const rng = createRng("deriva");
     let maxDev = 0;
@@ -222,10 +270,112 @@ describe("estadística de herencia (spec §3)", () => {
       pop = [r.child, r2.child];
       for (const c of pop) {
         assert.deepEqual(checkInvariants(c, NEVER), []);
-        for (const g of allGenes(c)) for (const k of STAT_IDS) maxDev = Math.max(maxDev, Math.abs(g.values[k] - g.anchor[k]));
+        for (const g of allGenes(c)) {
+          assert.equal(g.quality, 90);
+          maxDev = Math.max(maxDev, Math.abs(g.values.potencia - g.anchor.potencia), Math.abs(g.values.velocidad - g.anchor.velocidad));
+        }
       }
     }
-    assert.ok(maxDev > 3 && maxDev <= 10, `máx desviación ${maxDev}`);
+    assert.ok(maxDev > 2 && maxDev <= 10, `máx desviación ${maxDev}`);
+  });
+});
+
+describe("mutación: bloqueo de las 6 claves (spec §4.5, D-007)", () => {
+  it("la clave mutada nunca es ninguna de las 6 de los padres; id/movimiento correctos", () => {
+    const pop = createWildPopulation(createRng("mpop"), CFG, 30);
+    const rng = createRng("mut");
+    let catalogHits = 0;
+    let fresh = 0;
+    const levels = [0, 0, 0, 0];
+    for (let i = 0; i < 3000; i++) {
+      const p = pop[i % 30] as Creature;
+      const q = pop[(i * 11 + 3) % 30] as Creature;
+      if (p.id === q.id) continue;
+      const r = breed(p, q, rng, ALWAYS, { id: `m${i}`, birth: 1 });
+      for (const m of r.mutations) {
+        const g = r.child.genome[m.locus].D;
+        assert.equal(g.origin, "mutacion");
+        assert.equal(geneKey(g), m.key);
+        assert.ok(!parentKeySet(p, q, m.locus).has(m.key), `${m.key} repite un gen de los padres`);
+        assert.deepEqual(new Set(m.parentKeys), parentKeySet(p, q, m.locus));
+        levels[m.fallbackLevel] = (levels[m.fallbackLevel] as number) + 1;
+        if (m.matchesCatalog) {
+          catalogHits++;
+          assert.equal(g.id, CFG.catalogByKey.get(m.key)?.id);
+          assert.equal(g.move, `mov:${g.id}`);
+        } else {
+          fresh++;
+          assert.equal(g.id, `${g.family}.${g.locus}.m${g.signature}`);
+          assert.equal(g.move, `mov:prov:${g.id}`);
+        }
+      }
+    }
+    assert.ok(catalogHits > 0 && fresh > 0, `${catalogHits} / ${fresh}`);
+    assert.ok((levels[0] as number) > 0 && (levels[1] as number) > 0, `niveles ${levels}`);
+  });
+
+  it("padres homocigotos idénticos: la mutación cambia la firma y conserva la familia", () => {
+    const a = pureCreature("a", "roca");
+    const twin = { ...a, id: "twin" };
+    for (const r of breedMany(a, twin, 300, ALWAYS, "gem-mut")) {
+      for (const m of r.mutations) {
+        assert.ok(!keysOf(a, m.locus).includes(m.key));
+        assert.equal(m.family, "roca");
+      }
+    }
+  });
+
+  it("respaldo N1 → N2 → N3 determinista (prueba directa de mutationShape)", () => {
+    const g = hybridGene("vapor", "cabeza", [0.5, 0.5, 0.5, 0.5]); // firma 2222
+    const key = (sig: string) => `vapor|cabeza|${sig}`;
+    const zero = [0, 0, 0, 0];
+    assert.deepEqual(mutationShape(g, g, "vapor", new Set(), zero, CFG), { shape: [0.5, 0.5, 0.5, 0.5], level: 0 });
+    // N0 bloqueado ⇒ N1: |nFo| todos 0 ⇒ orden por índice, dirección + ⇒ 3222
+    const n1 = mutationShape(g, g, "vapor", new Set([key("2222")]), zero, CFG);
+    assert.deepEqual(n1, { shape: [0.75, 0.5, 0.5, 0.5], level: 1 });
+    // orden por |nFo| desc: el índice 2 (|−0,4|) primero, dirección −  (f0 sigue siendo 2222)
+    const nFo = [0.1, 0.2, -0.4, 0.3];
+    assert.deepEqual(mutationShape(g, g, "vapor", new Set([key("2222")]), nFo, CFG).shape, [0.5, 0.5, 0.25, 0.5]);
+    // N1 bloqueado entero ⇒ N2 (sentido contrario, mismo orden)
+    const n1all = [key("2222"), key("2212"), key("2223"), key("2322"), key("3222")];
+    assert.deepEqual(mutationShape(g, g, "vapor", new Set(n1all), nFo, CFG), { shape: [0.5, 0.5, 0.75, 0.5], level: 2 });
+    // N1 y N2 bloqueados ⇒ N3: distancia 2 y firma ascendente ⇒ 0222
+    const ring = ["2222", "3222", "1222", "2322", "2122", "2232", "2212", "2223", "2221"].map(key);
+    assert.deepEqual(mutationShape(g, g, "vapor", new Set(ring), zero, CFG), { shape: [0, 0.5, 0.5, 0.5], level: 3 });
+    // las claves de otra familia no bloquean
+    assert.equal(mutationShape(g, g, "llama", new Set(ring), zero, CFG).level, 0);
+  });
+
+  it("bordes de la rejilla: el vecino que sale de [0,1] se salta", () => {
+    const g = hybridGene("vapor", "cola", [1, 1, 1, 1]); // 4444
+    const r = mutationShape(g, g, "vapor", new Set(["vapor|cola|4444"]), [1, 1, 1, 1], CFG);
+    assert.deepEqual(r, { shape: [0.75, 1, 1, 1], level: 2 }); // N1 (+) imposible ⇒ N2 (−)
+  });
+});
+
+describe("mutación: valores (spec §4.4, QA-09)", () => {
+  it("valores mutados = repartir(m + media de las desviaciones de los padres, límites(m), Q)", () => {
+    const pop = createWildPopulation(createRng("v44"), CFG, 10);
+    const rng = createRng("v44b");
+    for (let i = 0; i < 500; i++) {
+      const p = pop[i % 10] as Creature;
+      const q = pop[(i + 3) % 10] as Creature;
+      const L = LOCUS_IDS[i % 4] as (typeof LOCUS_IDS)[number];
+      const gA = p.genome[L].D;
+      const gB = q.genome[L].D;
+      const nAn = [rng.float(-3, 3), rng.float(-3, 3), rng.float(-3, 3)];
+      const nFo = [rng.float(-3, 3), rng.float(-3, 3), rng.float(-3, 3), rng.float(-3, 3)];
+      const S = [gA, p.genome[L].R1, p.genome[L].R2, gB, q.genome[L].R1, q.genome[L].R2];
+      const out = mutateGene(gA, gB, S, rng.next(), rng.next(), nAn, nFo, CFG).gene;
+      const m = mutationAnchor(gA, gB, nAn, CFG);
+      const k3 = ["potencia", "velocidad", "resistencia"] as const;
+      const target = m.map((mk, k) => mk + (gA.values[k3[k]!] - gA.anchor[k3[k]!] + (gB.values[k3[k]!] - gB.anchor[k3[k]!])) / 2);
+      const [lo, hi] = valueBoundsOf(m, CFG);
+      const Q = Math.round(((gA.quality + gB.quality) / 2) * 100) / 100;
+      assert.deepEqual([out.anchor.potencia, out.anchor.velocidad, out.anchor.resistencia], m);
+      assert.deepEqual([out.values.potencia, out.values.velocidad, out.values.resistencia], distribute(target, lo, hi, Q, CFG));
+      assert.equal(out.quality, Q);
+    }
   });
 });
 
@@ -237,18 +387,6 @@ describe("casos borde", () => {
       for (const L of LOCUS_IDS) {
         const parentKeys = new Set(keysOf(a, L));
         for (const k of keysOf(r.child, L)) assert.ok(parentKeys.has(k));
-      }
-    }
-  });
-
-  it("padres idénticos con mutación: el D mutado difiere del D de los padres", () => {
-    const [a] = wildPair("id");
-    const twin = { ...a, id: "twin" };
-    for (const r of breedMany(a, twin, 300, ALWAYS, "gem-mut")) {
-      for (const m of r.mutations) {
-        assert.ok(!m.parentDKeys.includes(m.key));
-        // familias iguales => la mutación conserva familia (spec §4.1)
-        assert.equal(m.family, a.genome[m.locus].D.family);
       }
     }
   });
@@ -273,38 +411,43 @@ describe("casos borde", () => {
     for (const r of breedMany(hyb("a", "vapor"), hyb("b", "vapor"), 100, ALWAYS, "hh2")) {
       for (const m of r.mutations) {
         assert.equal(m.family, "vapor");
-        assert.notEqual(m.key, "vapor|" + m.locus + "|1232");
+        assert.notEqual(m.key, `vapor|${m.locus}|1232`);
       }
     }
   });
 
-  it("mutación: nunca igual a un D de los padres; id/movimiento según catálogo o provisional", () => {
-    const pop = createWildPopulation(createRng("mpop"), CFG, 30);
-    const rng = createRng("mut");
-    let catalogHits = 0;
-    let fresh = 0;
-    for (let i = 0; i < 1500; i++) {
-      const p = pop[i % 30] as Creature;
-      const q = pop[(i * 11 + 3) % 30] as Creature;
-      if (p.id === q.id) continue;
-      const r = breed(p, q, rng, ALWAYS, { id: `m${i}`, birth: 1 });
-      for (const m of r.mutations) {
-        const g = r.child.genome[m.locus].D;
-        assert.equal(g.origin, "mutacion");
-        assert.equal(geneKey(g), m.key);
-        assert.ok(!m.parentDKeys.includes(m.key), `${m.key} repite un D de los padres`);
-        if (m.matchesCatalog) {
-          catalogHits++;
-          assert.equal(g.id, CFG.catalogByKey.get(m.key)?.id);
-          assert.equal(g.move, `mov:${g.id}`);
-        } else {
-          fresh++;
-          assert.equal(g.id, `${g.family}.${g.locus}.m${g.signature}`);
-          assert.equal(g.move, `mov:prov:${g.id}`);
-        }
+  it("familia de la cría en F1 llama × marea: un solo D Vapor basta si no hay 3 de otra (spec §7)", () => {
+    let oneVaporFamily = 0;
+    for (const r of breedMany(pureCreature("a", "llama"), pureCreature("b", "marea"), 400, ALWAYS, "f1")) {
+      const ds = LOCUS_IDS.map((L) => r.child.genome[L].D.family);
+      const vap = ds.filter((f) => f === "vapor").length;
+      if (vap === 1 && r.child.family === "vapor") oneVaporFamily++;
+      if (vap > 0) {
+        const maxOther = Math.max(...["llama", "marea"].map((f) => ds.filter((o) => o === f).length));
+        assert.equal(r.child.family === "vapor", 2 * vap >= maxOther, ds.join(","));
       }
     }
-    assert.ok(catalogHits > 0 && fresh > 0, `${catalogHits} / ${fresh}`);
+    assert.ok(oneVaporFamily > 0);
+  });
+
+  it("mutación que cae en el catálogo conserva calidad mutada y origen (spec §1.2)", () => {
+    const pop = createWildPopulation(createRng("cat"), CFG, 30);
+    const rng = createRng("cat2");
+    let seen = 0;
+    for (let i = 0; i < 3000 && seen < 20; i++) {
+      const p = pop[i % 30] as Creature;
+      const q = pop[(i * 7 + 2) % 30] as Creature;
+      if (p.id === q.id) continue;
+      const r = breed(p, q, rng, ALWAYS, { id: `k${i}`, birth: 1 });
+      for (const m of r.mutations.filter((x) => x.matchesCatalog)) {
+        const g = r.child.genome[m.locus].D;
+        assert.equal(g.origin, "mutacion");
+        assert.equal(g.quality, Math.round(((p.genome[m.locus].D.quality + q.genome[m.locus].D.quality) / 2) * 100) / 100);
+        seen++;
+      }
+    }
+    assert.ok(seen > 0);
+    assert.equal(catalogGene("llama.cabeza.1").quality, 90);
   });
 });
 
@@ -341,12 +484,13 @@ describe("vector dorado", () => {
     const b = createWildCreature(rng, CFG, { id: "padreB" });
     const cfg = loadConfig((r) => (r.mutacion.prob_por_locus = 0.3));
     const res = breed(a, b, rng, cfg, { id: "cria", birth: 1 });
+    assert.ok(res.mutations.length > 0);
     assert.equal(JSON.stringify(res.child), GOLDEN_CHILD);
     assert.equal(JSON.stringify(expressedStats(res.child)), GOLDEN_STATS);
   });
 });
 
-// Si estos cambian, ha cambiado el algoritmo o el orden de tiradas: rompe
-// la reproducibilidad de partidas y simulaciones ya registradas.
-const GOLDEN_CHILD = "{\"id\":\"cria\",\"genome\":{\"cabeza\":{\"D\":{\"id\":\"voltio.cabeza.2\",\"family\":\"voltio\",\"locus\":\"cabeza\",\"shape\":[0.5,0.75,0.75,0.75],\"signature\":\"2333\",\"move\":\"mov:voltio.cabeza.2\",\"anchor\":{\"potencia\":35,\"velocidad\":40,\"resistencia\":15},\"values\":{\"potencia\":35.88,\"velocidad\":40.25,\"resistencia\":13.2},\"origin\":\"base\"},\"R1\":{\"id\":\"voltio.cabeza.1\",\"family\":\"voltio\",\"locus\":\"cabeza\",\"shape\":[0.25,0.75,1,0.5],\"signature\":\"1342\",\"move\":\"mov:voltio.cabeza.1\",\"anchor\":{\"potencia\":31,\"velocidad\":42,\"resistencia\":17},\"values\":{\"potencia\":29.83,\"velocidad\":44.25,\"resistencia\":16.54},\"origin\":\"base\"},\"R2\":{\"id\":\"roca.cabeza.1\",\"family\":\"roca\",\"locus\":\"cabeza\",\"shape\":[0.75,0.25,0.75,0.25],\"signature\":\"3131\",\"move\":\"mov:roca.cabeza.1\",\"anchor\":{\"potencia\":35,\"velocidad\":18,\"resistencia\":37},\"values\":{\"potencia\":31.28,\"velocidad\":16.08,\"resistencia\":38.58},\"origin\":\"base\"}},\"cuerpo\":{\"D\":{\"id\":\"roca.cuerpo.1\",\"family\":\"roca\",\"locus\":\"cuerpo\",\"shape\":[1,0,0.75,0.25],\"signature\":\"4031\",\"move\":\"mov:roca.cuerpo.1\",\"anchor\":{\"potencia\":30,\"velocidad\":16,\"resistencia\":44},\"values\":{\"potencia\":28.88,\"velocidad\":11.99,\"resistencia\":44.43},\"origin\":\"base\"},\"R1\":{\"id\":\"voltio.cuerpo.2\",\"family\":\"voltio\",\"locus\":\"cuerpo\",\"shape\":[0.75,0.5,0.75,0.75],\"signature\":\"3233\",\"move\":\"mov:voltio.cuerpo.2\",\"anchor\":{\"potencia\":30,\"velocidad\":38,\"resistencia\":22},\"values\":{\"potencia\":29.68,\"velocidad\":35.9,\"resistencia\":22.79},\"origin\":\"base\"},\"R2\":{\"id\":\"roca.cuerpo.3\",\"family\":\"roca\",\"locus\":\"cuerpo\",\"shape\":[0.75,0,1,0],\"signature\":\"3040\",\"move\":\"mov:roca.cuerpo.3\",\"anchor\":{\"potencia\":28,\"velocidad\":20,\"resistencia\":42},\"values\":{\"potencia\":24.81,\"velocidad\":17.64,\"resistencia\":41.46},\"origin\":\"base\"}},\"extremidades\":{\"D\":{\"id\":\"roca.extremidades.1\",\"family\":\"roca\",\"locus\":\"extremidades\",\"shape\":[0.75,0.5,0.75,0],\"signature\":\"3230\",\"move\":\"mov:roca.extremidades.1\",\"anchor\":{\"potencia\":31,\"velocidad\":21,\"resistencia\":38},\"values\":{\"potencia\":30.61,\"velocidad\":14.99,\"resistencia\":36.87},\"origin\":\"base\"},\"R1\":{\"id\":\"roca.extremidades.2\",\"family\":\"roca\",\"locus\":\"extremidades\",\"shape\":[1,0.5,0.5,0.25],\"signature\":\"4221\",\"move\":\"mov:roca.extremidades.2\",\"anchor\":{\"potencia\":35,\"velocidad\":19,\"resistencia\":36},\"values\":{\"potencia\":36.43,\"velocidad\":17.88,\"resistencia\":32.43},\"origin\":\"base\"},\"R2\":{\"id\":\"brote.extremidades.1\",\"family\":\"brote\",\"locus\":\"extremidades\",\"shape\":[0.25,0.75,0.25,0.5],\"signature\":\"1312\",\"move\":\"mov:brote.extremidades.1\",\"anchor\":{\"potencia\":29,\"velocidad\":33,\"resistencia\":28},\"values\":{\"potencia\":29.69,\"velocidad\":35.47,\"resistencia\":25.26},\"origin\":\"base\"}},\"cola\":{\"D\":{\"id\":\"brote.cola.m1323\",\"family\":\"brote\",\"locus\":\"cola\",\"shape\":[0.25,0.75,0.5,0.75],\"signature\":\"1323\",\"move\":\"mov:prov:brote.cola.m1323\",\"anchor\":{\"potencia\":30.35,\"velocidad\":20.85,\"resistencia\":38.8},\"values\":{\"potencia\":26.85,\"velocidad\":22.79,\"resistencia\":38.36},\"origin\":\"mutacion\"},\"R1\":{\"id\":\"voltio.cola.1\",\"family\":\"voltio\",\"locus\":\"cola\",\"shape\":[0,1,1,0.5],\"signature\":\"0442\",\"move\":\"mov:voltio.cola.1\",\"anchor\":{\"potencia\":28,\"velocidad\":41,\"resistencia\":21},\"values\":{\"potencia\":26.33,\"velocidad\":40.04,\"resistencia\":18.54},\"origin\":\"base\"},\"R2\":{\"id\":\"brote.cola.2\",\"family\":\"brote\",\"locus\":\"cola\",\"shape\":[0.25,0.75,0,1],\"signature\":\"1304\",\"move\":\"mov:brote.cola.2\",\"anchor\":{\"potencia\":34,\"velocidad\":27,\"resistencia\":29},\"values\":{\"potencia\":31.33,\"velocidad\":26.68,\"resistencia\":32.66},\"origin\":\"base\"}}},\"family\":\"roca\",\"generation\":1,\"parents\":[\"padreA\",\"padreB\"],\"offspringCount\":0,\"birth\":1}";
-const GOLDEN_STATS = "{\"potencia\":122.22,\"velocidad\":90.02000000000001,\"resistencia\":132.86}";
+// Vectores dorados v0.2 (spec §14). Si cambian, ha cambiado el algoritmo o
+// el orden de tiradas: rompe partidas y simulaciones ya registradas.
+const GOLDEN_CHILD = "{\"id\":\"cria\",\"genome\":{\"cabeza\":{\"D\":{\"id\":\"liquen.cabeza.m2132\",\"family\":\"liquen\",\"locus\":\"cabeza\",\"shape\":[0.5,0.25,0.75,0.5],\"signature\":\"2132\",\"move\":\"mov:prov:liquen.cabeza.m2132\",\"quality\":88.87,\"anchor\":{\"potencia\":34.64,\"velocidad\":27.69,\"resistencia\":26.54},\"values\":{\"potencia\":34.01,\"velocidad\":28.19,\"resistencia\":26.67},\"origin\":\"mutacion\"},\"R1\":{\"id\":\"roca.cabeza.2\",\"family\":\"roca\",\"locus\":\"cabeza\",\"shape\":[1,0.25,0.5,0.5],\"signature\":\"4122\",\"move\":\"mov:roca.cabeza.2\",\"quality\":87.22,\"anchor\":{\"potencia\":37.79,\"velocidad\":15.51,\"resistencia\":33.92},\"values\":{\"potencia\":36.56,\"velocidad\":14.76,\"resistencia\":35.9},\"origin\":\"base\"},\"R2\":{\"id\":\"roca.cabeza.2\",\"family\":\"roca\",\"locus\":\"cabeza\",\"shape\":[1,0.25,0.5,0.5],\"signature\":\"4122\",\"move\":\"mov:roca.cabeza.2\",\"quality\":91.68,\"anchor\":{\"potencia\":39.73,\"velocidad\":16.3,\"resistencia\":35.65},\"values\":{\"potencia\":41.38,\"velocidad\":16.56,\"resistencia\":33.74},\"origin\":\"base\"}},\"cuerpo\":{\"D\":{\"id\":\"sombra.cuerpo.1\",\"family\":\"sombra\",\"locus\":\"cuerpo\",\"shape\":[0.75,0.5,0.5,0.75],\"signature\":\"3223\",\"move\":\"mov:sombra.cuerpo.1\",\"quality\":91.19,\"anchor\":{\"potencia\":33.43,\"velocidad\":33.44,\"resistencia\":24.32},\"values\":{\"potencia\":30.97,\"velocidad\":34.95,\"resistencia\":25.27},\"origin\":\"base\"},\"R1\":{\"id\":\"roca.cuerpo.2\",\"family\":\"roca\",\"locus\":\"cuerpo\",\"shape\":[1,0,0.5,0.5],\"signature\":\"4022\",\"move\":\"mov:roca.cuerpo.2\",\"quality\":88.26,\"anchor\":{\"potencia\":33.34,\"velocidad\":13.73,\"resistencia\":41.19},\"values\":{\"potencia\":32.62,\"velocidad\":13.57,\"resistencia\":42.07},\"origin\":\"base\"},\"R2\":{\"id\":\"roca.cuerpo.2\",\"family\":\"roca\",\"locus\":\"cuerpo\",\"shape\":[1,0,0.5,0.5],\"signature\":\"4022\",\"move\":\"mov:roca.cuerpo.2\",\"quality\":89.68,\"anchor\":{\"potencia\":33.88,\"velocidad\":13.95,\"resistencia\":41.85},\"values\":{\"potencia\":35.44,\"velocidad\":14.49,\"resistencia\":39.75},\"origin\":\"base\"}},\"extremidades\":{\"D\":{\"id\":\"brote.extremidades.m4222\",\"family\":\"brote\",\"locus\":\"extremidades\",\"shape\":[1,0.5,0.5,0.5],\"signature\":\"4222\",\"move\":\"mov:prov:brote.extremidades.m4222\",\"quality\":90.35,\"anchor\":{\"potencia\":37.7,\"velocidad\":21.6,\"resistencia\":31.05},\"values\":{\"potencia\":39.52,\"velocidad\":22.09,\"resistencia\":28.74},\"origin\":\"mutacion\"},\"R1\":{\"id\":\"brote.extremidades.2\",\"family\":\"brote\",\"locus\":\"extremidades\",\"shape\":[0.5,0.75,0,0.75],\"signature\":\"2303\",\"move\":\"mov:brote.extremidades.2\",\"quality\":91.49,\"anchor\":{\"potencia\":33.55,\"velocidad\":31.51,\"resistencia\":26.43},\"values\":{\"potencia\":34.21,\"velocidad\":32.26,\"resistencia\":25.02},\"origin\":\"base\"},\"R2\":{\"id\":\"brote.extremidades.3\",\"family\":\"brote\",\"locus\":\"extremidades\",\"shape\":[0,0.75,0.5,0.25],\"signature\":\"0321\",\"move\":\"mov:brote.extremidades.3\",\"quality\":89.61,\"anchor\":{\"potencia\":26.88,\"velocidad\":36.84,\"resistencia\":25.89},\"values\":{\"potencia\":28.7,\"velocidad\":36.06,\"resistencia\":24.85},\"origin\":\"base\"}},\"cola\":{\"D\":{\"id\":\"brote.cola.m2132\",\"family\":\"brote\",\"locus\":\"cola\",\"shape\":[0.5,0.25,0.75,0.5],\"signature\":\"2132\",\"move\":\"mov:prov:brote.cola.m2132\",\"quality\":92.81,\"anchor\":{\"potencia\":30.71,\"velocidad\":24.37,\"resistencia\":37.73},\"values\":{\"potencia\":28.74,\"velocidad\":26.36,\"resistencia\":37.71},\"origin\":\"mutacion\"},\"R1\":{\"id\":\"llama.cola.2\",\"family\":\"llama\",\"locus\":\"cola\",\"shape\":[0.5,1,0.5,0.75],\"signature\":\"2423\",\"move\":\"mov:llama.cola.2\",\"quality\":86.76,\"anchor\":{\"potencia\":42.42,\"velocidad\":24.1,\"resistencia\":20.24},\"values\":{\"potencia\":43.79,\"velocidad\":21.89,\"resistencia\":21.08},\"origin\":\"base\"},\"R2\":{\"id\":\"sombra.cola.1\",\"family\":\"sombra\",\"locus\":\"cola\",\"shape\":[0.25,1,0.5,0.75],\"signature\":\"1423\",\"move\":\"mov:sombra.cola.1\",\"quality\":90.09,\"anchor\":{\"potencia\":35.04,\"velocidad\":34.03,\"resistencia\":21.02},\"values\":{\"potencia\":34.4,\"velocidad\":33.29,\"resistencia\":22.4},\"origin\":\"base\"}}},\"family\":\"liquen\",\"generation\":1,\"parents\":[\"padreA\",\"padreB\"],\"offspringCount\":0,\"birth\":1}";
+const GOLDEN_STATS = "{\"potencia\":133.24,\"velocidad\":111.59,\"resistencia\":118.38999999999999}";

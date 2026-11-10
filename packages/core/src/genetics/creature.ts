@@ -1,7 +1,7 @@
 /** Criatura: familia (spec §7), salvajes (spec §2.2) y consultas. */
 import type { Rng } from "../rng.ts";
-import { geneFromType, geneKey, valueBounds } from "./gene.ts";
-import { clamp, roundTo, sampleNormals, statsFrom, statSum } from "./math.ts";
+import { geneKey, makeGene } from "./gene.ts";
+import { anchorBounds, distribute, mean3, roundTo, sampleNormals, statsFrom, statsToArray, statSum, valueBoundsOf } from "./math.ts";
 import {
   LOCUS_IDS,
   STAT_IDS,
@@ -16,23 +16,36 @@ import {
 } from "./types.ts";
 
 /**
- * spec §7 — familia de la criatura: la más frecuente entre los 4 D
- * (híbrida = su propia familia); empate ⇒ la del primer locus en orden
- * cabeza > cuerpo > extremidades > cola entre las empatadas. Sin tiradas.
+ * spec §7 [v0.2] — familia de la criatura: puntuación por familia sobre
+ * los 4 D (gen base `peso_gen_base`, gen híbrido `peso_gen_hibrido`).
+ * Gana la mayor; empate ⇒ gana una híbrida si hay alguna entre las
+ * empatadas; si siguen empatadas, la del primer locus (cabeza > … > cola).
  */
-export function creatureFamily(genome: Genome): FamilyId {
-  const counts = new Map<FamilyId, number>();
+export function creatureFamily(genome: Genome, config: GeneticsConfig): FamilyId {
+  const score = new Map<FamilyId, number>();
   for (const L of LOCUS_IDS) {
     const f = genome[L].D.family;
-    counts.set(f, (counts.get(f) ?? 0) + 1);
+    const w = config.hybridById.has(f) ? config.familyWeights.hybrid : config.familyWeights.base;
+    score.set(f, (score.get(f) ?? 0) + w);
   }
-  let best = 0;
-  for (const c of counts.values()) best = Math.max(best, c);
-  for (const L of LOCUS_IDS) {
-    const f = genome[L].D.family;
-    if (counts.get(f) === best) return f;
-  }
-  throw new Error("creatureFamily: genoma vacío");
+  let best = -Infinity;
+  for (const L of LOCUS_IDS) best = Math.max(best, score.get(genome[L].D.family) as number);
+  const tied = LOCUS_IDS.map((L) => genome[L].D.family).filter((f) => score.get(f) === best);
+  const hybrids = tied.filter((f) => config.hybridById.has(f));
+  const pool = hybrids.length > 0 ? hybrids : tied; // en orden de loci
+  return pool[0] as FamilyId;
+}
+
+/**
+ * spec §2.2 [v0.2] — calidad de un gen salvaje con 2 uniformes:
+ * triangular r2(base + base·margen·(uq1 + uq2 − 1)) ∈ [min, max];
+ * "uniforme" (solo barrido §11) usa r2(base + base·margen·(2·uq1 − 1)) e
+ * ignora uq2, que se consume igualmente (ver notas v0.2).
+ */
+export function wildQuality(uq1: number, uq2: number, config: GeneticsConfig): number {
+  const { base, margin } = config.quality;
+  const t = config.quality.wildDistribution === "triangular" ? uq1 + uq2 - 1 : 2 * uq1 - 1;
+  return roundTo(base + base * margin * t, config);
 }
 
 export interface WildOptions {
@@ -47,8 +60,9 @@ export interface WildOptions {
 }
 
 /**
- * spec §2.2 `salvaje(rng, familiaForzada?, puro?)`. Consume exactamente
- * `salvaje.tiradas_por_criatura` (181) tiradas, siempre en el mismo orden.
+ * spec §2.2 `salvaje(rng, familiaForzada?, puro?)` [v0.2]. Consume
+ * exactamente `salvaje.tiradas_por_criatura` (205) tiradas, siempre en el
+ * mismo orden: `t`, y por locus × slot `uc, uf, uv, uq1, uq2, 3×N`.
  */
 export function createWildCreature(rng: Rng, config: GeneticsConfig, opts: WildOptions): Creature {
   const base = config.baseFamilies;
@@ -67,6 +81,8 @@ export function createWildCreature(rng: Rng, config: GeneticsConfig, opts: WildO
       const uc = rng.next(); // 3 tiradas
       const uf = rng.next();
       const uv = rng.next();
+      const uq1 = rng.next(); // [v0.2] calidad
+      const uq2 = rng.next();
       const n = sampleNormals(rng, 3, config); // 12 tiradas
       const p = slot === "D" ? w.probDMain : w.probRMain;
       let fam: FamilyId;
@@ -77,19 +93,34 @@ export function createWildCreature(rng: Rng, config: GeneticsConfig, opts: WildO
       const variant = Math.floor(uv * w.variantsPerFamilyLocus) + 1;
       const type = config.catalogById.get(`${fam}.${L}.${variant}`);
       if (!type) throw new Error(`createWildCreature: falta ${fam}.${L}.${variant} en catálogo`);
-      const values = STAT_IDS.map((k, i) => {
-        const a = type.anchor[k];
-        const [lo, hi] = valueBounds(a, config);
-        return roundTo(clamp(a + w.sigma * (n[i] as number), lo, hi), config);
-      });
-      slots[slot] = geneFromType(type, statsFrom(values));
+      const Q = wildQuality(uq1, uq2, config);
+      // ancla del catálogo (calidad base) escalada a Q y repartida (spec §1.5)
+      const [alo, ahi] = anchorBounds(config);
+      const anchor = distribute(
+        statsToArray(type.anchor).map((a) => (a * Q) / config.quality.base),
+        alo,
+        ahi,
+        Q,
+        config,
+      );
+      // valores: ruido de suma cero y reparto a Q
+      const mn = mean3(n);
+      const [vlo, vhi] = valueBoundsOf(anchor, config);
+      const values = distribute(
+        anchor.map((a, k) => a + w.sigma * ((n[k] as number) - mn)),
+        vlo,
+        vhi,
+        Q,
+        config,
+      );
+      slots[slot] = makeGene(type, Q, statsFrom(anchor), statsFrom(values), "base");
     }
-    genome[L] = slots;
+    genome[L] = Object.freeze(slots);
   }
   return {
     id: opts.id,
     genome,
-    family: creatureFamily(genome),
+    family: creatureFamily(genome, config),
     generation: 0,
     parents: null,
     offspringCount: 0,
@@ -133,13 +164,27 @@ export function allGenes(c: Creature): Gene[] {
   return LOCUS_IDS.flatMap((L) => [c.genome[L].D, c.genome[L].R1, c.genome[L].R2]);
 }
 
+/** spec §1.3 [v0.2] — calidad de la criatura = media de la calidad de los 4 D. */
+export function creatureQuality(c: Creature): number {
+  let s = 0;
+  for (const L of LOCUS_IDS) s += c.genome[L].D.quality;
+  return s / LOCUS_IDS.length;
+}
+
+/** spec §1.3 [v0.2] — porcentaje mostrado: (calidad − min) / (max − min) × 100. */
+export function qualityPercent(quality: number, config: GeneticsConfig): number {
+  const { min, max } = config.quality;
+  return ((quality - min) / (max - min)) * 100;
+}
+
 /**
- * Invariantes de la spec §10.2 sobre una criatura. Devuelve la lista de
- * violaciones (vacía si todo cumple). `sumTolerance` por defecto 0,01
- * (`criterios_sim.invariantes.tolerancia_suma_ancla`).
+ * Invariantes por gen de la spec §10.2 [v0.2]. Devuelve la lista de
+ * violaciones (vacía si todo cumple). Tolerancia de sumas por defecto:
+ * `criterios_sim.invariantes.tolerancia_suma` (QA-05).
  */
-export function checkInvariants(c: Creature, config: GeneticsConfig, sumTolerance = 0.01): string[] {
+export function checkInvariants(c: Creature, config: GeneticsConfig, sumTolerance = config.invariantTolerance): string[] {
   const v = config.values;
+  const q = config.quality;
   const errs: string[] = [];
   const eps = 1e-9;
   for (const L of LOCUS_IDS) {
@@ -147,13 +192,16 @@ export function checkInvariants(c: Creature, config: GeneticsConfig, sumToleranc
       const g = c.genome[L][slot];
       const where = `${c.id}.${L}.${slot}`;
       if (g.locus !== L) errs.push(`${where}: locus ${g.locus}`);
-      if (Math.abs(statSum(g.anchor) - v.anchorSum) > sumTolerance) errs.push(`${where}: Σancla=${statSum(g.anchor)}`);
+      if (!(g.quality >= q.min - eps && g.quality <= q.max + eps)) errs.push(`${where}: calidad=${g.quality}`);
+      if (!(Math.abs(statSum(g.anchor) - g.quality) <= sumTolerance)) errs.push(`${where}: Σancla=${statSum(g.anchor)} ≠ ${g.quality}`);
+      if (!(Math.abs(statSum(g.values) - g.quality) <= sumTolerance)) errs.push(`${where}: Σvalores=${statSum(g.values)} ≠ ${g.quality}`);
       for (const k of STAT_IDS) {
         const a = g.anchor[k];
         const x = g.values[k];
-        if (a < v.anchorMin - eps || a > v.anchorMax + eps) errs.push(`${where}: ancla.${k}=${a}`);
-        if (x < v.absMin - eps || x > v.absMax + eps) errs.push(`${where}: valor.${k}=${x}`);
-        if (Math.abs(x - a) > v.maxDeviation + eps) errs.push(`${where}: |${k}−ancla|=${Math.abs(x - a)}`);
+        if (!(a >= v.anchorMin - eps && a <= v.anchorMax + eps)) errs.push(`${where}: ancla.${k}=${a}`);
+        if (!(x >= Math.max(v.absMin, a - v.maxDeviation) - eps && x <= Math.min(v.absMax, a + v.maxDeviation) + eps)) {
+          errs.push(`${where}: valor.${k}=${x} (ancla ${a})`);
+        }
       }
     }
   }

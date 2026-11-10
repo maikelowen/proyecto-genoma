@@ -28,7 +28,9 @@ import {
   createRng,
   createWildCreature,
   createWildPopulation,
+  distribute,
   expressedStats,
+  makeGene,
   fromState,
   geneKey,
   LOCUS_IDS,
@@ -100,19 +102,20 @@ function normal(rng: Rng, cfg: GeneticsConfig): number {
  */
 export function createClones(rng: Rng, cfg: GeneticsConfig, n: number, homozygous = false): Creature[] {
   const tpl = createWildCreature(rng, cfg, { id: "tpl" });
-  const f = 10 ** cfg.decimals;
   const v = cfg.values;
   const out: Creature[] = [];
   for (let i = 0; i < n; i++) {
     const genome = {} as Record<LocusId, Locus>;
     for (const L of LOCUS_IDS) {
+      // [núcleo v0.2] Σvalores = calidad: ruido salvaje y reparto con `distribute` (spec §1.5).
+      // Pendiente (agente del simulador): E3a v0.2 = clones homocigotos brote.*.1 con valores = ancla.
       const slot = (g: Gene): Gene => {
-        const vals = STAT_IDS.map((k) => {
-          const a = g.anchor[k];
-          const x = a + cfg.wild.sigma * normal(rng, cfg);
-          return Math.round(Math.min(Math.max(x, Math.max(v.absMin, a - v.maxDeviation)), Math.min(v.absMax, a + v.maxDeviation)) * f) / f;
-        });
-        return { ...g, values: { potencia: vals[0] as number, velocidad: vals[1] as number, resistencia: vals[2] as number } };
+        const anc = STAT_IDS.map((k) => g.anchor[k]);
+        const x = anc.map((a) => a + cfg.wild.sigma * normal(rng, cfg));
+        const lo = anc.map((a) => Math.max(v.absMin, a - v.maxDeviation));
+        const hi = anc.map((a) => Math.min(v.absMax, a + v.maxDeviation));
+        const vals = distribute(x, lo, hi, g.quality, cfg);
+        return makeGene(g, g.quality, g.anchor, { potencia: vals[0] as number, velocidad: vals[1] as number, resistencia: vals[2] as number }, g.origin);
       };
       const l = tpl.genome[L];
       // homocigoto (diagnóstico E3a_homo): D, R1 y R2 son el tipo del D de la plantilla

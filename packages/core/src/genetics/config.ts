@@ -1,5 +1,6 @@
 /**
- * Carga y validación de `config/genetica.v0.1.json`.
+ * Carga y validación de `config/genetica.v0.2.json` (spec v0.2 §9.3).
+ * Solo admite el formato v0.2 (calidad por gen); la v0.1 ya no se carga.
  *
  * Función pura: recibe el objeto JSON ya parseado (el núcleo no lee
  * ficheros) y devuelve una GeneticsConfig tipada e inmutable, o lanza
@@ -91,8 +92,21 @@ export function pairKey(a: FamilyId, b: FamilyId): string {
 export function parseGeneticsConfig(raw: unknown): GeneticsConfig {
   const r = obj(raw, "config");
 
+  const version = str(r["version"], "version");
+  if (version !== "0.2") fail("version", `solo se admite la config v0.2 (recibida '${version}')`);
+
+  // spec §9.3 — reglas de validación declaradas en la propia config
+  const vc = obj(r["validacion_config"], "validacion_config");
+  const idRegex = new RegExp(str(vc["regex_ids"], "validacion_config.regex_ids"));
+  const maxOffspringMin = int(vc["max_crias_minimo"], "validacion_config.max_crias_minimo", 0);
+  const normalTol = num(vc["tolerancia_normal_factor"], "validacion_config.tolerancia_normal_factor", 0);
+  const checkId = (id: string, path: string): void => {
+    if (!idRegex.test(id)) fail(path, `id '${id}' no cumple ${idRegex.source} (QA-07)`);
+  };
+
   // spec §1.1 — órdenes fijos
   sameList(arr(r["orden_loci"], "orden_loci"), LOCUS_IDS, "orden_loci");
+  LOCUS_IDS.forEach((l, i) => checkId(l, `orden_loci[${i}]`));
   sameList(arr(r["orden_valores"], "orden_valores"), STAT_IDS, "orden_valores");
   const slots = arr(obj(r["orden_slots_padres"], "orden_slots_padres")["slots"], "orden_slots_padres.slots");
   sameList(slots, ["A.D", "A.R1", "A.R2", "B.D", "B.R1", "B.R2"], "orden_slots_padres.slots");
@@ -102,12 +116,14 @@ export function parseGeneticsConfig(raw: unknown): GeneticsConfig {
   const baseFamilies = arr(fam["base"], "familias.base").map((x, i) => str(x, `familias.base[${i}]`));
   if (baseFamilies.length < 2) fail("familias.base", "se necesitan al menos 2 familias");
   if (new Set(baseFamilies).size !== baseFamilies.length) fail("familias.base", "ids repetidos");
+  baseFamilies.forEach((f, i) => checkId(f, `familias.base[${i}]`));
   const hybrids: HybridFamily[] = arr(fam["hibridas"], "familias.hibridas").map((h, i) => {
     const p = `familias.hibridas[${i}]`;
     const o = obj(h, p);
     const comps = arr(o["componentes"], `${p}.componentes`).map((c, j) => str(c, `${p}.componentes[${j}]`));
     if (comps.length !== 2 || comps[0] === comps[1]) fail(`${p}.componentes`, "deben ser 2 familias distintas");
     for (const c of comps) if (!baseFamilies.includes(c)) fail(`${p}.componentes`, `'${c}' no es familia base`);
+    checkId(str(o["id"], `${p}.id`), `${p}.id`);
     return { id: str(o["id"], `${p}.id`), name: str(o["nombre"], `${p}.nombre`), components: [comps[0], comps[1]] as [string, string] };
   });
   const hybridById = new Map<FamilyId, HybridFamily>();
@@ -127,12 +143,18 @@ export function parseGeneticsConfig(raw: unknown): GeneticsConfig {
     center: num(n["centro"], "normal.centro"),
     factor: num(n["factor"], "normal.factor", 0),
   };
+  // spec §9.1 (QA-04): la normal debe ser estándar para n_uniformes dado
+  if (normal.center !== normal.uniforms / 2) fail("normal.centro", `debe ser n_uniformes/2 = ${normal.uniforms / 2}`);
+  if (Math.abs(normal.factor * normal.factor * normal.uniforms - 12) >= normalTol) {
+    fail("normal.factor", "factor²·n_uniformes debe ser 12");
+  }
   const decimals = int(r["redondeo_decimales"], "redondeo_decimales", 0, 10);
+  let roundFactor = 1; // spec §9.1 (QA-03): F = 10^decimales por multiplicación
+  for (let i = 0; i < decimals; i++) roundFactor *= 10;
 
   // spec §1.2 — rangos de valores
   const v = obj(r["valores"], "valores");
   const values = {
-    anchorSum: num(v["suma_ancla"], "valores.suma_ancla"),
     anchorMin: num(v["ancla_min"], "valores.ancla_min"),
     anchorMax: num(v["ancla_max"], "valores.ancla_max"),
     absMin: num(v["absoluto_min"], "valores.absoluto_min"),
@@ -141,8 +163,24 @@ export function parseGeneticsConfig(raw: unknown): GeneticsConfig {
   };
   if (values.anchorMin > values.anchorMax) fail("valores", "ancla_min > ancla_max");
   if (values.absMin > values.anchorMin || values.absMax < values.anchorMax) fail("valores", "el rango absoluto debe contener al de ancla");
-  if (values.anchorMin * 3 > values.anchorSum || values.anchorMax * 3 < values.anchorSum) {
-    fail("valores.suma_ancla", "inalcanzable con ancla_min/ancla_max");
+
+  // spec §1.2/§1.4/§9.3 — calidad por gen
+  const q = obj(r["calidad"], "calidad");
+  const dist = str(q["distribucion_salvaje"], "calidad.distribucion_salvaje");
+  if (dist !== "triangular" && dist !== "uniforme") fail("calidad.distribucion_salvaje", "debe ser 'triangular' o 'uniforme'");
+  if (q["mutacion"] !== "media_padres_sin_ruido") fail("calidad.mutacion", "solo se admite 'media_padres_sin_ruido'");
+  const quality = {
+    base: num(q["base"], "calidad.base", 0),
+    margin: num(q["margen"], "calidad.margen", 0, 1),
+    min: num(q["min"], "calidad.min"),
+    max: num(q["max"], "calidad.max"),
+    wildDistribution: dist,
+  } as const;
+  if (Math.abs(quality.min - quality.base * (1 - quality.margin)) > 1e-9) fail("calidad.min", "debe ser base·(1−margen)");
+  if (Math.abs(quality.max - quality.base * (1 + quality.margin)) > 1e-9) fail("calidad.max", "debe ser base·(1+margen)");
+  // Σlo ≤ calidad.min y calidad.max ≤ Σhi para anclas ⇒ repartir siempre es factible
+  if (values.anchorMin * 3 > quality.min || values.anchorMax * 3 < quality.max) {
+    fail("calidad", "rango de calidad inalcanzable con ancla_min/ancla_max");
   }
 
   const f = obj(r["forma"], "forma");
@@ -174,8 +212,8 @@ export function parseGeneticsConfig(raw: unknown): GeneticsConfig {
 
   // spec §9.2 — el consumo fijo debe cuadrar con la config
   const nu = normal.uniforms;
-  const expectWild = 1 + LOCUS_IDS.length * 3 * (3 + 3 * nu);
-  const expectLocus = 4 + 9 * nu + 2 + 3 * nu + 4 * nu;
+  const expectWild = 1 + LOCUS_IDS.length * 3 * (5 + 3 * nu); // spec §9.2: 1 + 12·(5 + 3n)
+  const expectLocus = 6 + 16 * nu; // spec §9.2
   if (wild.drawsPerCreature !== expectWild) fail("salvaje.tiradas_por_criatura", `debería ser ${expectWild}`);
   if (inheritance.drawsPerLocus !== expectLocus) fail("herencia.tiradas_por_locus", `debería ser ${expectLocus}`);
   if (inheritance.drawsPerChild !== expectLocus * LOCUS_IDS.length) fail("herencia.tiradas_por_cria", `debería ser ${expectLocus * LOCUS_IDS.length}`);
@@ -190,6 +228,7 @@ export function parseGeneticsConfig(raw: unknown): GeneticsConfig {
     sigmaShape: num(m["sigma_forma"], "mutacion.sigma_forma", 0),
     sumRetries: int(m["reintentos_reparto_suma"], "mutacion.reintentos_reparto_suma", 1),
     sumEpsilon: num(m["epsilon_suma"], "mutacion.epsilon_suma", 0),
+    fallbackMaxStep: int(m["paso_respaldo_max"], "mutacion.paso_respaldo_max", 2, 2),
   };
 
   const d = obj(r["deriva"], "deriva");
@@ -197,11 +236,20 @@ export function parseGeneticsConfig(raw: unknown): GeneticsConfig {
 
   const l = obj(r["limites_sim"], "limites_sim");
   const limits = {
-    maxOffspring: int(l["max_crias_por_criatura"], "limites_sim.max_crias_por_criatura", 0),
+    maxOffspring: int(l["max_crias_por_criatura"], "limites_sim.max_crias_por_criatura", Math.max(1, maxOffspringMin)), // QA-06
     minAgeGenerations: int(l["edad_minima_generaciones"], "limites_sim.edad_minima_generaciones", 0),
   };
 
-  const version = str(r["version"], "version");
+  // spec §7 — pesos de la familia de la criatura
+  const fc = obj(r["familia_criatura"], "familia_criatura");
+  const familyWeights = {
+    base: num(fc["peso_gen_base"], "familia_criatura.peso_gen_base", Number.MIN_VALUE),
+    hybrid: num(fc["peso_gen_hibrido"], "familia_criatura.peso_gen_hibrido", Number.MIN_VALUE),
+  };
+
+  // QA-05: tolerancia de invariantes desde la config
+  const inv = obj(obj(r["criterios_sim"], "criterios_sim")["invariantes"], "criterios_sim.invariantes");
+  const invariantTolerance = num(inv["tolerancia_suma"], "criterios_sim.invariantes.tolerancia_suma", 0);
 
   // Config parcial para reutilizar helpers (firma) al validar el catálogo.
   const partial = { shape, decimals } as unknown as GeneticsConfig;
@@ -226,7 +274,7 @@ export function parseGeneticsConfig(raw: unknown): GeneticsConfig {
     if (signature !== signatureOf(shapeT, partial)) fail(`${p}.firma`, `no coincide con la forma (${signatureOf(shapeT, partial)})`);
     const anchor = stats(o["ancla"], `${p}.ancla`);
     for (const k of STAT_IDS) num(anchor[k], `${p}.ancla.${k}`, values.anchorMin, values.anchorMax);
-    if (Math.abs(statSum(anchor) - values.anchorSum) > 1e-9) fail(`${p}.ancla`, `suma ${statSum(anchor)} ≠ ${values.anchorSum}`);
+    if (Math.abs(statSum(anchor) - quality.base) > 1e-9) fail(`${p}.ancla`, `suma ${statSum(anchor)} ≠ calidad.base ${quality.base}`);
     return {
       id: str(o["id"], `${p}.id`),
       family,
@@ -263,6 +311,8 @@ export function parseGeneticsConfig(raw: unknown): GeneticsConfig {
     hybrids: Object.freeze(hybrids),
     normal,
     decimals,
+    roundFactor,
+    quality,
     values,
     shape,
     wild,
@@ -270,6 +320,8 @@ export function parseGeneticsConfig(raw: unknown): GeneticsConfig {
     mutation,
     drift,
     limits,
+    familyWeights,
+    invariantTolerance,
     catalog: Object.freeze(catalog),
     catalogById,
     catalogByKey,

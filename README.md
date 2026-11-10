@@ -31,27 +31,27 @@ config/              datos de configuración del juego
 types/               shim mínimo de tipos de Node (ver más abajo)
 ```
 
-## API de genética (v0.1)
+## API de genética (v0.2)
 
-Spec: `docs/spec/genetica-v0.1.md` · notas: `docs/spec/notas-implementacion-v0.1.md`.
+Spec: `docs/spec/genetica-v0.2.md` · notas: `docs/spec/notas-implementacion-v0.2.md` · convenciones: `docs/equipo/nucleo.md`. El núcleo solo carga la config v0.2.
 
 ```ts
-import raw from "./config/genetica.v0.1.json" with { type: "json" };
+import raw from "./config/genetica.v0.2.json" with { type: "json" };
 import { parseGeneticsConfig, createRng, createWildPopulation, breed, expressedStats,
          creatureFamily, geneKey, createGenedex, recordMutations, checkInvariants } from "./packages/core/src/index.ts";
 
 const cfg = parseGeneticsConfig(raw);           // valida y tipa (barridos: clona raw, cambia, vuelve a parsear)
 const rng = createRng("semilla");
-const [a, b] = createWildPopulation(rng, cfg, 2);           // 181 tiradas por salvaje
+const [a, b] = createWildPopulation(rng, cfg, 2);           // 205 tiradas por salvaje
 const r = breed(a, b, rng, cfg, { id: "c1", birth: 1 });    // 280 tiradas, puro
 r.child; r.parent1; r.parent2;   // copias de los padres con crías + 1
 r.trace;      // por locus: mutated, dSlot, r1Slot, r2Slot
-r.mutations;  // claves nuevas, para métricas/Genedex
+r.mutations;  // clave, parentKeys (las 6 bloqueadas), fallbackLevel, para métricas/Genedex
 expressedStats(r.child);         // suma de valores de los 4 D
 geneKey(r.child.genome.cabeza.D);  // "familia|locus|firma"
 ```
 
-Otras: `createWildCreature(rng, cfg, {id, family?, pure?, birth?})`, `breedingBlocker`, `expressedGenes`, `allGenes`, `locusKeys`, `isCatalogKey`.
+Otras: `createWildCreature(rng, cfg, {id, family?, pure?, birth?})`, `breedingBlocker`, `creatureFamily(genome, cfg)`, `creatureQuality`, `qualityPercent`, `checkInvariants`, `expressedGenes`, `allGenes`, `locusKeys`, `isCatalogKey`, `distribute` (repartir §1.5), `makeGene`. Cada gen lleva `quality` (Σanchor = Σvalues = quality) y está congelado.
 
 ## Convenciones
 

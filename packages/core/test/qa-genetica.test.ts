@@ -108,10 +108,11 @@ describe("QA: familia de la mutación (spec §4.1)", () => {
   });
 });
 
-describe("QA: ancla mutada (spec §4.2)", () => {
+describe("QA: ancla mutada (spec v0.2 §4.3; era §4.2)", () => {
   const g = (anc: [number, number, number]): Gene => {
     const anchor = { potencia: anc[0], velocidad: anc[1], resistencia: anc[2] };
-    return { id: "x", family: "llama", locus: "cabeza", shape: [0.5, 0.5, 0.5, 0.5], signature: "2222", move: "m", anchor, values: anchor, origin: "base" };
+    // [v0.2] calidad 90 = Σancla de estos casos (mutationAnchor reparte a la media de calidades)
+    return { id: "x", family: "llama", locus: "cabeza", shape: [0.5, 0.5, 0.5, 0.5], signature: "2222", move: "m", quality: 90, anchor, values: anchor, origin: "base" };
   };
 
   it("casos en los bordes [12, 50]: suma 90, en rango, 2 decimales", () => {
