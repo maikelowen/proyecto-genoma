@@ -26,8 +26,13 @@
 - En los estadísticos, la tolerancia es de 5 errores estándar (`tol5`) con semilla fija: sin inestabilidad y sensibles a errores de ~1 punto.
 - Además de las frecuencias, probar las invariantes tras muchas generaciones con mutación alta, los casos borde construidos a mano (`makeCreature`, `hybridGene`) y llamadas directas a funciones internas para los respaldos.
 - Los tests de QA (`qa-genetica.test.ts`) no se debilitan: si hay que adaptarlos, solo se cambia lo que exige la API nueva.
-- `npm run check` debe tardar menos de 10 s (ahora mismo, ~3,5 s).
+- `npm run check` debe tardar menos de 10 s (ahora mismo, ~6,5 s con combate).
 
 ## Lecciones
 - Una spec con "suma fija" necesita una función común de reparto (`distribute`) con un ajuste de redondeo explícito, no soluciones distintas en cada sitio.
 - El parser es la primera línea de defensa del simulador: casi todos los hallazgos de QA de v0.1 eran validaciones que faltaban.
+- Combate: el estado guarda la energía *disponible* del turno (la IA la ve antes de elegir); las 24 tiradas se sacan todas al empezar el turno, por posición, antes de ejecutar nada.
+- La IA elige objetivos válidos *ahora* y usa la simulación solo para puntuar; si no, genera planes inválidos que el motor convierte en golpes sin avisar (lo detecta un test que exige `plan.valid` en todas las partidas).
+- Los JSON de config llevan claves `_doc`: los parsers cuentan claves con `dataKeys` (ignora `_…`).
+- En tests de reglas, controla todo lo que multiplica: `varianza = 0`, `jitter = 0`, golpe de potencia 0 y familias distintas en el equipo (la sinergia se cuela si 2+ usan movimiento).
+- Si una tabla derivable (familias) está en la config, se valida contra su regla y se permite borrarla para los barridos.
