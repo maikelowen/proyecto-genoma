@@ -26,6 +26,10 @@
 - **Topes frente a presupuesto:** comprueba con una muestra grande qué fracción de lo generado llega al tope. En v0.2, el 100 % de las curas de coste 4–5 estaban recortadas (K-01). El código era fiel a la spec y el fallo estaba en la spec.
 - **Simetría:** un equipo contra sí mismo no prueba nada. Usa un estado espejo (plan de A = plan de B) y parejas X–Y / Y–X con la misma semilla.
 - **Parches de config:** si se pueden crear claves y el parser ignora las desconocidas, una errata en un barrido no falla. Hay que probarlo.
+- **Cierre de un hallazgo de parches:** pruébalo en cada sección del parche (`combate`, `movimientos`, `sales`). K-02 quedó cerrado en dos de las tres (C-01).
+- **Modo rápido:** un "SUSPENDIDO" sacado de 24 combates no es una señal. Mira la columna `dudoso` antes de alarmarte y repite con ≥ 2000 combates (C-02).
+- **Configs iguales con resultados distintos:** mira si el `id` de la variante entra en la semilla. Compara configs con `isDeepStrictEqual` antes de culpar a la config (C-03).
+- **Tras adoptar una propuesta:** las etiquetas de "base" (`v02`) mienten y los tests autorreferentes dejan de fijar valores (C-04 y C-05).
 - **"No depende de X":** mira el IC y el recuento de semillas en cada instante. Con la media sola, una diferencia de 14 puntos pasa por "no depende" (G-01).
 
 ## Formato de entrega
