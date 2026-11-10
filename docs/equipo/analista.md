@@ -30,3 +30,4 @@
 - La estimación analítica del diseñador acertó dos veces (sorpresa y E4). Merece la pena pedirla siempre antes de simular, porque detecta fallos del simulador.
 - Un cambio "pequeño" de parámetro (κ 0,05 → 0,10) puede romper un criterio en otro escenario. Al validar, se valida la combinación en **todos** los escenarios.
 - El modo rápido sirve para depurar, no para concluir: con N = 200 y 40 generaciones, algunos criterios (Genedex) cambian de veredicto.
+- **No se valida con las semillas con que se eligió, ni se escriben a mano cifras o conclusiones en los informes** (QA V-01, V-02, V-04). κ 0,075 se eligió con `valida02-*` y se revalidó con `valida03-*`. El informe lee la config del JSON, indica commit y huella, y sus conclusiones son plantillas condicionales sobre los datos.

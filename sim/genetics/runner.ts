@@ -12,11 +12,14 @@ const ESC = RAW["escenarios_sim"];
 const CRIT = RAW["criterios_sim"];
 
 /**
- * Prefijo de semillas por defecto. v0.1 eligió parámetros con `genoma-1..5`;
- * la validación v0.2 usa semillas NUEVAS (QA S-02).
+ * Prefijo de semillas por defecto: siempre uno NO usado para elegir nada
+ * (QA S-02, V-01). Historial: `genoma-*` eligió los parámetros de v0.1;
+ * `valida02-*` validó v0.2 y con ellas se eligió κ 0,075; `valida03-*`
+ * revalida κ 0,075. Al elegir algo con unas semillas, añádelas a USED_SEED_PREFIXES.
  */
-export const DEFAULT_SEED_PREFIX = "valida02";
+export const DEFAULT_SEED_PREFIX = "valida03";
 export const V01_SEED_PREFIX = "genoma";
+export const USED_SEED_PREFIXES: readonly string[] = ["genoma", "valida02"];
 
 export interface Plan {
   readonly mode: "rapido" | "completo";
@@ -66,38 +69,34 @@ export interface Experiment {
   readonly strategy: Strategy;
 }
 
-/** §15.2: efecto de la afinidad 0,5 (v0.2) frente a 0,75 (v0.1) en E1/E2. */
-export const AFFINITY_075 = oneParam("afin075", "afinidad híbrida 0,75 (valor v0.1)", "mutacion.prob_hibrida_afinidad", 0.75);
+/** κ de la config por defecto (se lee del JSON, nunca se escribe a mano: QA V-02). */
+export function defaultKappa(): number {
+  return buildConfig(DEFAULT_VARIANT.set).drift.kappa;
+}
+
+export function kappaVariant(k: number): Variant {
+  return oneParam(`kappa${k}`, `κ ${String(k).replace(".", ",")}`, "deriva.kappa", k);
+}
 
 /**
- * Variantes de arreglo: solo para criterios que suspenden con la config por
- * defecto (presupuesto ajustado: como mucho 1–2 variantes del parámetro implicado).
+ * Referencias de κ para la trayectoria del monocultivo (QA V-03): los
+ * valores vecinos del de por defecto en `barridos_sim["deriva.kappa"]`.
+ * No se elige nada con ellas: solo describen cómo responde E5 a κ.
  */
-export const FIX_VARIANTS: readonly { readonly variant: Variant; readonly scenarios: readonly ScenarioId[]; readonly why: string }[] = [
-  {
-    variant: { id: "margen025", label: "margen de calidad ±2,5 % (87,75–92,25)", set: { "calidad.margen": 0.025, "calidad.min": 87.75, "calidad.max": 92.25 } },
-    scenarios: ["E5"],
-    why: "Monocultivo E5: ¿lo causa la selección indirecta de calidad? (margen a la mitad)",
-  },
-  {
-    variant: oneParam("kappa005", "κ deriva 0,05 (valor v0.1)", "deriva.kappa", 0.05),
-    scenarios: ["E5", "E3a", "E3a_control"],
-    why: "Monocultivo E5: ¿lo causa el retorno al ancla más fuerte de v0.2? (κ 0,05)",
-  },
-  {
-    variant: oneParam("kappa0075", "κ deriva 0,075 (intermedio)", "deriva.kappa", 0.075),
-    scenarios: ["E1", "E2", "E3a", "E3a_control", "E5"],
-    why: "Compromiso entre deriva E3a (κ alto) y monocultivo E5 (κ bajo): κ 0,075",
-  },
-];
+export function kappaReferences(): Variant[] {
+  const ks = [...(RAW["barridos_sim"]["deriva.kappa"] as number[])].sort((a, b) => a - b);
+  const k0 = defaultKappa();
+  const below = ks.filter((k) => k < k0).pop();
+  const above = ks.find((k) => k > k0);
+  return [below, above].filter((k): k is number => k !== undefined).map(kappaVariant);
+}
 
 export function experiments(): Experiment[] {
-  const out: Experiment[] = [
-    { id: "v02", label: "Configuración v0.2 por defecto", variants: [DEFAULT_VARIANT], scenarios: ALL_SCENARIOS, strategy: randomStrategy },
-    { id: "afinidad", label: "Afinidad híbrida 0,75 vs 0,5 (§15.2)", variants: [AFFINITY_075], scenarios: ["E1", "E2"], strategy: randomStrategy },
+  const k0 = String(defaultKappa()).replace(".", ",");
+  return [
+    { id: "v02", label: `Configuración por defecto del JSON (κ ${k0})`, variants: [{ ...DEFAULT_VARIANT, label: `por defecto (κ ${k0})` }], scenarios: ALL_SCENARIOS, strategy: randomStrategy },
+    { id: "referencia_kappa", label: "Referencias de κ (solo E5 y E3a, para la trayectoria del monocultivo)", variants: kappaReferences(), scenarios: ["E5", "E3a", "E3a_control"], strategy: randomStrategy },
   ];
-  for (const f of FIX_VARIANTS) out.push({ id: `arreglo_${f.variant.id}`, label: f.why, variants: [f.variant], scenarios: f.scenarios, strategy: randomStrategy });
-  return out;
 }
 
 /** Config efectiva de un escenario (E3a/E3c fuerzan la mutación indicada en el JSON). */

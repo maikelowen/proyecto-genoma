@@ -344,5 +344,5 @@ Tiradas por cría: **280 (sin cambio)**. Tiradas por salvaje: **181 → 205**. C
 3. Deriva E3a homocigoto con suma cero y κ 0,075 (medido en el informe v0.2: +6,21 en gen 20 y +7,30 en gen 100, con las semillas de validación; pendiente revalidar con semillas nuevas).
 4. Que D-007 no cambie la tasa de mutación ni la sorpresa (debería ser ±0,1 pp) y que el respaldo N3 no se use nunca o casi nunca (informar nº de usos de N1, N2, N3).
 5. Que con calidad, sorpresa, diversidad y Genedex sigan aprobando como con la combinación v0.2 del informe (16/18 + nuevos).
-6. Monocultivo dirigido E5 (≤ 60 %) y que la calidad media no suba en E5.
+6. Monocultivo dirigido E5 (≤ 60 %) y calidad en E5: puede subir dentro del margen (D-012, medido +1,44 [1,17; 1,70]); se vigila que ningún gen supere 94,5. Validado con semillas `valida03-*` (informe v0.2): 25/25 criterios, monocultivo E5 en el umbral (59,9 % [54,5; 65,3]); se sigue en el simulador de economía (D-013).
 7. Semana 2 (combate): calidad máx. vs mín. ≤ 55 % (objetivo), ≤ 60 % (límite).

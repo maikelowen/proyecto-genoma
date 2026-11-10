@@ -18,7 +18,7 @@ import {
   runDeterminism,
   runKey,
   seedsFor,
-  V01_SEED_PREFIX,
+  USED_SEED_PREFIXES,
   summarize,
   type Experiment,
   type ScenarioId,
@@ -115,10 +115,10 @@ const HELP = `Simulador de genética v0.1 (Proyecto Genoma)
   --quick               ejecución reducida (<30 s): N=200, 40 gen, 2 semillas, E4 1000 ensayos
   --semillas N          nº de semillas por configuración (completo: 5)
   --semilla P           prefijo de semilla (semillas = P-1..P-N; por defecto "${DEFAULT_SEED_PREFIX}",
-                        distinto del usado para elegir parámetros en v0.1, "${V01_SEED_PREFIX}")
+                        nunca uno ya usado para elegir: ${USED_SEED_PREFIXES.join(", ")})
   --generaciones N      generaciones de E1/E2 (≥20)
   --poblacion N         tamaño de población de E1/E2
-  --barrido a,b|todos   v02 (config por defecto, todos los escenarios), afinidad (0,75 vs 0,5 en E1/E2), arreglo_* (si los hay)
+  --barrido a,b|todos   v02 (config por defecto del JSON, todos los escenarios), referencia_kappa (κ vecinos, E5/E3a)
   --config a,b          limita configuraciones (p. ej. v02)
   --escenario a,b       E1, E2, E3a, E3a_control, E3b, E3c, E4, E5
   --estrategia id       E1 con esa estrategia (azar, velocidad, purista, hibridas) sobre la config por defecto
@@ -157,7 +157,7 @@ async function main(): Promise<void> {
     throw e;
   }
   const plan = makePlan(args);
-  if (args.seedPrefix === V01_SEED_PREFIX) console.log(`AVISO: "${V01_SEED_PREFIX}" son las semillas con las que se eligieron los parámetros en v0.1; para validar usa otras (QA S-02).`);
+  if (USED_SEED_PREFIXES.includes(args.seedPrefix)) console.log(`AVISO: con "${args.seedPrefix}-*" ya se eligieron parámetros; para validar usa otro prefijo (QA S-02, V-01).`);
   const exps = selectExperiments(args);
   if (exps.length === 0) throw new Error("nada que ejecutar con esos filtros");
   const outDir = args.out ?? `sim/out/${plan.mode}`;

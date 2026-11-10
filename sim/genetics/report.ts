@@ -3,7 +3,8 @@
  * claro y oscuro, legible en móvil) y versión Markdown versionable.
  * Todas las cifras salen de los mismos datos que los CSV.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import type { Row } from "./engine.ts";
 import { evaluateCriteria, type Criterion, type DeterminismResult, type Plan, type ScenarioId, type ScenarioRun, type VariantSummary } from "./runner.ts";
 import { meanCI, type MeanCI } from "./stats.ts";
@@ -76,6 +77,16 @@ export class Data {
       out.push([Number(((runs[0] as ScenarioRun).rows[i] as Row)["gen"]), s / runs.length]);
     }
     return out;
+  }
+  /** Valor por semilla, en la generación `gen`, del máximo de varias columnas (p. ej. peor locus). */
+  seedMaxAt(exp: string, id: string, sc: string, gen: number, cols: readonly string[]): number[] {
+    return this.input.runs
+      .filter((r) => r.experiment === exp && r.variant.id === id && r.scenario === sc)
+      .map((r) => {
+        const row = r.rows.find((x) => Number(x["gen"]) === gen);
+        return row ? Math.max(...cols.map((c) => Number(row[c]))) : NaN;
+      })
+      .filter((x) => Number.isFinite(x));
   }
   /** Curva media entre semillas del máximo de varias columnas (p. ej. peor locus). */
   curveMax(exp: string, id: string, sc: string, cols: readonly string[]): [number, number][] {
@@ -398,6 +409,27 @@ function renderMd(blocks: readonly Block[]): string {
 // ---------------------------------------------------------------------------
 // Entrada
 // ---------------------------------------------------------------------------
+
+/** Commit de HEAD (leído de .git, sin procesos externos) y huella de la config, para saber desde qué se generó el informe (QA V-02). */
+export function provenance(): { commit: string; configSha: string } {
+  let commit = "desconocido";
+  try {
+    const head = readFileSync(".git/HEAD", "utf8").trim();
+    if (head.startsWith("ref: ")) {
+      const ref = head.slice(5);
+      try {
+        commit = readFileSync(`.git/${ref}`, "utf8").trim();
+      } catch {
+        const line = readFileSync(".git/packed-refs", "utf8").split("\n").find((l) => l.endsWith(` ${ref}`));
+        if (line) commit = line.split(" ")[0] as string;
+      }
+    } else commit = head;
+  } catch {
+    /* sin .git */
+  }
+  const configSha = createHash("sha256").update(JSON.stringify(RAW)).digest("hex");
+  return { commit: commit.slice(0, 7), configSha: configSha.slice(0, 12) };
+}
 
 export function writeReports(input: ReportInput): string[] {
   const d = new Data(input);
