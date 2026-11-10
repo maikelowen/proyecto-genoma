@@ -49,3 +49,40 @@ export function quantile(xs: readonly number[], q: number): number {
   if (!Number.isFinite(a) || !Number.isFinite(b)) return lo === hi ? a : Number.isFinite(a) ? Infinity : a;
   return a + (b - a) * (pos - lo);
 }
+
+/**
+ * IC 95 % de un cuantil sin supuestos de distribución (estadísticos de
+ * orden, aproximación normal a la binomial). Admite Infinity (censura por
+ * la derecha): si el extremo cae en un censurado, devuelve Infinity.
+ */
+export function quantileCI(xs: readonly number[], q: number): { lo: number; hi: number } {
+  const s = [...xs].sort((a, b) => a - b);
+  const n = s.length;
+  if (n === 0) return { lo: NaN, hi: NaN };
+  const h = 1.96 * Math.sqrt(n * q * (1 - q));
+  const lo = Math.max(0, Math.floor(n * q - h) - 1);
+  const hi = Math.min(n - 1, Math.ceil(n * q + h) - 1);
+  return { lo: s[lo] as number, hi: s[hi] as number };
+}
+
+/**
+ * Probabilidad por cría de un suceso a partir de tiempos hasta el primer
+ * éxito con censura (MLE geométrico): p = nº no censurados / Σ min(T, tope).
+ * Devuelve p, su IC 95 % (Wald) y la mediana geométrica implícita ln 2 / p.
+ */
+export function geometricMLE(xs: readonly number[], cap: number): { p: number; lo: number; hi: number; median: number; medianLo: number; medianHi: number; censored: number } {
+  let events = 0;
+  let exposure = 0;
+  for (const x of xs) {
+    if (Number.isFinite(x)) {
+      events++;
+      exposure += x;
+    } else exposure += cap;
+  }
+  const p = events / exposure;
+  const se = Math.sqrt((p * p * (1 - p)) / Math.max(1, events));
+  const lo = Math.max(1e-12, p - 1.96 * se);
+  const hi = p + 1.96 * se;
+  const med = (x: number): number => Math.LN2 / -Math.log1p(-Math.min(x, 0.999999));
+  return { p, lo, hi, median: med(p), medianLo: med(hi), medianHi: med(lo), censored: xs.length - events };
+}

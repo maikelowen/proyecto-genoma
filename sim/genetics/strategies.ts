@@ -10,6 +10,7 @@
  * los barridos de la misma semilla sigan pareados en la cría).
  */
 import { expressedStats, type Creature, type GeneticsConfig, type Rng } from "../../packages/core/src/index.ts";
+import { RAW } from "./cfg.ts";
 
 export interface StrategyCtx {
   readonly cfg: GeneticsConfig;
@@ -47,7 +48,8 @@ export const randomStrategy: Strategy = {
  * velocidad de los 4 D; empate por índice); apareamiento al azar dentro
  * de la élite, varias pasadas hasta agotar el límite de 5 crías.
  */
-export const ELITE_FRACTION = 0.4;
+/** spec v0.2 §10.1 E5: `escenarios_sim.E5_estrategia_velocidad.fraccion_elite`. */
+export const ELITE_FRACTION: number = RAW["escenarios_sim"]["E5_estrategia_velocidad"].fraccion_elite;
 export const speedStrategy: Strategy = {
   id: "velocidad",
   label: "Selectiva por velocidad (élite 40 %)",

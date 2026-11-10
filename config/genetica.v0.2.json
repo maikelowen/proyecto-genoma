@@ -179,7 +179,7 @@
   },
   "deriva": {
     "_doc": "[v0.2] d' = (1-kappa)*d + sigma*(n - media(n)), d = valor - ancla; después reparto a la calidad con límites (sec. 6). Suma cero: no añade puntos.",
-    "kappa": 0.1,
+    "kappa": 0.075,
     "sigma": 1.0
   },
   "familia_criatura": {

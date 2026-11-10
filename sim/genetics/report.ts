@@ -8,6 +8,10 @@ import type { Row } from "./engine.ts";
 import { evaluateCriteria, type Criterion, type DeterminismResult, type Plan, type ScenarioId, type ScenarioRun, type VariantSummary } from "./runner.ts";
 import { meanCI, type MeanCI } from "./stats.ts";
 import { narrative, type Narrative } from "./narrative.ts";
+import { RAW } from "./cfg.ts";
+
+/** Tope de crías de E4: un valor censurado se muestra como "> tope" (QA S-01), nunca "∞". */
+export const E4_CAP: number = RAW["escenarios_sim"]["E4_primera_hibrida"].tope_crias;
 
 export interface ReportInput {
   readonly plan: Plan;
@@ -73,6 +77,19 @@ export class Data {
     }
     return out;
   }
+  /** Curva media entre semillas del máximo de varias columnas (p. ej. peor locus). */
+  curveMax(exp: string, id: string, sc: string, cols: readonly string[]): [number, number][] {
+    const runs = this.input.runs.filter((r) => r.experiment === exp && r.variant.id === id && r.scenario === sc);
+    if (runs.length === 0) return [];
+    const n = (runs[0] as ScenarioRun).rows.length;
+    const out: [number, number][] = [];
+    for (let i = 0; i < n; i++) {
+      let s = 0;
+      for (const r of runs) s += Math.max(...cols.map((c) => Number((r.rows[i] as Row)[c])));
+      out.push([Number(((runs[0] as ScenarioRun).rows[i] as Row)["gen"]), s / runs.length]);
+    }
+    return out;
+  }
   /** Nº total de crías simuladas en escenarios de población + E4. */
   totalChildren(): number {
     let t = 0;
@@ -97,21 +114,23 @@ export function pct(x: number, d = 1): string {
   return `${(x * 100).toFixed(d).replace(".", ",")} %`;
 }
 export function nf(x: number, d = 1): string {
-  if (x === Infinity) return "∞";
+  if (x === Infinity) return `> ${E4_CAP}`;
   if (!Number.isFinite(x)) return "—";
   return x.toFixed(d).replace(".", ",");
 }
 function fmtC(c: Criterion, x: number): string {
+  if (c.fmt === "pts") return `${x > 0 ? "+" : ""}${nf(x, 2)}`;
   return c.fmt === "pct" ? pct(x) : c.fmt === "int" ? nf(x, 0) : nf(x, Math.abs(x) >= 100 ? 0 : Math.abs(x) >= 10 ? 1 : 2);
 }
 export function critShort(c: Criterion): string {
   return fmtC(c, c.value);
 }
 export function critValue(c: Criterion): string {
-  const ci = c.ci && c.ci.n > 1 && c.ci.hi - c.ci.lo > 1e-9 ? ` [${fmtC(c, c.ci.lo)}; ${fmtC(c, c.ci.hi)}]` : "";
+  const ci = c.ci && (!("n" in c.ci) || c.ci.n > 1) && !(c.ci.hi - c.ci.lo <= 1e-9) ? ` [${fmtC(c, c.ci.lo)}; ${fmtC(c, c.ci.hi)}]` : "";
   return `${fmtC(c, c.value)}${ci}`;
 }
 export function verdict(c: Criterion): string {
+  if (c.informative) return c.pass ? "OK (informativo)" : "NO (informativo)";
   return c.pass ? (c.fragile ? "APROBADO (frágil)" : "APROBADO") : c.fragile ? "SUSPENSO (frágil)" : "SUSPENSO";
 }
 function esc(s: string): string {
@@ -226,7 +245,7 @@ export function dotChart(o: { title: string; items: readonly { label: string; ci
   return `<figure><figcaption>${esc(o.title)}</figcaption>${legend(slots, `<span><i class="sw band"></i>${esc(o.bandLabel)}</span>`)}<svg viewBox="0 0 ${W} ${h}" role="img" aria-label="${esc(o.title)}">${s}</svg>${o.note ? `<p class="note">${esc(o.note)}</p>` : ""}</figure>`;
 }
 
-export function histogram(o: { title: string; counts: readonly number[]; binLabel: (i: number) => string; xLabel: string; note?: string; marks?: readonly { x: number; label: string }[] }): string {
+export function histogram(o: { title: string; counts: readonly number[]; binLabel: (i: number) => string; xLabel: string; yLabel?: string; note?: string; marks?: readonly { x: number; label: string }[] }): string {
   const total = o.counts.reduce((a, b) => a + b, 0);
   const ys = o.counts.map((c) => c / total);
   const yMax0 = Math.max(...ys) * 1.1;
@@ -246,10 +265,12 @@ export function histogram(o: { title: string; counts: readonly number[]; binLabe
     if (i % 2 === 0) s += `<text class="tick" x="${x + bw / 2 - 1}" y="${H - M.b + 16}" text-anchor="middle">${esc(o.binLabel(i))}</text>`;
   });
   for (const mk of o.marks ?? []) {
-    const x = M.l + (mk.x / 10) * bw;
+    if (!Number.isFinite(mk.x)) continue;
+    const x = M.l + Math.min(n, mk.x / 10) * bw;
     s += `<line class="mark" x1="${x}" x2="${x}" y1="${M.t}" y2="${H - M.b}"/><text class="tick" x="${x + 4}" y="${M.t + 12}">${esc(mk.label)}</text>`;
   }
   s += `<line class="axis" x1="${M.l}" x2="${W - M.r}" y1="${H - M.b}" y2="${H - M.b}"/><text class="axl" x="${(M.l + W - M.r) / 2}" y="${H - 6}" text-anchor="middle">${esc(o.xLabel)}</text>`;
+  s += `<text class="axl" transform="translate(13 ${(M.t + H - M.b) / 2}) rotate(-90)" text-anchor="middle">${esc(o.yLabel ?? "% de ensayos")}</text>`; // QA S-06
   return `<figure><figcaption>${esc(o.title)}</figcaption><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title)}">${s}</svg>${o.note ? `<p class="note">${esc(o.note)}</p>` : ""}</figure>`;
 }
 
@@ -383,13 +404,15 @@ export function writeReports(input: ReportInput): string[] {
   const n: Narrative = narrative(d);
   const html = renderHtml(n.title, n.blocks);
   const out: string[] = [];
-  const htmlPath = input.plan.mode === "completo" && input.fullSet ? "sim/out/informe-genetica-v0.1.html" : `${input.outDir}/informe-genetica-v0.1.html`;
+  const official = input.plan.mode === "completo" && input.fullSet;
+  const htmlPath = official ? "sim/out/informe-genetica-v0.2.html" : `${input.outDir}/informe-genetica-v0.2.html`;
   writeFileSync(htmlPath, html);
   out.push(htmlPath);
-  if (input.plan.mode === "completo" && input.fullSet) {
+  if (official) {
     mkdirSync("docs/informes", { recursive: true });
-    writeFileSync("docs/informes/genetica-v0.1.md", renderMd(n.blocks));
-    out.push("docs/informes/genetica-v0.1.md");
+    writeFileSync("docs/informes/informe-genetica-v0.2.html", html);
+    writeFileSync("docs/informes/genetica-v0.2.md", renderMd(n.blocks));
+    out.push("docs/informes/informe-genetica-v0.2.html", "docs/informes/genetica-v0.2.md");
   }
   return out;
 }

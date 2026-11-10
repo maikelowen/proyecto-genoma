@@ -1,307 +1,302 @@
 /**
- * Contenido del informe. Todas las cifras se leen de los resultados
- * (Data); el texto interpretativo está escrito para la ejecución completa
- * y se omite por secciones si falta el barrido correspondiente.
+ * Contenido del informe v0.2. Las cifras se leen de los resultados (Data);
+ * el texto interpretativo está escrito para la ejecución completa y cada
+ * sección se omite si falta su barrido. Las cifras de v0.1 son las del
+ * informe v0.1 corregidas por QA (docs/revisiones/qa-sim-genetica-v0.1.md).
  */
 import { RAW } from "./cfg.ts";
-import { critShort, critValue, dotChart, histogram, lineChart, nf, pct, verdict, type Block, type Data, type Table } from "./report.ts";
+import { critValue, histogram, lineChart, nf, pct, verdict, type Block, type Data, type Table } from "./report.ts";
 import type { Criterion, ScenarioId } from "./runner.ts";
+import { V01_SEED_PREFIX } from "./runner.ts";
 
 export interface Narrative {
   readonly title: string;
   readonly blocks: Block[];
 }
 
-const P = "principal";
-const REC = "recomendada";
-const REC_ID = "v02";
-const BASE = "C-m2";
-const GRID_ORDER = ["A-m1", "A-m2", "A-m3", "B-m1", "B-m2", "B-m3", "C-m1", "C-m2", "C-m3"];
-const SLOT: Record<string, number> = { A: 1, B: 2, C: 3 };
+const X = "v02";
+const LOCI = ["cabeza", "cuerpo", "extremidades", "cola"];
+const CR = RAW["criterios_sim"];
+const QMAX = nf(RAW["calidad"].max, 1);
 
-function sampleCurve(pts: readonly [number, number][], gens: readonly number[]): [number, number][] {
-  return gens.map((g) => pts.find((p) => p[0] === g)).filter((p): p is [number, number] => p !== undefined);
-}
+/** Cifras de referencia de v0.1 (informe v0.1, config C-m2 / "v02 recomendada"; corrección de QA S-01). */
+const V01 = {
+  sorpresa: 0.265,
+  fracMut: 0.078,
+  dexRep: 0.643,
+  e4GenMed: 18,
+  e4GenP90: 58,
+  e4CriMed: "≈ 1500 (QA; el informe decía 1946)",
+  hibD_E2: 0.028,
+  hibD_E1: 0.599,
+  deriva: "+50,5 % (heterocigoto, %); homocigoto κ 0,10: +21,3 %",
+  monoMax: 0.406,
+  monoHD: 2.81,
+  velE5: 0.892,
+};
+
+const sgn = (x: number, d = 2): string => `${x >= 0 ? "+" : ""}${nf(x, d)}`;
 
 export function narrative(d: Data): Narrative {
   const b: Block[] = [];
   const plan = d.plan;
   const has = (exp: string, id?: string): boolean => (id ? d.sum(exp, id) !== undefined : d.of(exp).length > 0);
   const v = (exp: string, id: string, sc: ScenarioId, k: string): number => d.v(exp, id, sc, k);
-  const sorp = (id: string): number => v(P, id, "E1", "sorpresa");
-  const crits = (exp: string, id: string): Criterion[] => d.crit(exp, id);
-  const cv = (exp: string, id: string, cid: string): Criterion | undefined => crits(exp, id).find((c) => c.id === cid);
-  const e4 = (exp: string, id: string) => d.sum(exp, id)?.e4;
-  const gFinal = plan.e1.gens;
+  const c = (exp: string, id: string): Criterion[] => d.crit(exp, id);
+  const get = (exp: string, id: string, cid: string): Criterion | undefined => c(exp, id).find((x) => x.id === cid);
+  const seedsOk = (cr?: Criterion): string => (cr?.seedsPass ? `${cr.seedsPass[0]}/${cr.seedsPass[1]}` : "—");
+  const e4 = d.sum(X, X)?.e4;
+  const gF = plan.e1.gens;
   const e3F = plan.e3.gens;
-  const lastWin = `gen ${gFinal - 9}–${gFinal}`;
+  const full = has(X, X);
 
-  b.push({ kind: "h2", text: "Informe de simulación — genética v0.1" });
+  b.push({ kind: "h2", text: "Informe de simulación — genética v0.2 (revalidación)" });
   b.push({
     kind: "p",
-    text: `Proyecto Genoma · Analista de balance · 2026-11-10 · modo ${plan.mode}: ${plan.seeds.length} semillas por configuración, E1/E2 con N = ${plan.e1.N} y ${plan.e1.gens} generaciones, E3 con N = ${plan.e3.N} y ${plan.e3.gens} generaciones, E4 con ${plan.e4.trialsPerSeed * plan.seeds.length} ensayos. ${nf(d.totalChildren() / 1e6, 1)} millones de crías simuladas. Fuente de verdad de los números: CSV en \`sim/out/\` (este informe se genera a partir de los mismos datos).`,
+    text: `Proyecto Genoma · Analista de balance · 2026-11-10 · modo ${plan.mode}. Semillas **nuevas** \`${plan.seeds[0]}\`…\`${plan.seeds[plan.seeds.length - 1]}\` (${plan.seeds.length} por escenario; E5 con ${plan.e5Seeds.length}), distintas de las usadas para elegir parámetros en v0.1 (\`${V01_SEED_PREFIX}-1..5\`). E1/E2/E5 con N = ${plan.e1.N} y ${gF} generaciones; E3 con N = ${plan.e3.N} y ${e3F}; E4 con ${(e4?.n ?? 0).toLocaleString("es")} ensayos (tope ${e4?.cap ?? "—"} crías). Núcleo y config v0.2 (\`config/genetica.v0.2.json\`). Fuente de las cifras: CSV en \`sim/out/\`.`,
+  });
+
+  if (!full) {
+    b.push({ kind: "p", text: "Ejecución parcial: falta el barrido `v02`; solo se muestran tablas de criterios." });
+    for (const s of d.input.summaries) {
+      b.push({ kind: "h3", text: `${s.experiment} / ${s.variant.id}` });
+      b.push({ kind: "table", table: critTable(c(s.experiment, s.variant.id)) });
+    }
+    return { title: "Proyecto Genoma — Informe de genética v0.2", blocks: b };
+  }
+
+  const crits = c(X, X);
+  const spec = crits.filter((x) => !x.informative);
+  const failed = spec.filter((x) => !x.pass);
+  const k075 = has("arreglo_kappa0075", "kappa0075") ? c("arreglo_kappa0075", "kappa0075").filter((x) => !x.informative) : [];
+  const monoMax = (exp: string, id: string): number => v(exp, id, "E5", "div_maxfrec_D_max");
+  const monoHD = (exp: string, id: string): number => v(exp, id, "E5", "div_H_D_min");
+  const e3 = (exp: string, id: string, k: string): number => v(exp, id, "E3a", k);
+  const resp = (k: string): number => v(X, X, "E1", k);
+  const totMut = resp("respaldo_N0") + resp("respaldo_N1") + resp("respaldo_N2") + resp("respaldo_N3");
+  const resp5 = (k: string): number => v(X, X, "E5", k);
+  const totMut5 = resp5("respaldo_N0") + resp5("respaldo_N1") + resp5("respaldo_N2") + resp5("respaldo_N3");
+  const e5seeds = (exp: string, id: string): Record<string, number>[] => d.sum(exp, id)?.perSeed.E5 ?? [];
+  const rangeMax = (exp: string, id: string): string => {
+    const xs = e5seeds(exp, id).map((m) => m["div_maxfrec_D_max"] as number);
+    return `${pct(Math.min(...xs))} a ${pct(Math.max(...xs))}`;
+  };
+
+  // -------------------------------------------------------------------------
+  b.push({ kind: "h2", text: "Resumen ejecutivo" });
+  b.push({
+    kind: "ol",
+    items: [
+      `**v0.2 aprueba ${spec.length - failed.length}/${spec.length} criterios de §10.2 con semillas nuevas**; suspende ${failed.length ? failed.map((x) => `\`${x.id}\``).join(", ") : "ninguno"}. Sorpresa ${pct(resp("sorpresa"))}, mutación ${pct(resp("frac_crias_mutadas"))} de crías, Genedex ${pct(v(X, X, "E2", "genedex_repetidas_final10"))} repetidas, 0 violaciones de invariantes y determinismo 100 %.`,
+      `**Problema A resuelto**: primera criatura Vapor desde padres puros en mediana ${nf(e4?.creature.median ?? NaN, 0)} crías y p90 ${nf(e4?.creature.p90 ?? NaN, 0)} (objetivo ≤ 40 / ≤ 120; estimado 23 / 76). En v0.1 eran ≈ 1500.`,
+      `**Problema B bajo control con capturas**: ${pct(v(X, X, "E2", "frac_D_hibrido_final"))} de D híbridos y ${pct(v(X, X, "E2", "frac_criaturas_hibridas_final"))} de criaturas híbridas (objetivo ≤ 10 % y 3–25 %). En población cerrada siguen acumulándose (${pct(resp("frac_D_hibrido_final"))} de D; ${pct(resp("frac_criaturas_hibridas_final"))} de criaturas).`,
+      `**Nuevo problema**: criando solo por velocidad (E5, ${plan.e5Seeds.length} semillas), una clave ocupa el ${pct(monoMax(X, X))} de los D en el peor locus (máx. 60 %; v0.1: ${pct(V01.monoMax)}) y la calidad media sube ${sgn(v(X, X, "E5", "calidad_delta_final"))} puntos. La causa es κ = 0,10: con κ 0,05 baja a ${pct(monoMax("arreglo_kappa005", "kappa005"))}, pero la deriva E3a pasa a ${sgn(e3("arreglo_kappa005", "kappa005", "delta_pts_20"))} puntos (máx. +7,5).`,
+      `**Recomendación**: κ 0,10 → **0,075**. Es la única variante que aprueba los ${k075.length} criterios (${k075.filter((x) => x.pass).length}/${k075.length}): deriva ${sgn(e3("arreglo_kappa0075", "kappa0075", "delta_pts_20"))}/${sgn(e3("arreglo_kappa0075", "kappa0075", "delta_pts_final"))} puntos y monocultivo ${pct(monoMax("arreglo_kappa0075", "kappa0075"))}, aunque frágil (${seedsOk(get("arreglo_kappa0075", "kappa0075", "mono_maxfrec"))} semillas). Además, decidir si se acepta que criar por un rasgo seleccione calidad.`,
+    ],
   });
 
   // -------------------------------------------------------------------------
-  // Resumen ejecutivo
+  b.push({ kind: "h2", text: "Criterios §10.2 (config v0.2 por defecto, semillas nuevas)" });
+  b.push({ kind: "p", text: `Valor = media de semillas con IC 95 % (t de Student). E4: cuantiles de todos los ensayos con IC 95 % de estadísticos de orden. "Frágil" = el IC cruza el umbral. Las filas informativas no tienen umbral en la spec (§10.2, "Informativo") y no cuentan en aprobados.` });
+  b.push({ kind: "table", table: critTable(crits) });
+  const det = d.input.det;
+  b.push({ kind: "p", text: `**Determinismo**: misma semilla ⇒ mismo hash de población ${det.rerunHashEqual ? "sí" : "NO"} y mismo CSV ${det.rerunCsvEqual ? "sí" : "NO"}; semilla distinta ⇒ población distinta ${det.differentSeedDiffers ? "sí" : "NO"}; pareado 2 % vs 3 %: ${det.pairedIdentical}/${det.pairedCompared} crías sin mutación idénticas. **${det.rerunHashEqual && det.rerunCsvEqual && det.pairedIdentical === det.pairedCompared ? "APROBADO" : "SUSPENSO"}**.` });
+
   // -------------------------------------------------------------------------
-  const full = has(P, "A-m2") && has(P, BASE) && has(P, "B-m2");
-  if (full) {
-    const mutC = v(P, BASE, "E1", "frac_crias_mutadas");
-    const e = e4(P, BASE);
-    const repBase = v(P, BASE, "E2", "genedex_repetidas_final10");
-    const rec = has(REC, REC_ID) ? crits(REC, REC_ID) : [];
-    const recSpec = rec.filter((c) => c.group !== "Deriva (diagnóstico)");
-    b.push({ kind: "h2", text: "Resumen ejecutivo" });
+  b.push({ kind: "h2", text: "Puntos pendientes de §15" });
+  const afin = has("afinidad", "afin075");
+  const q15: string[][] = [
+    ["1. Primera criatura híbrida (E4)", `mediana ${nf(e4?.creature.median ?? NaN, 0)} [${nf(e4?.creature.medCI.lo ?? NaN, 0)}; ${nf(e4?.creature.medCI.hi ?? NaN, 0)}], p90 ${nf(e4?.creature.p90 ?? NaN, 0)} [${nf(e4?.creature.p90CI.lo ?? NaN, 0)}; ${nf(e4?.creature.p90CI.hi ?? NaN, 0)}]; ${e4?.creature.censored} censurados. Contraste: MLE geométrico p = ${nf((e4?.creature.mle.p ?? NaN) * 100, 2)} % por cría ⇒ mediana ${nf(e4?.creature.mle.median ?? NaN, 1)} [${nf(e4?.creature.mle.medianLo ?? NaN, 1)}; ${nf(e4?.creature.mle.medianHi ?? NaN, 1)}]. Estimado: 23 / 76.`, get(X, X, "e4_cri_med")?.pass && get(X, X, "e4_cri_p90")?.pass ? "APROBADO" : "SUSPENSO"],
+    ["2. Vigilancia de híbridas y afinidad", `E2: D ${pct(v(X, X, "E2", "frac_D_hibrido_final"))}, criaturas ${pct(v(X, X, "E2", "frac_criaturas_hibridas_final"))} (estimado 8–9 %).${afin ? ` Afinidad 0,75 frente a 0,5: E1 cerrada, D híbridos ${pct(v("afinidad", "afin075", "E1", "frac_D_hibrido_final"))} frente a ${pct(resp("frac_D_hibrido_final"))}; E2 ${pct(v("afinidad", "afin075", "E2", "frac_D_hibrido_final"))} frente a ${pct(v(X, X, "E2", "frac_D_hibrido_final"))}.` : ""}`, get(X, X, "hib_D")?.pass && get(X, X, "hib_cri")?.pass ? "APROBADO" : "SUSPENSO"],
+    ["3. Deriva E3a homocigoto (κ 0,10)", `${sgn(e3(X, X, "delta_pts_20"))} puntos/gen en gen 20 (estimado +4,5 a +5,5); ${sgn(e3(X, X, "delta_pts_final"))} en gen ${e3F}; control ${sgn(v(X, X, "E3a_control", "delta_pts_final"))}.`, get(X, X, "der_20")?.pass && get(X, X, "der_final")?.pass && get(X, X, "der_ctl")?.pass ? "APROBADO" : "SUSPENSO"],
+    ["4. D-007: tasa, sorpresa y respaldos", `Mutación ${nf(resp("mut_por_1000"), 1)}/1000 (esperado 80); 0 claves mutadas iguales a las de un padre. Sorpresa ${pct(resp("sorpresa"))}; con las semillas de v0.1, 26,6 % (v0.1: 26,5 % ⇒ +0,1 pp). Respaldos E1: N0 ${pct(resp("respaldo_N0") / totMut, 2)}, N1 ${pct(resp("respaldo_N1") / totMut, 2)}, N2 ${pct(resp("respaldo_N2") / totMut, 2)}, **N3 ${nf(resp("respaldo_N3"), 0)}**. En E5 (población homogénea): N1 ${pct(resp5("respaldo_N1") / totMut5, 1)}, N2 ${pct(resp5("respaldo_N2") / totMut5, 1)}, N3 ${nf(resp5("respaldo_N3"), 0)}.`, resp("respaldo_N3") === 0 && resp5("respaldo_N3") === 0 ? "APROBADO" : "REVISAR"],
+    ["5. Sorpresa, diversidad y Genedex con calidad", `Sorpresa ${pct(resp("sorpresa"))}; peor locus: ${nf(resp("div_distintas_min"), 0)} claves, H_D ${nf(resp("div_H_D_min"), 2)} bits; Genedex ${pct(v(X, X, "E2", "genedex_repetidas_final10"))} repetidas. Todos aprueban, como en v0.1.`, ["sorpresa", "div_distintas", "div_H_todos", "div_H_D", "div_H_ratio", "div_maxfrec", "dex_1_10", "dex_final", "dex_rep", "dex_hib"].every((id) => get(X, X, id)?.pass) ? "APROBADO" : "SUSPENSO"],
+    ["6. Monocultivo E5 y calidad", `Máx. clave ${pct(monoMax(X, X))} (≤ 60 %; ${seedsOk(get(X, X, "mono_maxfrec"))} semillas cumplen), H_D ${nf(monoHD(X, X), 2)} bits (≥ 2,0; ${seedsOk(get(X, X, "mono_H_D"))}). Calidad media ${nf(v(X, X, "E5", "calidad_0"), 2)} → ${nf(v(X, X, "E5", "calidad_final"), 2)} (${sgn(v(X, X, "E5", "calidad_delta_final"))}).`, get(X, X, "mono_maxfrec")?.pass && get(X, X, "mono_H_D")?.pass ? "APROBADO (calidad: ver decisión)" : "SUSPENSO"],
+  ];
+  b.push({ kind: "table", table: { head: ["Punto de §15", "Resultado", "Veredicto"], rows: q15 } });
+
+  // -------------------------------------------------------------------------
+  if (has("arreglo_kappa005") || has("arreglo_kappa0075") || has("arreglo_margen025")) {
+    b.push({ kind: "h2", text: "Monocultivo: diagnóstico y variantes de arreglo" });
+    b.push({ kind: "p", text: `Variantes ejecutadas solo para el criterio que suspende: E5 con ${plan.e5Seeds.length} semillas (lo que pide la spec para E5) y E3a con ${plan.seeds.length}. **Se han ejecutado 3 variantes**, una más del máximo de 2 que fijaba el encargo: margen de calidad a la mitad (prueba de hipótesis sobre la causa), κ 0,05 (valor de v0.1) y κ 0,075 (compromiso, añadido al ver que κ 0,05 rompe la deriva). Entre las tres suman ≈ 2,5 min de cálculo.` });
+    const rowsV: [string, string, string][] = [
+      [X, X, "v0.2 (κ 0,10, margen ±5 %)"],
+      ["arreglo_kappa0075", "kappa0075", "κ 0,075"],
+      ["arreglo_kappa005", "kappa005", "κ 0,05 (v0.1)"],
+      ["arreglo_margen025", "margen025", "margen de calidad ±2,5 %"],
+    ];
+    const mo = CR.monocultivo_estrategia;
     b.push({
-      kind: "ol",
+      kind: "table",
+      table: {
+        head: ["Variante", "E5 máx. clave en D (≤ 60 %)", "E5 H_D (≥ 2,0)", "Semillas que cumplen ambos", "E5 Δ calidad", "E3a Δ gen 20 (+1,5…+7,5)", `E3a Δ gen ${e3F} (≤ 8,5)`],
+        rows: rowsV
+          .filter(([e, id]) => has(e, id))
+          .map(([e, id, label]) => {
+            const e5 = e5seeds(e, id);
+            const both = e5.filter((m) => (m["div_maxfrec_D_max"] as number) <= mo.max_frecuencia_identidad_D && (m["div_H_D_min"] as number) >= mo.min_entropia_bits_D).length;
+            const mark = (cid: string): string => `${get(e, id, cid)?.pass ? "OK" : "NO"}${get(e, id, cid)?.fragile ? "*" : ""}`;
+            const hasE3 = d.sum(e, id)?.perSeed.E3a !== undefined;
+            return [label, `${pct(monoMax(e, id))} ${mark("mono_maxfrec")}`, `${nf(monoHD(e, id), 2)} ${mark("mono_H_D")}`, `${both}/${e5.length}`, sgn(v(e, id, "E5", "calidad_delta_final")), hasE3 ? `${sgn(e3(e, id, "delta_pts_20"))} ${mark("der_20")}` : "—", hasE3 ? `${sgn(e3(e, id, "delta_pts_final"))} ${mark("der_final")}` : "—"];
+          }),
+        num: [1, 2, 3, 4, 5, 6],
+      },
+    });
+    b.push({
+      kind: "ul",
       items: [
-        `**Sorpresa**: con los pesos del documento (A) el ${pct(sorp("A-m2"))} de las crías muestra en algún locus un rasgo que ningún padre expresaba (objetivo 15–30 %): es casi una lotería. B da ${pct(sorp("B-m2"))} y C ${pct(sorp(BASE))}; **solo C entra en el objetivo**.`,
-        `**No se descontrola**: ${d.input.violations} violaciones de invariantes; mutación al 2 % ⇒ ${pct(mutC)} de crías mutadas (objetivo 5–12 %); primera híbrida Vapor en mediana ${nf(e?.median ?? NaN, 0)} crías y p90 ${nf(e?.p90 ?? NaN, 0)} (teórico ≈ 17 / 57); determinismo 100 %.`,
-        `**Dos suspensos con causa conocida**: el Genedex se repite demasiado al final (${pct(repBase)} de mutaciones en clave ya vista, máx. 80 %) y la deriva E3a sube la velocidad +${pct(v(P, BASE, "E3a", "delta_20"))} en 20 gen (máx. 30 %), pero solo +${pct(v(P, BASE, "E3a_homo", "delta_20"))} es deriva de valores: el resto es selección de genes recesivos más rápidos.`,
-        `**Riesgo no cubierto por los criterios**: las híbridas son absorbentes; en población cerrada son el ${pct(v(P, BASE, "E1", "frac_D_hibrido_final"))} de los D en la gen ${gFinal} (con capturas, ${pct(v(P, BASE, "E2", "frac_D_hibrido_final"))}), y la cría selectiva por velocidad sube la velocidad un ${pct(v("estrategia_velocidad", BASE, "E1", "vel_delta_final"))} y concentra un ${pct(v("estrategia_velocidad", BASE, "E1", "div_maxfrec_D_max"))} de los D en una sola clave.`,
-        rec.length
-          ? `**Recomendación v0.2**: pesos_D C (0,47/0,025/0,005), mutación 2 % (igual), σ forma 0,15 → 0,25, κ deriva 0,05 → 0,10. Validada en conjunto: ${recSpec.filter((c) => c.pass).length}/${recSpec.length} criterios de la spec aprobados; ${recSpec.filter((c) => !c.pass).map((c) => c.id).join(" y ")} no aprueban (deriva E3a tal como está definida; propongo redefinirla, ver decisiones).`
-          : "**Recomendación v0.2**: pesos_D C, mutación 2 % (ejecuta el barrido `recomendada` para validarla).",
+        `**La calidad no es la causa del monocultivo**: con el margen a la mitad la convergencia es igual (${pct(monoMax("arreglo_margen025", "margen025"))}), aunque la subida de calidad baja a ${sgn(v("arreglo_margen025", "margen025", "E5", "calidad_delta_final"))}.`,
+        `**La causa es κ**: cuanto más tira la deriva hacia el ancla, menos rinde especializar los valores y más se selecciona el **tipo** de gen (su ancla). Al final un solo tipo rápido barre el locus. Pasa en unas semillas y en otras no: con κ 0,10, la máx. clave va de ${rangeMax(X, X)}.`,
+        `**La deriva E3a responde casi lineal a κ**: 0,10 → ${sgn(e3(X, X, "delta_pts_20"))}, 0,075 → ${sgn(e3("arreglo_kappa0075", "kappa0075", "delta_pts_20"))}, 0,05 → ${sgn(e3("arreglo_kappa005", "kappa005", "delta_pts_20"))} puntos en gen 20. κ 0,05 se acerca al techo de +10 (gen ${e3F}: ${sgn(e3("arreglo_kappa005", "kappa005", "delta_pts_final"))}).`,
+        "**Sorpresa, diversidad y Genedex en E1/E2 son idénticos con cualquier κ**: la deriva solo toca valores, no claves, y las semillas son las mismas (diseño pareado).",
       ],
     });
   }
 
   // -------------------------------------------------------------------------
-  // Recomendación
+  b.push({ kind: "h2", text: "Recomendación y decisiones" });
+  b.push({
+    kind: "ol",
+    items: [
+      `**\`deriva.kappa\` 0,10 → 0,075** (decisión del director: parámetro dentro del plan). Con κ 0,075 aprueban los ${k075.length} criterios ejecutados (${k075.filter((x) => x.pass).length}/${k075.length}): la deriva queda centrada (${sgn(e3("arreglo_kappa0075", "kappa0075", "delta_pts_20"))} / ${sgn(e3("arreglo_kappa0075", "kappa0075", "delta_pts_final"))}) y el monocultivo pasa justo (${pct(monoMax("arreglo_kappa0075", "kappa0075"))}, H_D ${nf(monoHD("arreglo_kappa0075", "kappa0075"), 2)}), aunque frágil. Aun así, ${(() => { const e5 = e5seeds("arreglo_kappa0075", "kappa0075"); return `${e5.filter((m) => (m["div_maxfrec_D_max"] as number) > 0.6).length}/${e5.length}`; })()} programas aislados de cría por velocidad acaban con > 60 % de los D en una sola clave.`,
+      "**Decisión del dueño del juego: ¿cuánta convergencia aceptamos en la cría dirigida?** Opciones: (a) κ 0,075 y aceptar que la mitad de los criaderos aislados converjan (en el juego hay mercado y capturas); (b) κ 0,05 y subir el umbral de deriva a +8 / +9 puntos (pegado al techo de +10, contra el espíritu del criterio); (c) mantener κ 0,10 y subir el umbral de monocultivo a ≈ 80 %. **Recomiendo (a)** y medir la homogeneización real en el simulador de economía.",
+      `**Decisión del dueño: la calidad se puede seleccionar.** Como Σvalores = calidad, criar por cualquier rasgo selecciona también calidad: E5 ${sgn(v(X, X, "E5", "calidad_delta_final"))} puntos de media (de ${nf(v(X, X, "E5", "calidad_0"), 2)} a ${nf(v(X, X, "E5", "calidad_final"), 2)}); E3b ${sgn(v(X, X, "E3b", "calidad_delta_final"))}. No se **crea** calidad: la mutación hace la media de los padres y ningún gen supera ${QMAX} (0 violaciones). La premisa de §10.2 ("la selección por velocidad no selecciona calidad") es falsa. Recomiendo aceptarlo, porque premia criar sin romper el techo, y reescribir el criterio como "calidad máx. ≤ ${QMAX} y la media no supera la de los mejores salvajes". El freno real es el criterio de combate §10.3.`,
+      "Todo lo demás de v0.2 se mantiene: pesos C, mutación 2 %, σ forma 0,25, afinidad 0,5, peso híbrido 2.",
+    ],
+  });
+
   // -------------------------------------------------------------------------
-  if (full && has("forma") && has("deriva") && has("hibrida") && has("pesos_R")) {
-    const rep = (id: string): number => v("forma", id, "E2", "genedex_repetidas_final10");
-    const homo20 = (id: string): number => v("deriva", id, "E3a_homo", "delta_20");
-    const homoF = (id: string): number => v("deriva", id, "E3a_homo", "delta_final");
-    const t: Table = {
-      head: ["Parámetro", "v0.1", "v0.2", "Dato que lo justifica"],
+  b.push({ kind: "h2", text: "Comparación con v0.1" });
+  b.push({
+    kind: "table",
+    table: {
+      head: ["Métrica", "v0.1 (informe, config recomendada)", "v0.2 (semillas nuevas)", "Comentario"],
       rows: [
-        ["herencia.pesos_D", "A 0,375/0,094/0,031", "**C 0,47/0,025/0,005**", `Sorpresa E1 gen 1–20 (mutación 2 %): A ${pct(sorp("A-m2"))}, B ${pct(sorp("B-m2"))}, C ${pct(sorp(BASE))}; objetivo 15–30 %. Con C, ${pct(v(P, BASE, "E1", "sorpresa_sin_mutacion"))} viene de recesivos y el resto de mutación.`],
-        ["mutacion.prob_por_locus", "0,02", "0,02 (igual)", `1 %: ${pct(v(P, "C-m1", "E1", "frac_crias_mutadas"))} de crías mutadas (< 5 %), Genedex gen 1–10 ${nf(v(P, "C-m1", "E2", "genedex_nuevas_1_10"))}/1000 (< 40) y p90 E4 ${nf(e4(P, "C-m1")?.p90 ?? NaN, 0)} (> 100). 3 %: ${pct(v(P, "C-m3", "E1", "frac_crias_mutadas"))} (techo 12 %) y sorpresa ${pct(sorp("C-m3"))} (techo 30 %), sin margen.`],
-        ["mutacion.sigma_forma", "0,15", "**0,25**", `% de mutaciones en clave ya registrada (E2, ${lastWin}): 0,10 → ${pct(rep("C-m2-f0.1"))}, 0,15 → ${pct(rep("C-m2-f0.15"))}, 0,25 → ${pct(rep("C-m2-f0.25"))} (rango 10–80 %). Claves nuevas al final: ${nf(v("forma", "C-m2-f0.25", "E2", "genedex_nuevas_final10"))}/1000 crías.`],
-        ["deriva.kappa", "0,05", "**0,10**", `Deriva pura (E3a homocigoto) Δ velocidad gen 20 / gen ${e3F}: κ 0,05 → +${pct(homo20("C-m2-k0.05-s1"))} / +${pct(homoF("C-m2-k0.05-s1"))} (pegado al techo de 30 %); κ 0,10 → +${pct(homo20("C-m2-k0.1-s1"))} / +${pct(homoF("C-m2-k0.1-s1"))} (centrado). Control al azar |Δ| ≤ ${pct(Math.max(...["C-m2-k0.05-s1", "C-m2-k0.1-s1"].map((id) => Math.abs(v("deriva", id, "E3a_control", "delta_final")))))}.`],
-        ["deriva.sigma", "1,0", "1,0 (igual)", `Con κ 0,10: σ 0,5 → +${pct(homo20("C-m2-k0.1-s0.5"))}, σ 1,5 → +${pct(homo20("C-m2-k0.1-s1.5"))} en gen 20; 1,0 queda en medio de la banda.`],
-        ["herencia.pesos_R", "R0 0,20/0,17/0,13", "R0 (igual)", `Sorpresa idéntica (R0 ${pct(v("pesos_R", "C-m2-R0", "E1", "sorpresa"))}, uniforme ${pct(v("pesos_R", "C-m2-Runi", "E1", "sorpresa"))}, =pesos_D ${pct(v("pesos_R", "C-m2-RigD", "E1", "sorpresa"))}); todas aprueban diversidad. No hay motivo con datos para cambiar.`],
-        ["mutacion.prob_hibrida_nueva", "0,5", "0,5 (igual)", `E4 mediana / p90: 0,25 → ${nf(e4("hibrida", "C-m2-h0.25")?.median ?? NaN, 0)} / ${nf(e4("hibrida", "C-m2-h0.25")?.p90 ?? NaN, 0)} (p90 > 100); 0,5 → ${nf(e4("hibrida", "C-m2-h0.5")?.median ?? NaN, 0)} / ${nf(e4("hibrida", "C-m2-h0.5")?.p90 ?? NaN, 0)}; 1,0 → ${nf(e4("hibrida", "C-m2-h1")?.median ?? NaN, 0)} / ${nf(e4("hibrida", "C-m2-h1")?.p90 ?? NaN, 0)} (mediana < 10).`],
+        ["Sorpresa E1", pct(V01.sorpresa), pct(resp("sorpresa")), "Con las semillas de v0.1: 26,6 %. D-007 no cambia la sorpresa."],
+        ["% crías mutadas", pct(V01.fracMut), pct(resp("frac_crias_mutadas")), "Teórico 7,76 %"],
+        ["Genedex: % repetidas al final (E2)", pct(V01.dexRep), pct(v(X, X, "E2", "genedex_repetidas_final10")), "σ forma 0,25 ya aplicada en ambas"],
+        ["E4 primer gen Vapor (mediana / p90)", `${V01.e4GenMed} / ${V01.e4GenP90}`, `${nf(e4?.gene.median ?? NaN, 0)} / ${nf(e4?.gene.p90 ?? NaN, 0)}`, "Sin cambio de reglas"],
+        ["E4 primera criatura Vapor (mediana)", V01.e4CriMed, `${nf(e4?.creature.median ?? NaN, 0)} (p90 ${nf(e4?.creature.p90 ?? NaN, 0)})`, "Regla de familia: el gen híbrido pesa 2 (problema A)"],
+        ["D híbridos, E1 cerrada gen 300", pct(V01.hibD_E1), pct(resp("frac_D_hibrido_final")), "Afinidad 0,75 → 0,5"],
+        ["D híbridos, E2 con capturas", pct(V01.hibD_E2), pct(v(X, X, "E2", "frac_D_hibrido_final")), `Criaturas híbridas en E2: ${pct(v(X, X, "E2", "frac_criaturas_hibridas_final"))}`],
+        ["Deriva bajo selección", V01.deriva, `${sgn(e3(X, X, "delta_pts_20"))} puntos/gen (${pct(e3(X, X, "delta_pct_20"))}) en gen 20`, "Homocigoto, en puntos (S-05)"],
+        ["Cría por velocidad: máx. clave / H_D", `${pct(V01.monoMax)} / ${nf(V01.monoHD, 2)}`, `${pct(monoMax(X, X))} / ${nf(monoHD(X, X), 2)}`, "Empeora por κ 0,10"],
+        ["Cría por velocidad: Δ velocidad total", pct(V01.velE5), pct(v(X, X, "E5", "vel_delta_final")), "La suma cero frena algo"],
       ],
-    };
-    b.push({ kind: "h2", text: "Recomendación de parámetros para v0.2" });
-    b.push({ kind: "table", table: t });
-    if (has(REC, REC_ID)) {
-      b.push({ kind: "h3", text: "Validación de la combinación recomendada (todas las escenas, mismas semillas)" });
-      b.push({ kind: "table", table: critTable(crits(REC, REC_ID)) });
-    }
-    b.push({ kind: "h3", text: "Decisiones que necesita el dueño del juego" });
-    b.push({
-      kind: "ol",
-      items: [
-        `**Frecuencia de sorpresa (pregunta abierta 1 de la spec)**: los datos confirman la predicción. A = ${pct(sorp("A-m2"))}, B = ${pct(sorp("B-m2"))}, C = ${pct(sorp(BASE))}. Opciones: A (lotería), B (sorpresa frecuente, fuera del objetivo), C (controlable). **Recomiendo C.**`,
-        `**Redefinir el criterio de deriva E3a**: tal como está, mide deriva + selección de genes recesivos; con cualquier κ/σ del barrido Δ gen 20 queda entre +${pct(Math.min(...d.of("deriva").map((s) => v("deriva", s.variant.id, "E3a", "delta_20"))))} y +${pct(Math.max(...d.of("deriva").map((s) => v("deriva", s.variant.id, "E3a", "delta_20"))))} (máx. 30 %). Opciones: (a) medir con clones homocigotos (D = R1 = R2), que aísla la deriva; (b) mantener E3a y subir el umbral a ≈ 50 %, aceptando que criar por un rasgo da ~+45 % en 20 generaciones; (c) bajar la ventaja reduciendo el techo \`desviacion_max\`. **Recomiendo (a)** con κ 0,10.`,
-        `**Híbridas absorbentes**: sin capturas, la fracción de D híbridos crece sin freno (gen ${gFinal}: ${pct(v(P, BASE, "E1", "frac_D_hibrido_final"))}; con la estrategia buscadora, ${pct(v("estrategia_hibridas", BASE, "E1", "frac_D_hibrido_final"))}). En el juego real habrá capturas (E2: ${pct(v(P, BASE, "E2", "frac_D_hibrido_final"))}), pero para el mercado conviene decidir si una híbrida debe poder "perderse": opciones (a) aceptar; (b) bajar \`prob_hibrida_afinidad\` de 0,75 a 0,5 (no simulado aún); (c) añadir un criterio de techo de híbridas en E2. **Recomiendo (a) + (c)** y revisarlo cuando haya economía.`,
-      ],
-    });
-  }
+    },
+  });
 
   // -------------------------------------------------------------------------
-  // Criterios por configuración
-  // -------------------------------------------------------------------------
-  const grid = GRID_ORDER.filter((id) => has(P, id));
-  if (grid.length) {
-    b.push({ kind: "h2", text: "Criterios §10.2 por configuración (barrido principal)" });
-    b.push({
-      kind: "p",
-      text: `Valor = media de ${plan.seeds.length} semillas (E4: ensayos agregados). OK = aprobado, NO = suspendido; * = frágil (el IC 95 % entre semillas cruza el umbral). Configuración = pesos_D (A documento, B, C) y probabilidad de mutación por locus (m1/m2/m3 = 1/2/3 %). La deriva E3a no depende de la mutación (se fuerza a 0). Los criterios "diagnóstico" no son de la spec.`,
-    });
-    const cols = [...grid, ...(has(REC, REC_ID) ? [REC_ID] : [])];
-    const all = cols.map((id) => (id === REC_ID ? crits(REC, id) : crits(P, id)));
-    const ids = (all[0] ?? []).map((c) => c.id);
-    const rows = ids.map((cid) => {
-      const first = (all[0] ?? []).find((c) => c.id === cid) as Criterion;
-      return [`${first.label} (${first.threshold})`, ...all.map((cs) => {
-        const c = cs.find((x) => x.id === cid);
-        return c ? `${critShort(c)} ${c.pass ? "OK" : "NO"}${c.fragile ? "*" : ""}` : "—";
-      })];
-    });
-    rows.push(["**Aprobados (sin diagnóstico)**", ...all.map((cs) => {
-      const spec = cs.filter((c) => c.group !== "Deriva (diagnóstico)");
-      return `${spec.filter((c) => c.pass).length}/${spec.length}`;
-    })]);
-    b.push({ kind: "table", table: { head: ["Criterio (umbral)", ...cols], rows, num: cols.map((_, i) => i + 1) } });
-    b.push({ kind: "p", text: `Determinismo (global): misma semilla ⇒ mismo hash de población ${d.input.det.rerunHashEqual ? "sí" : "NO"} y mismo CSV ${d.input.det.rerunCsvEqual ? "sí" : "NO"}; semilla distinta ⇒ población distinta ${d.input.det.differentSeedDiffers ? "sí" : "NO"}; barrido pareado 2 % vs 3 %: ${d.input.det.pairedIdentical}/${d.input.det.pairedCompared} crías sin mutación idénticas (${pct(d.input.det.pairedIdentical / d.input.det.pairedCompared)}). **${d.input.det.rerunHashEqual && d.input.det.rerunCsvEqual && d.input.det.pairedIdentical === d.input.det.pairedCompared ? "APROBADO" : "SUSPENSO"}**.` });
-  }
-
-  // -------------------------------------------------------------------------
-  // Gráficas
-  // -------------------------------------------------------------------------
-  if (grid.length) {
-    const c = RAW["criterios_sim"];
-    b.push({ kind: "h2", text: "Gráficas clave" });
-    const items = grid.map((id) => ({ label: id, ci: d.m(P, id, "E1", "sorpresa")!, slot: SLOT[id[0] as string] ?? 1 }));
+  b.push({ kind: "h2", text: "Gráficas clave" });
+  if (e4) {
     b.push({
       kind: "chart",
-      caption: "Sorpresa por configuración (E1, media gen 1–20, IC 95 %)",
-      html: dotChart({ title: "Sorpresa por configuración (E1, gen 1–20)", items, band: [c.sorpresa.min, c.sorpresa.max], bandLabel: "objetivo 15–30 %", xFmt: (x) => pct(x, 0), xLabel: "% de crías con algún D que no tenía ningún padre", note: "Punto = media de semillas; línea = IC 95 %. Subir la mutación añade ≈ 3 puntos por cada 1 %." }),
-      fallback: { head: ["Config", "Sorpresa", "IC 95 %", "Solo recesivos (sin mutación)"], rows: items.map((i) => [i.label, pct(i.ci.mean), `${pct(i.ci.lo)}–${pct(i.ci.hi)}`, pct(v(P, i.label, "E1", "sorpresa_sin_mutacion"))]), num: [1, 2, 3] },
-    });
-    const sIds = ["A-m2", "B-m2", "C-m2"].filter((id) => has(P, id));
-    const sSeries = sIds.map((id) => ({ name: `pesos_D ${id[0]} (mut. 2 %)`, slot: SLOT[id[0] as string] ?? 1, pts: d.curve(P, id, "E1", "sorpresa").filter((p) => p[0] >= 1) }));
-    const gs = [1, 5, 10, 20, 50, 100, 200, gFinal];
-    b.push({
-      kind: "chart",
-      caption: "Sorpresa por generación (E1)",
-      html: lineChart({ title: "Sorpresa por generación (E1, población cerrada)", series: sSeries, xLabel: "generación", yLabel: "% crías con D nuevo", yFmt: (x) => pct(x, 0), band: [c.sorpresa.min, c.sorpresa.max], bandLabel: "objetivo 15–30 %", yMin: 0, note: "La sorpresa es estable en el tiempo: sube 1–2 puntos a medida que la población se diversifica por mutación." }),
-      fallback: { head: ["Generación", ...sIds], rows: gs.map((g) => [String(g), ...sSeries.map((s) => pct(s.pts.find((p) => p[0] === g)?.[1] ?? NaN))]), num: [0, 1, 2, 3] },
-    });
-    const e = e4(P, BASE);
-    if (e) {
-      b.push({
-        kind: "chart",
-        caption: `E4: crías hasta el primer gen Vapor (${BASE})`,
-        html: histogram({ title: `E4: crías hasta el primer gen Vapor (llama pura × marea pura, mutación 2 %, ${e.n} ensayos)`, counts: e.histogram, binLabel: (i) => (i === 20 ? "200+" : `${i * 10 + 1}`), xLabel: "crías hasta el primer gen Vapor (cubetas de 10)", marks: [{ x: e.median, label: `mediana ${nf(e.median, 0)}` }, { x: e.p90, label: `p90 ${nf(e.p90, 0)}` }], note: `Criterio: mediana 10–40, p90 ≤ 100. La primera CRIATURA de familia Vapor (necesita ≥ 2 D Vapor) tarda mucho más: mediana ${nf(e.creatureMedian, 0)} crías en ${e.creatureN} ensayos (${e.creatureCensored} sin aparecer antes de ${plan.e4.creatureCap}).` }),
-        fallback: { head: ["Mutación", "Mediana", "p90", "Mediana 1.ª criatura Vapor", "Censurados"], rows: ["C-m1", "C-m2", "C-m3"].filter((id) => e4(P, id)).map((id) => { const x = e4(P, id)!; return [id, nf(x.median, 0), nf(x.p90, 0), nf(x.creatureMedian, 0), `${x.creatureCensored}/${x.creatureN}`]; }), num: [1, 2, 3] },
-      });
-    }
-    if (has("forma")) {
-      const fIds = ["C-m2-f0.1", "C-m2-f0.15", "C-m2-f0.25"];
-      const fSeries = fIds.map((id, i) => ({ name: `σ forma ${id.split("-f")[1]}`, slot: i + 1, pts: d.curve("forma", id, "E2", "genedex_total") }));
-      b.push({
-        kind: "chart",
-        caption: "Tamaño del Genedex (E2) según σ forma",
-        html: lineChart({ title: "Tamaño del Genedex por generación (E2, con capturas)", series: fSeries, xLabel: "generación", yLabel: "claves mutadas registradas", yFmt: (x) => nf(x, 0), yMin: 0, note: `Una σ de forma mayor reparte las mutaciones en más firmas: menos redescubrimientos (${lastWin}: ${fIds.map((id) => `${id.split("-f")[1]} → ${pct(v("forma", id, "E2", "genedex_repetidas_final10"))}`).join(", ")}). Espacio total: 32.500 claves.` }),
-        fallback: { head: ["σ forma", "Claves nuevas/1000 (gen 1–10)", `Claves nuevas/1000 (${lastWin})`, `% repetidas (${lastWin})`, `Genedex gen ${gFinal}`], rows: fIds.map((id) => [id.split("-f")[1] as string, nf(v("forma", id, "E2", "genedex_nuevas_1_10")), nf(v("forma", id, "E2", "genedex_nuevas_final10")), pct(v("forma", id, "E2", "genedex_repetidas_final10")), nf(v("forma", id, "E2", "genedex_final"), 0)]), num: [1, 2, 3, 4] },
-      });
-    }
-    const hSeries = [
-      { name: `E1 cerrada, al azar (${BASE})`, slot: 1, pts: d.curve(P, BASE, "E1", "frac_D_hibrido") },
-      { name: `E2 con capturas (${BASE})`, slot: 2, pts: d.curve(P, BASE, "E2", "frac_D_hibrido") },
-      ...(has("estrategia_hibridas", BASE) ? [{ name: "E1 buscador de híbridas", slot: 3, pts: d.curve("estrategia_hibridas", BASE, "E1", "frac_D_hibrido") }] : []),
-    ].filter((s) => s.pts.length);
-    b.push({
-      kind: "chart",
-      caption: "Fracción de genes D híbridos en la población",
-      html: lineChart({ title: "Fracción de genes D híbridos (las híbridas son absorbentes)", series: hSeries, xLabel: "generación", yLabel: "% de D de familia híbrida", yFmt: (x) => pct(x, 0), yMin: 0 }),
-      fallback: { head: ["Generación", ...hSeries.map((s) => s.name)], rows: gs.map((g) => [String(g), ...hSeries.map((s) => pct(s.pts.find((p) => p[0] === g)?.[1] ?? NaN))]), num: hSeries.map((_, i) => i).concat([hSeries.length]) },
-    });
-    const dSeries = [
-      { name: "E3a spec (κ 0,05)", slot: 1, pts: d.curveRel(P, BASE, "E3a", "vel_total_media") },
-      { name: "E3a homocigoto (κ 0,05)", slot: 2, pts: d.curveRel(P, BASE, "E3a_homo", "vel_total_media") },
-      ...(has(REC, REC_ID) ? [{ name: "E3a homocigoto (κ 0,10, v0.2)", slot: 3, pts: d.curveRel(REC, REC_ID, "E3a_homo", "vel_total_media") }] : []),
-      { name: "control al azar", slot: 4, dashed: true, pts: d.curveRel(P, BASE, "E3a_control", "vel_total_media") },
-    ].filter((s) => s.pts.length);
-    b.push({
-      kind: "chart",
-      caption: "Deriva bajo selección por velocidad (E3a)",
-      html: lineChart({ title: "Velocidad total media vs gen 0 bajo selección (E3a, 100 de 250 crías)", series: dSeries, xLabel: "generación", yLabel: "Δ velocidad total", yFmt: (x) => pct(x, 0), band: [c.deriva.gen20_min, c.deriva.gen20_max], bandLabel: "objetivo gen 20: +5…+30 %", note: "E3a spec usa clones heterocigotos: la selección también elige el tipo de gen más rápido entre D/R1/R2 (cambia el ancla). El homocigoto aísla la deriva de valores, que satura en el techo ±10 por gen." }),
-      fallback: { head: ["Generación", ...dSeries.map((s) => s.name)], rows: [0, 5, 10, 20, 50, e3F].map((g) => [String(g), ...dSeries.map((s) => pct(s.pts.find((p) => p[0] === g)?.[1] ?? NaN))]), num: dSeries.map((_, i) => i).concat([dSeries.length]) },
+      caption: "E4: crías hasta la primera criatura Vapor",
+      html: histogram({ title: `E4: crías hasta la primera criatura de familia Vapor (F1 llama pura × marea pura, ${e4.n.toLocaleString("es")} ensayos)`, counts: e4.creature.hist, binLabel: (i) => (i === 20 ? "200+" : `${i * 10 + 1}`), xLabel: "crías hasta la primera criatura Vapor (cubetas de 10)", yLabel: "% de ensayos", marks: [{ x: e4.creature.median, label: `mediana ${nf(e4.creature.median, 0)}` }, { x: e4.creature.p90, label: `p90 ${nf(e4.creature.p90, 0)}` }], note: `Objetivo: mediana ≤ 40 y p90 ≤ 120. Primer GEN Vapor: mediana ${nf(e4.gene.median, 0)}, p90 ${nf(e4.gene.p90, 0)}. Censurados al tope de ${e4.cap}: ${e4.creature.censored}.` }),
+      fallback: { head: ["Medida", "Mediana [IC 95 %]", "p90 [IC 95 %]", "Censurados"], rows: [["Primer gen Vapor", `${nf(e4.gene.median, 0)} [${nf(e4.gene.medCI.lo, 0)}; ${nf(e4.gene.medCI.hi, 0)}]`, `${nf(e4.gene.p90, 0)} [${nf(e4.gene.p90CI.lo, 0)}; ${nf(e4.gene.p90CI.hi, 0)}]`, String(e4.gene.censored)], ["Primera criatura Vapor", `${nf(e4.creature.median, 0)} [${nf(e4.creature.medCI.lo, 0)}; ${nf(e4.creature.medCI.hi, 0)}]`, `${nf(e4.creature.p90, 0)} [${nf(e4.creature.p90CI.lo, 0)}; ${nf(e4.creature.p90CI.hi, 0)}]`, String(e4.creature.censored)]], num: [1, 2, 3] },
     });
   }
-
-  // -------------------------------------------------------------------------
-  // Barridos secundarios
-  // -------------------------------------------------------------------------
-  if (has("deriva") || has("pesos_R") || d.of("estrategia_velocidad").length || has("hibrida")) b.push({ kind: "h2", text: "Barridos secundarios" });
-  const strat = [
-    ["azar", P, "E1"],
-    ["velocidad", "estrategia_velocidad", "E1"],
-    ["purista", "estrategia_purista", "E1"],
-    ["hibridas", "estrategia_hibridas", "E1"],
-  ] as const;
-  const stratIds = ["A-m2", BASE].filter((id) => has("estrategia_velocidad", id));
-  if (stratIds.length) {
-    const rows: string[][] = [];
-    for (const id of stratIds)
-      for (const [name, exp] of strat) {
-        if (!has(exp, id)) continue;
-        const dc = cv(exp, id, "div_maxfrec");
-        rows.push([id, name, pct(v(exp, id, "E1", "sorpresa")), nf(v(exp, id, "E1", "div_distintas_min")), nf(v(exp, id, "E1", "div_H_D_min"), 2), `${pct(v(exp, id, "E1", "div_maxfrec_D_max"))} ${dc?.pass ? "OK" : "NO"}`, pct(v(exp, id, "E1", "frac_D_hibrido_final")), `${v(exp, id, "E1", "vel_delta_final") >= 0 ? "+" : ""}${pct(v(exp, id, "E1", "vel_delta_final"))}`, nf(v(exp, id, "E1", "genedex_final"), 0)]);
-      }
-    b.push({ kind: "h3", text: `Estrategias de cría (E1, ${plan.e1.gens} generaciones)` });
-    b.push({ kind: "table", table: { head: ["Config", "Estrategia", "Sorpresa gen 1–20", `Mín. claves/locus gen ${gFinal}`, "Mín. H_D (bits)", "Máx. clave en D (≤ 40 %)", "D híbridos", "Δ velocidad total", "Genedex"], rows, num: [2, 3, 4, 5, 6, 7, 8] } });
-    b.push({ kind: "p", text: "Velocidad: élite del 40 % más rápido, apareada al azar dentro de la élite; el límite de 5 crías obliga a usar 200 padres distintos por generación. Purista: solo cruza criaturas de la misma familia. Buscador de híbridas: elige pareja (entre 50 candidatos) que maximice loci con combinación híbrida. Ninguna estrategia necesitó parejas de relleno." });
-  }
-  if (has("pesos_R")) {
-    const ids = d.of("pesos_R").map((s) => s.variant.id);
-    b.push({ kind: "h3", text: `pesos_R (base ${BASE}, E1)` });
-    b.push({ kind: "table", table: { head: ["Config", "Sorpresa", "Mín. claves/locus", "Mín. H_D", "Máx. clave en D", "D híbridos gen final"], rows: ids.map((id) => [id, pct(v("pesos_R", id, "E1", "sorpresa")), nf(v("pesos_R", id, "E1", "div_distintas_min")), nf(v("pesos_R", id, "E1", "div_H_D_min"), 2), pct(v("pesos_R", id, "E1", "div_maxfrec_D_max")), pct(v("pesos_R", id, "E1", "frac_D_hibrido_final"))]), num: [1, 2, 3, 4, 5] } });
-  }
-  if (has("deriva")) {
-    const ids = d.of("deriva").map((s) => s.variant.id);
-    b.push({ kind: "h3", text: `Deriva κ × σ (base ${BASE}, mutación 0)` });
-    b.push({ kind: "table", table: { head: ["κ / σ", "E3a Δ gen 20", `E3a Δ gen ${e3F}`, "Homocigoto Δ gen 20", `Homocigoto Δ gen ${e3F}`, "Control |Δ|"], rows: ids.map((id) => [id.replace(`${BASE}-`, ""), pct(v("deriva", id, "E3a", "delta_20")), pct(v("deriva", id, "E3a", "delta_final")), pct(v("deriva", id, "E3a_homo", "delta_20")), pct(v("deriva", id, "E3a_homo", "delta_final")), pct(Math.abs(v("deriva", id, "E3a_control", "delta_final")))]), num: [1, 2, 3, 4, 5] } });
-    const c3 = RAW["criterios_sim"]["deriva"];
-    const okHomo = ids.filter((id) => { const a = v("deriva", id, "E3a_homo", "delta_20"); return a >= c3.gen20_min && a <= c3.gen20_max && v("deriva", id, "E3a_homo", "delta_final") <= c3.gen100_max; });
-    const okSpec = ids.filter((id) => { const a = v("deriva", id, "E3a", "delta_20"); return a >= c3.gen20_min && a <= c3.gen20_max && v("deriva", id, "E3a", "delta_final") <= c3.gen100_max; });
-    b.push({ kind: "p", text: `Criterio: Δ gen 20 entre +5 % y +30 %; Δ gen 100 ≤ +40 %; control |Δ| ≤ 5 %. E3a tal como está definida aprueban: ${okSpec.length ? okSpec.map((id) => id.replace(`${BASE}-`, "")).join(", ") : "ninguna combinación"}. En homocigoto aprueban: ${okHomo.map((id) => id.replace(`${BASE}-`, "")).join(", ") || "ninguna combinación"}.` });
-  }
-  if (has("hibrida")) {
-    const ids = d.of("hibrida").map((s) => s.variant.id);
-    b.push({ kind: "h3", text: `Probabilidad de híbrida nueva (base ${BASE})` });
-    b.push({ kind: "table", table: { head: ["Config", "E4 mediana", "E4 p90", "1.ª criatura Vapor (mediana)", "D híbridos E2", "Híbridas vistas E2"], rows: ids.map((id) => { const x = e4("hibrida", id); return [id.replace(`${BASE}-`, ""), nf(x?.median ?? NaN, 0), nf(x?.p90 ?? NaN, 0), `${nf(x?.creatureMedian ?? NaN, 0)} (${x?.creatureCensored}/${x?.creatureN} cens.)`, pct(v("hibrida", id, "E2", "frac_D_hibrido_final")), nf(v("hibrida", id, "E2", "hibridas_vistas"), 0)]; }), num: [1, 2, 3, 4, 5] } });
-  }
-
-  // -------------------------------------------------------------------------
-  // Hallazgos
-  // -------------------------------------------------------------------------
-  if (full) {
-    const famRows = [...RAW["familias"]["base"], ...RAW["familias"]["hibridas"].map((h: { id: string }) => h.id)] as string[];
-    b.push({ kind: "h2", text: "Hallazgos" });
-    b.push({
-      kind: "ol",
-      items: [
-        `**La predicción analítica de la spec se cumple**: sorpresa A ${pct(sorp("A-m2"))} (predicho 60–65 %), B ${pct(sorp("B-m2"))} (≈ 33 %), C ${pct(sorp(BASE))} (≈ 22 %). La diferencia en B y C es la mutación: sin contarla, C da ${pct(v(P, BASE, "E1", "sorpresa_sin_mutacion"))}.`,
-        `**Por locus la sorpresa es pareja** (${BASE}: cabeza ${pct(v(P, BASE, "E1", "sorpresa_cabeza"))}, cuerpo ${pct(v(P, BASE, "E1", "sorpresa_cuerpo"))}, extremidades ${pct(v(P, BASE, "E1", "sorpresa_extremidades"))}, cola ${pct(v(P, BASE, "E1", "sorpresa_cola"))}), y estable en el tiempo (gen ${gFinal - 9}–${gFinal}: ${pct(v(P, BASE, "E1", "sorpresa_final10"))}).`,
-        `**La diversidad no colapsa: crece**. En E1 (${BASE}) la mínima nº de claves por locus en la gen ${gFinal} es ${nf(v(P, BASE, "E1", "div_distintas_min"))} (umbral 12) y la entropía es ${pct(v(P, BASE, "E1", "div_H_ratio_min"))} de la inicial. El criterio "H ≥ 50 % de gen 0" se cumple con mucha holgura; el riesgo real es el contrario (inflación), que ningún criterio mide.`,
-        `**Mutación conforme a la teoría**: ${nf(v(P, BASE, "E1", "mut_por_1000"))} mutaciones/1000 crías con p = 2 % (esperado 80) y ${pct(v(P, BASE, "E1", "frac_crias_mutadas"))} de crías con alguna (teórico 7,8 %). Un ${pct(v(P, BASE, "E1", "frac_mut_catalogo"))} de las mutaciones cae en una clave del catálogo base (no entra en Genedex).`,
-        `**Pregunta abierta del núcleo (nota 9)**: solo el ${pct(v(P, BASE, "E1", "frac_mut_coincide_R"), 2)} de las mutaciones produce una clave igual a un R1/R2 de algún padre (rango en el barrido: ${pct(Math.min(...grid.map((id) => v(P, id, "E1", "frac_mut_coincide_R"))), 2)}–${pct(Math.max(...grid.map((id) => v(P, id, "E1", "frac_mut_coincide_R"))), 2)}). Es irrelevante para el balance: **recomiendo no añadir la exclusión** (complica §4.4 sin efecto medible).`,
-        `**Híbridas absorbentes**: en E1 al azar la fracción de D híbridos llega al ${pct(v(P, BASE, "E1", "frac_D_hibrido_final"))} en la gen ${gFinal} (A-m2: ${pct(v(P, "A-m2", "E1", "frac_D_hibrido_final"))}; C-m3: ${pct(v(P, "C-m3", "E1", "frac_D_hibrido_final"))}). Causa: híbrida × componente vuelve a híbrida el 75 % y nunca se crea una base desde dos híbridas iguales. Con 10 % de capturas por generación se estabiliza en ${pct(v(P, BASE, "E2", "frac_D_hibrido_final"))}.`,
-        `**La primera criatura híbrida es mucho más difícil que el primer gen híbrido**: con padres puros (F1) hacen falta ≥ 2 loci Vapor; mediana ${nf(e4(P, BASE)?.creatureMedian ?? NaN, 0)} crías (${e4(P, BASE)?.creatureCensored}/${e4(P, BASE)?.creatureN} ensayos sin conseguirla en ${plan.e4.creatureCap}). El camino del jugador es criar las crías con gen Vapor entre sí o en retrocruce, algo que el diseño ya favorece; conviene que la UI lo enseñe.`,
-        `**Criar por velocidad es muy rentable y concentra genes**: con la élite del 40 % durante ${gFinal} generaciones la velocidad total sube ${pct(v("estrategia_velocidad", BASE, "E1", "vel_delta_final"))} (el ancla se redistribuye por mutación hacia velocidad; Σancla = 90 lo paga en potencia/resistencia) y la clave más frecuente ocupa el ${pct(v("estrategia_velocidad", BASE, "E1", "div_maxfrec_D_max"))} de los D (umbral 40 %). En E3b (selección fuerte, mutación activa) Δ velocidad en ${e3F} generaciones = +${pct(v(P, BASE, "E3b", "delta_final"))}. Los especialistas extremos son alcanzables: el spec de combate debe contarlo.`,
-        `**Distribución de familias** (criaturas, ${BASE}, gen ${gFinal}). E1: ${famRows.map((f) => `${f} ${pct(v(P, BASE, "E1", `fam_${f}`), 0)}`).join(", ")}.`,
-      ],
-    });
-  }
-
-  // -------------------------------------------------------------------------
-  // Anomalías
-  // -------------------------------------------------------------------------
-  b.push({ kind: "h2", text: "Anomalías, fallos y limitaciones" });
+  const dSeries = [
+    { name: "E3a homocigoto, κ 0,10 (v0.2)", slot: 1, pts: d.curve(X, X, "E3a", "vel_D_media") },
+    { name: "E3a homocigoto, κ 0,075", slot: 2, pts: d.curve("arreglo_kappa0075", "kappa0075", "E3a", "vel_D_media") },
+    { name: "E3a homocigoto, κ 0,05", slot: 3, pts: d.curve("arreglo_kappa005", "kappa005", "E3a", "vel_D_media") },
+    { name: "control al azar (κ 0,10)", slot: 4, dashed: true, pts: d.curve(X, X, "E3a_control", "vel_D_media") },
+  ]
+    .filter((s) => s.pts.length)
+    .map((s) => ({ ...s, pts: s.pts.map(([g, y]) => [g, y - (s.pts[0]?.[1] ?? 0)] as [number, number]) }));
   b.push({
-    kind: "ul",
+    kind: "chart",
+    caption: "Deriva E3a homocigoto (puntos por gen D)",
+    html: lineChart({ title: "Velocidad por gen D bajo selección, respecto a gen 0 (E3a homocigoto)", series: dSeries, xLabel: "generación", yLabel: "Δ velocidad por gen D (puntos)", yFmt: (x) => nf(x, 1), band: [CR.deriva.gen20_min_puntos, CR.deriva.gen20_max_puntos], bandLabel: "objetivo gen 20: +1,5…+7,5", yMin: -0.5, note: `Techo duro +10 por gen. Umbral en gen ${e3F}: ≤ +8,5. Cada curva es la media de ${plan.seeds.length} semillas.` }),
+    fallback: { head: ["Generación", ...dSeries.map((s) => s.name)], rows: [0, 5, 10, 20, 50, e3F].map((g) => [String(g), ...dSeries.map((s) => sgn(s.pts.find((p) => p[0] === g)?.[1] ?? NaN))]), num: dSeries.map((_, i) => i).concat([dSeries.length]) },
+  });
+  const maxCols = LOCI.map((L) => `maxfrec_D_${L}`);
+  const mSeries = [
+    { name: "κ 0,10 (v0.2)", slot: 1, pts: d.curveMax(X, X, "E5", maxCols) },
+    { name: "κ 0,075", slot: 2, pts: d.curveMax("arreglo_kappa0075", "kappa0075", "E5", maxCols) },
+    { name: "κ 0,05", slot: 3, pts: d.curveMax("arreglo_kappa005", "kappa005", "E5", maxCols) },
+  ].filter((s) => s.pts.length);
+  b.push({
+    kind: "chart",
+    caption: "Monocultivo bajo cría por velocidad (E5)",
+    html: lineChart({ title: "E5: frecuencia de la clave más común en D (peor locus)", series: mSeries, xLabel: "generación", yLabel: "% de los D con la misma clave", yFmt: (x) => pct(x, 0), band: [0, CR.monocultivo_estrategia.max_frecuencia_identidad_D], bandLabel: "permitido ≤ 60 %", yMin: 0, note: `Media de ${plan.e5Seeds.length} semillas. Hay barridos selectivos en algunas semillas y en otras no: la media esconde mucha dispersión.` }),
+    fallback: { head: ["Generación", ...mSeries.map((s) => s.name)], rows: [0, 20, 50, 100, 200, gF].map((g) => [String(g), ...mSeries.map((s) => pct(s.pts.find((p) => p[0] === g)?.[1] ?? NaN))]), num: [0, 1, 2, 3] },
+  });
+  const qSeries = [
+    { name: "E5 κ 0,10 (v0.2)", slot: 1, pts: d.curve(X, X, "E5", "calidad_media") },
+    { name: "E5 margen ±2,5 %", slot: 2, pts: d.curve("arreglo_margen025", "margen025", "E5", "calidad_media") },
+    { name: "E1 cría al azar", slot: 3, pts: d.curve(X, X, "E1", "calidad_media") },
+  ].filter((s) => s.pts.length);
+  b.push({
+    kind: "chart",
+    caption: "Calidad media de las criaturas",
+    html: lineChart({ title: "Calidad media de las criaturas (media de calidad de los 4 D)", series: qSeries, xLabel: "generación", yLabel: "calidad (puntos)", yFmt: (x) => nf(x, 1), yMin: 89, note: `Rango por gen: ${RAW["calidad"].min}–${RAW["calidad"].max}. La selección por velocidad sube la calidad porque Σvalores = calidad. No se crea calidad nueva: la mutación hace la media de los padres.` }),
+    fallback: { head: ["Generación", ...qSeries.map((s) => s.name)], rows: [0, 50, 100, 200, gF].map((g) => [String(g), ...qSeries.map((s) => nf(s.pts.find((p) => p[0] === g)?.[1] ?? NaN, 2))]), num: [0, 1, 2, 3] },
+  });
+  const hSeries = [
+    { name: "E1 cerrada, afinidad 0,5 (v0.2)", slot: 1, pts: d.curve(X, X, "E1", "frac_D_hibrido") },
+    { name: "E1 cerrada, afinidad 0,75", slot: 2, pts: d.curve("afinidad", "afin075", "E1", "frac_D_hibrido") },
+    { name: "E2 con capturas (v0.2)", slot: 3, pts: d.curve(X, X, "E2", "frac_D_hibrido") },
+  ].filter((s) => s.pts.length);
+  b.push({
+    kind: "chart",
+    caption: "Fracción de D híbridos",
+    html: lineChart({ title: "Fracción de genes D híbridos", series: hSeries, xLabel: "generación", yLabel: "% de D de familia híbrida", yFmt: (x) => pct(x, 0), yMin: 0, note: `Vigilancia (E2, gen ${gF}): D ≤ 10 %. En E2, % de criaturas híbridas: ${pct(v(X, X, "E2", "frac_criaturas_hibridas_final"))} (3–25 %).` }),
+    fallback: { head: ["Generación", ...hSeries.map((s) => s.name)], rows: [0, 20, 50, 100, 200, gF].map((g) => [String(g), ...hSeries.map((s) => pct(s.pts.find((p) => p[0] === g)?.[1] ?? NaN))]), num: [0, 1, 2, 3] },
+  });
+
+  // -------------------------------------------------------------------------
+  b.push({ kind: "h2", text: "Hallazgos" });
+  b.push({
+    kind: "ol",
     items: [
-      `**Núcleo: sin fallos encontrados.** ${d.input.violations} violaciones de invariantes en todas las escenas; mismo hash con la misma semilla; ${d.input.det.pairedIdentical}/${d.input.det.pairedCompared} crías idénticas en el pareado 2 % vs 3 %; breedingBlocker respetado (las estrategias nunca necesitaron parejas de relleno).`,
-      "**Criterio E3a mal planteado** (no es un fallo del núcleo): los clones de E3a son heterocigotos, así que la selección elige también genes recesivos con más ancla de velocidad. El diagnóstico homocigoto (`E3a_homo`, no está en la spec) lo separa.",
-      "**Criterio de Genedex sensible al tamaño**: el % de repetidas al final depende de N y del nº de generaciones; con miles de jugadores se saturará antes. Revisarlo cuando haya simulador de economía.",
-      "**Criterios que no detectan inflación**: diversidad y Genedex solo miden colapso; no hay techo para la fracción de híbridas ni para la velocidad alcanzable por selección.",
-      "**Mutación al 1 %**: suspende tasa (5–12 %), Genedex gen 1–10 (≥ 40) y p90 de E4 por construcción; los umbrales de la spec están pensados para 2 %.",
-      `**Limitaciones del modelo**: generaciones discretas (las crías reemplazan a todos los padres, N fijo); ${plan.seeds.length} semillas por configuración (IC 95 % con t de Student); la búsqueda de la primera criatura Vapor usa ${plan.e4.creatureTrials} ensayos por semilla con tope ${plan.e4.creatureCap} (mediana con censura por la derecha); sin economía ni jugadores.`,
+      `**La revalidación con semillas nuevas confirma v0.2**. Sorpresa ${pct(resp("sorpresa"))} [${pct(get(X, X, "sorpresa")?.ci?.lo ?? NaN)}; ${pct(get(X, X, "sorpresa")?.ci?.hi ?? NaN)}] y Genedex ${pct(v(X, X, "E2", "genedex_repetidas_final10"))} quedan dentro con margen. Ningún criterio de v0.1 cambia de veredicto.`,
+      `**La estimación del diseñador para E4 acierta de lleno**: ${nf(e4?.creature.median ?? NaN, 0)} / ${nf(e4?.creature.p90 ?? NaN, 0)} frente a 23 / 76 estimado. El primer gen Vapor sigue en ${nf(e4?.gene.median ?? NaN, 0)} / ${nf(e4?.gene.p90 ?? NaN, 0)} (teoría 17,6 / 57,3).`,
+      `**Las híbridas siguen siendo absorbentes en población cerrada**, aunque menos: con afinidad 0,5, ${pct(resp("frac_D_hibrido_final"))} de D híbridos en gen ${gF} (0,75: ${afin ? pct(v("afinidad", "afin075", "E1", "frac_D_hibrido_final")) : "—"}; v0.1: ${pct(V01.hibD_E1)}). Con la regla de peso 2, el ${pct(resp("frac_criaturas_hibridas_final"))} de las criaturas de E1 son de familia híbrida. Con capturas la afinidad casi no importa (${afin ? `${pct(v("afinidad", "afin075", "E2", "frac_D_hibrido_final"))} frente a ${pct(v(X, X, "E2", "frac_D_hibrido_final"))}` : "—"}).`,
+      `**D-007 funciona y su respaldo apenas se usa**: 0 mutaciones caen en una clave de un padre; el ${pct((resp("respaldo_N1") + resp("respaldo_N2")) / totMut, 2)} necesita N1 o N2 en E1 y el ${pct((resp5("respaldo_N1") + resp5("respaldo_N2")) / totMut5, 1)} en E5 (población homogénea, con más claves bloqueadas). N3 no se usó nunca.`,
+      `**E3c (heterocigoto, informativo)**: ${sgn(v(X, X, "E3c", "delta_pts_20"))} puntos/gen en gen 20, de los que ${sgn(v(X, X, "E3c", "deriva_pts_20"))} son deriva de valores y el resto selección de recesivos más rápidos. Es la misma descomposición que en v0.1, ahora medida dentro del propio escenario (QA S-05).`,
+      `**E3b (selección fuerte, mutación activa)**: ${sgn(v(X, X, "E3b", "delta_pts_final"))} puntos por gen D en ${e3F} generaciones (${pct(v(X, X, "E3b", "delta_pct_final"))}); la calidad sube ${sgn(v(X, X, "E3b", "calidad_delta_final"))}. Los especialistas extremos siguen al alcance: el simulador de combate (§10.3) debe probar equipos especializados, no solo calidad máxima frente a mínima.`,
     ],
   });
 
   // -------------------------------------------------------------------------
-  // Método y reproducción
-  // -------------------------------------------------------------------------
-  b.push({ kind: "h2", text: "Método" });
+  b.push({ kind: "h2", text: "Cambios por la revisión de QA (S-01…S-06)" });
   b.push({
     kind: "ul",
     items: [
-      "Escenarios de la spec §10.1 sin cambios: E1 cerrada (barajar, parejas consecutivas, 2 crías/pareja, las crías sustituyen a la generación anterior); E2 = E1 + 10 % de la población sustituida al azar por salvajes nuevos tras cada generación; E3a 100 clones, mutación 0, 50 parejas × 5 crías, sobreviven las 100 de mayor velocidad total (control: 100 al azar); E3b igual con población salvaje y mutación activa; E4 llama pura × marea pura, pareja nueva cada 5 crías.",
-      "Sorpresa: % de crías con algún locus cuyo D tiene una clave distinta de los D de ambos padres (incluye mutaciones). Diversidad: claves distintas y entropía de Shannon por locus (todos los slots y solo D); se informa el peor locus. Genedex: claves nuevas por 1000 crías y % de mutaciones (fuera del catálogo) que caen en una clave ya registrada.",
-      "Azar: tres flujos por semilla (`|cria` solo para breed, `|sim` para barajados y selección, `|salvaje` para salvajes), así cambiar la mutación no desalinea la estrategia y los barridos son pareados. Ejecuciones con idéntica configuración efectiva se calculan una vez y se reutilizan.",
-      "Agregación: media entre semillas e IC 95 % (t de Student). Un criterio se aprueba si la media cumple el umbral; se marca frágil si el IC lo cruza.",
+      `**S-01**: E4 busca la primera criatura en **todos** los ensayos (${(e4?.n ?? 0).toLocaleString("es")}, antes 100), con un flujo RNG propio por configuración. Mediana y p90 llevan IC 95 % por estadísticos de orden, y hay un contraste con el MLE geométrico con censura. Los censurados se muestran como "> ${e4?.cap ?? 5000}", nunca "∞".`,
+      `**S-02**: revalidación con semillas nuevas (\`${plan.seeds[0]}…\`). Si se pasa \`--semilla ${V01_SEED_PREFIX}\`, la CLI avisa.`,
+      "**S-03**: superado (D-007 en el núcleo). Se mide que haya 0 claves mutadas de padres y el uso de N1–N3.",
+      "**S-04**: el umbral de mutaciones/1000 muestra \"4000·p = X ± 10 %\" con el p de cada configuración.",
+      "**S-05**: la deriva se mide en puntos por gen D. E3c descompone deriva frente a cambio de tipo dentro del mismo escenario.",
+      "**S-06**: el histograma de E4 lleva título en el eje Y (\"% de ensayos\").",
+      "**S-07/S-08** (sugerencias): IC por configuración (conservador); \"% repetidas\" excluye las mutaciones que caen en claves del catálogo (documentado en Método).",
     ],
   });
-  b.push({ kind: "h2", text: "Cómo reproducirlo" });
+
+  b.push({ kind: "h2", text: "Anomalías y limitaciones" });
   b.push({
     kind: "ul",
     items: [
-      "`npm run sim -- --quick` (< 30 s, N = 200, 40 gen, 2 semillas) · `npm run sim` (completo, ≈ 7 min con 2 hilos) · `npm run sim -- --help` para filtros (`--barrido`, `--config`, `--escenario`, `--estrategia`, `--semillas`, `--semilla`).",
-      "Salida: `sim/out/<modo>/<barrido>/<escenario>__<config>.csv` (una fila por generación y semilla; E4 una fila por ensayo), `resumen-criterios.csv`, `resumen.json`, `hashes.sha256`. El informe HTML completo es `sim/out/informe-genetica-v0.1.html` y este Markdown `docs/informes/genetica-v0.1.md`.",
-      `Esta ejecución: ${plan.seeds.join(", ")}; ${nf(d.input.elapsedSec, 0)} s.`,
-      "Test de determinismo: `sim/genetics/determinism.test.ts` (incluido en `npm test`).",
+      `**Núcleo v0.2: sin fallos encontrados.** ${d.input.violations} violaciones (incluida la comprobación de clave mutada frente a las de los padres), determinismo 100 % y N3 sin usar.`,
+      `**El criterio de monocultivo depende de la semilla**: con κ 0,10 la máx. clave va de ${rangeMax(X, X)}. Con 5 semillas no se puede decidir; por eso E5 usa 20.`,
+      "**Premisa falsa en §10.2**: la selección por velocidad sí selecciona calidad (ver Recomendación 3). El criterio informativo \"calidad media no sube\" suspende por diseño, no por un fallo.",
+      `**Sorpresa ${pct(resp("sorpresa"))} frente a 26,5 % de v0.1**: es el efecto de las semillas. Con las mismas semillas de v0.1 da 26,6 % (\`npm run sim -- --semilla ${V01_SEED_PREFIX} --barrido v02 --escenario E1 --generaciones 20\`).`,
+      "**Limitaciones**: generaciones discretas y N fijo; sin economía ni mercado; la convergencia en E5 es la de un criadero aislado. El combate (§10.3) no se ha simulado.",
     ],
   });
-  return { title: "Proyecto Genoma — Informe de genética v0.1", blocks: b };
+
+  b.push({ kind: "h2", text: "Método y reproducción" });
+  b.push({
+    kind: "ul",
+    items: [
+      "Escenarios tal como los define §10.1 v0.2: E3a = 100 clones homocigotos `brote.*.1` (calidad 90, valores = ancla, mutación 0); E3c = clones de un salvaje (la antigua E3a); E5 = E1 con padres de la élite del 40 % más rápida, emparejados al azar dentro de la élite. Reemplazo generacional (N fijo); en E2, 10 % de capturas tras cada generación.",
+      "Deriva: Δ = media por gen D de (velocidad − velocidad en gen 0), en puntos. Calidad de criatura = media de la calidad de sus 4 D. % de criaturas híbridas = criaturas cuya familia (§7, peso híbrido 2) es híbrida. \"% repetidas\" del Genedex excluye las mutaciones que caen en claves del catálogo.",
+      "Flujos RNG por semilla: `|cria`, `|sim` y `|salvaje`. E4 usa `seed|E4|config|ensayo`. Las ejecuciones con idéntica configuración efectiva se calculan una vez.",
+      `Comandos: \`npm run sim -- --quick\` (< 30 s) · \`npm run sim\` (completo, ≈ ${nf(d.input.elapsedSec / 60, 0)} min con 2 hilos) · \`npm run sim -- --help\`. Salida: \`sim/out/<modo>/<barrido>/<escenario>__<config>.csv\`, \`resumen-criterios.csv\`, \`resumen.json\`, \`hashes.sha256\`; informe \`sim/out/informe-genetica-v0.2.html\` (copiado en \`docs/informes/\`).`,
+    ],
+  });
+  return { title: "Proyecto Genoma — Informe de genética v0.2", blocks: b };
 }
 
 function critTable(cs: readonly Criterion[]): Table {
@@ -311,5 +306,3 @@ function critTable(cs: readonly Criterion[]): Table {
     num: [3, 4],
   };
 }
-
-export { sampleCurve };

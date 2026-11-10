@@ -1,24 +1,41 @@
 /**
- * Orquestación: planes (rápido/completo), experimentos (barridos),
+ * Orquestación (spec v0.2): planes (rápido/completo), experimentos,
  * extracción de métricas por semilla y evaluación de criterios §10.2.
  */
 import type { GeneticsConfig } from "../../packages/core/src/index.ts";
-import { buildConfig, buildRaw, driftSweep, hybridSweep, mainGrid, pesosRSweep, RAW, shapeSigmaSweep, type Variant } from "./cfg.ts";
+import { buildConfig, buildRaw, DEFAULT_VARIANT, oneParam, RAW, type Variant } from "./cfg.ts";
 import { runE4, runPopulation, type PopRunResult, type Row } from "./engine.ts";
-import { meanCI, quantile, type MeanCI } from "./stats.ts";
-import { findStrategy, randomStrategy, STRATEGIES, type Strategy } from "./strategies.ts";
+import { geometricMLE, meanCI, quantile, quantileCI, type MeanCI } from "./stats.ts";
+import { findStrategy, randomStrategy, speedStrategy, type Strategy } from "./strategies.ts";
 
 const ESC = RAW["escenarios_sim"];
 const CRIT = RAW["criterios_sim"];
+
+/**
+ * Prefijo de semillas por defecto. v0.1 eligió parámetros con `genoma-1..5`;
+ * la validación v0.2 usa semillas NUEVAS (QA S-02).
+ */
+export const DEFAULT_SEED_PREFIX = "valida02";
+export const V01_SEED_PREFIX = "genoma";
 
 export interface Plan {
   readonly mode: "rapido" | "completo";
   readonly seeds: readonly string[];
   readonly e1: { readonly N: number; readonly gens: number };
   readonly e3: { readonly N: number; readonly gens: number };
-  readonly e4: { readonly trialsPerSeed: number; readonly creatureTrials: number; readonly creatureCap: number };
+  readonly e4: { readonly trialsPerSeed: number; readonly cap: number };
   /** Generaciones del ensayo pareado 2 % vs 3 %. */
   readonly pairedGens: number;
+  /**
+   * Semillas de E5: su resultado depende de si hay o no un barrido selectivo
+   * (varía 37–88 % entre semillas), así que en modo completo usa las 20 de
+   * la spec (`E5_estrategia_velocidad.semillas`); el resto, `seeds`.
+   */
+  readonly e5Seeds: readonly string[];
+}
+
+export function seedsFor(plan: Plan, sc: ScenarioId): readonly string[] {
+  return sc === "E5" ? plan.e5Seeds : plan.seeds;
 }
 
 export function makePlan(o: { quick: boolean; seeds?: number; seedPrefix: string; gens?: number; pop?: number }): Plan {
@@ -29,72 +46,70 @@ export function makePlan(o: { quick: boolean; seeds?: number; seedPrefix: string
     mode: o.quick ? "rapido" : "completo",
     seeds,
     e1: { N: o.pop ?? (o.quick ? 200 : ESC["E1_cerrada"].poblacion), gens: o.gens ?? (o.quick ? 40 : ESC["E1_cerrada"].generaciones) },
-    e3: { N: ESC["E3a_deriva_pura"].poblacion, gens: o.quick ? 30 : ESC["E3a_deriva_pura"].generaciones },
-    e4: { trialsPerSeed: Math.ceil(e4Total / nSeeds), creatureTrials: o.quick ? 5 : 20, creatureCap: 5000 },
+    e3: { N: ESC["E3a_deriva_homocigoto"].poblacion, gens: o.quick ? 30 : ESC["E3a_deriva_homocigoto"].generaciones },
+    e4: { trialsPerSeed: Math.ceil(e4Total / nSeeds), cap: ESC["E4_primera_hibrida"].tope_crias },
     pairedGens: o.quick ? 5 : 20,
+    e5Seeds: o.quick || o.seeds !== undefined ? seeds : Array.from({ length: Math.max(nSeeds, ESC["E5_estrategia_velocidad"].semillas as number) }, (_, i) => `${o.seedPrefix}-${i + 1}`),
   };
 }
 
-export type ScenarioId = "E1" | "E2" | "E3a" | "E3a_control" | "E3a_homo" | "E3b" | "E4";
-/** E3a_homo: diagnóstico (no está en la spec): como E3a pero con clones homocigotos (D = R1 = R2), para aislar la deriva de la selección de tipos de gen. */
-export const ALL_SCENARIOS: readonly ScenarioId[] = ["E1", "E2", "E3a", "E3a_control", "E3a_homo", "E3b", "E4"];
+/** Escenarios v0.2 (spec §10.1). E3a = homocigoto; E3c = heterocigoto (antigua E3a v0.1). */
+export type ScenarioId = "E1" | "E2" | "E3a" | "E3a_control" | "E3b" | "E3c" | "E4" | "E5";
+export const ALL_SCENARIOS: readonly ScenarioId[] = ["E1", "E2", "E3a", "E3a_control", "E3b", "E3c", "E4", "E5"];
 
 export interface Experiment {
   readonly id: string;
   readonly label: string;
   readonly variants: readonly Variant[];
   readonly scenarios: readonly ScenarioId[];
+  /** Estrategia de E1/E2 (E5 usa siempre la de velocidad). */
   readonly strategy: Strategy;
 }
 
-/**
- * Configuración base para los barridos secundarios. Elegida a partir del
- * barrido principal (ver informe): pesos_D C, mutación 2 % (única que
- * aprueba sorpresa y mutación con margen).
- */
-export const SECONDARY_BASE_ID = "C-m2";
+/** §15.2: efecto de la afinidad 0,5 (v0.2) frente a 0,75 (v0.1) en E1/E2. */
+export const AFFINITY_075 = oneParam("afin075", "afinidad híbrida 0,75 (valor v0.1)", "mutacion.prob_hibrida_afinidad", 0.75);
 
 /**
- * Recomendación para v0.2 (combinación validada en todos los escenarios):
- * pesos_D C, mutación 2 %, σ forma 0,25, κ deriva 0,10. El resto igual que v0.1.
+ * Variantes de arreglo: solo para criterios que suspenden con la config por
+ * defecto (presupuesto ajustado: como mucho 1–2 variantes del parámetro implicado).
  */
-export const RECOMMENDED: Variant = {
-  id: "v02",
-  label: "v0.2 recomendada: pesos_D C · mutación 2 % · σ forma 0,25 · κ 0,10",
-  set: {
-    "herencia.pesos_D": RAW["barridos_sim"]["herencia.pesos_D"]["C"],
-    "mutacion.prob_por_locus": 0.02,
-    "mutacion.sigma_forma": 0.25,
-    "deriva.kappa": 0.1,
+export const FIX_VARIANTS: readonly { readonly variant: Variant; readonly scenarios: readonly ScenarioId[]; readonly why: string }[] = [
+  {
+    variant: { id: "margen025", label: "margen de calidad ±2,5 % (87,75–92,25)", set: { "calidad.margen": 0.025, "calidad.min": 87.75, "calidad.max": 92.25 } },
+    scenarios: ["E5"],
+    why: "Monocultivo E5: ¿lo causa la selección indirecta de calidad? (margen a la mitad)",
   },
-};
+  {
+    variant: oneParam("kappa005", "κ deriva 0,05 (valor v0.1)", "deriva.kappa", 0.05),
+    scenarios: ["E5", "E3a", "E3a_control"],
+    why: "Monocultivo E5: ¿lo causa el retorno al ancla más fuerte de v0.2? (κ 0,05)",
+  },
+  {
+    variant: oneParam("kappa0075", "κ deriva 0,075 (intermedio)", "deriva.kappa", 0.075),
+    scenarios: ["E1", "E2", "E3a", "E3a_control", "E5"],
+    why: "Compromiso entre deriva E3a (κ alto) y monocultivo E5 (κ bajo): κ 0,075",
+  },
+];
 
 export function experiments(): Experiment[] {
-  const grid = mainGrid();
-  const base = grid.find((v) => v.id === SECONDARY_BASE_ID) as Variant;
-  const docBase = grid.find((v) => v.id === "A-m2") as Variant;
   const out: Experiment[] = [
-    { id: "principal", label: "pesos_D × prob. mutación", variants: grid, scenarios: ALL_SCENARIOS, strategy: randomStrategy },
+    { id: "v02", label: "Configuración v0.2 por defecto", variants: [DEFAULT_VARIANT], scenarios: ALL_SCENARIOS, strategy: randomStrategy },
+    { id: "afinidad", label: "Afinidad híbrida 0,75 vs 0,5 (§15.2)", variants: [AFFINITY_075], scenarios: ["E1", "E2"], strategy: randomStrategy },
   ];
-  for (const s of STRATEGIES.filter((x) => x.id !== "azar")) {
-    out.push({ id: `estrategia_${s.id}`, label: `Estrategia: ${s.label}`, variants: [docBase, base], scenarios: ["E1"], strategy: s });
-  }
-  out.push({ id: "pesos_R", label: "pesos_R (con base " + base.id + ")", variants: pesosRSweep(base), scenarios: ["E1"], strategy: randomStrategy });
-  out.push({ id: "forma", label: "σ forma de la mutación (con base " + base.id + ")", variants: shapeSigmaSweep(base), scenarios: ["E2"], strategy: randomStrategy });
-  out.push({ id: "deriva", label: "deriva κ × σ (con base " + base.id + ")", variants: driftSweep(base), scenarios: ["E3a", "E3a_control", "E3a_homo"], strategy: randomStrategy });
-  out.push({ id: "recomendada", label: "Recomendación v0.2 (combinada)", variants: [RECOMMENDED], scenarios: ALL_SCENARIOS, strategy: randomStrategy });
-  out.push({ id: "hibrida", label: "prob. híbrida nueva (con base " + base.id + ")", variants: hybridSweep(base), scenarios: ["E2", "E4"], strategy: randomStrategy });
+  for (const f of FIX_VARIANTS) out.push({ id: `arreglo_${f.variant.id}`, label: f.why, variants: [f.variant], scenarios: f.scenarios, strategy: randomStrategy });
   return out;
 }
 
-/** Config efectiva de un escenario (E3a* fuerza mutación 0). */
+/** Config efectiva de un escenario (E3a/E3c fuerzan la mutación indicada en el JSON). */
 export function effectiveSet(v: Variant, sc: ScenarioId): Record<string, unknown> {
-  return sc === "E3a" || sc === "E3a_control" || sc === "E3a_homo" ? { ...v.set, "mutacion.prob_por_locus": ESC["E3a_deriva_pura"].prob_mutacion_override } : { ...v.set };
+  if (sc === "E3a" || sc === "E3a_control") return { ...v.set, "mutacion.prob_por_locus": ESC["E3a_deriva_homocigoto"].prob_mutacion_override };
+  if (sc === "E3c") return { ...v.set, "mutacion.prob_por_locus": ESC["E3c_deriva_heterocigoto"].prob_mutacion_override };
+  return { ...v.set };
 }
 
-/** Clave de deduplicación: dos ejecuciones con la misma clave dan exactamente el mismo resultado. */
+/** Clave de deduplicación: misma clave ⇒ mismo resultado exacto (E4 lleva el id de config en su flujo RNG). */
 export function runKey(strategyId: string, v: Variant, sc: ScenarioId, seed: string): string {
-  return `${sc}|${strategyId}|${seed}|${JSON.stringify(buildRaw(effectiveSet(v, sc)))}`;
+  return `${sc}|${sc === "E5" ? speedStrategy.id : strategyId}|${seed}|${sc === "E4" ? v.id : ""}|${JSON.stringify(buildRaw(effectiveSet(v, sc)))}`;
 }
 
 export function strategyById(id: string): Strategy {
@@ -115,45 +130,23 @@ export interface ScenarioRun {
   readonly violations: number;
   readonly violationSamples: string[];
   readonly fallbackPairs: number;
-  /** Solo E4. */
+  /** Solo E4 (Infinity = censurado al tope). */
   readonly geneCounts?: number[];
   readonly creatureCounts?: number[];
 }
 
 export function runScenario(exp: Experiment, v: Variant, sc: ScenarioId, seed: string, plan: Plan): ScenarioRun {
   const cfg: GeneticsConfig = buildConfig(effectiveSet(v, sc));
-  const scenarioName = exp.strategy.id === "azar" ? sc : `${sc}_${exp.strategy.id}`;
   if (sc === "E4") {
     const e = ESC["E4_primera_hibrida"];
-    const r = runE4({
-      variantId: v.id,
-      cfg,
-      seed,
-      trials: plan.e4.trialsPerSeed,
-      famA: e.familia_A,
-      famB: e.familia_B,
-      target: e.hibrida_objetivo,
-      cpp: e.crias_por_pareja,
-      creatureTrials: plan.e4.creatureTrials,
-      creatureCap: plan.e4.creatureCap,
-    });
-    return {
-      experiment: exp.id,
-      variant: v,
-      scenario: sc,
-      seed,
-      rows: r.rows,
-      hash: "",
-      violations: r.violations,
-      violationSamples: [],
-      fallbackPairs: 0,
-      geneCounts: r.geneCounts,
-      creatureCounts: r.creatureCounts,
-    };
+    const r = runE4({ variantId: v.id, cfg, seed, trials: plan.e4.trialsPerSeed, famA: e.familia_A, famB: e.familia_B, target: e.hibrida_objetivo, cpp: e.crias_por_pareja, cap: plan.e4.cap });
+    return { experiment: exp.id, variant: v, scenario: sc, seed, rows: r.rows, hash: "", violations: r.violations, violationSamples: [], fallbackPairs: 0, geneCounts: r.geneCounts, creatureCounts: r.creatureCounts };
   }
+  const strategy = sc === "E5" ? speedStrategy : exp.strategy;
+  const scenarioName = sc === "E5" || strategy.id === "azar" ? sc : `${sc}_${strategy.id}`;
+  const common = { scenario: scenarioName, variantId: v.id, cfg, seed, strategy, wildFrac: 0, select: "top_speed" as const, init: "wild" as const };
   let res: PopRunResult;
-  const common = { scenario: scenarioName, variantId: v.id, cfg, seed, strategy: exp.strategy, wildFrac: 0, select: "top_speed" as const, init: "wild" as const };
-  if (sc === "E1" || sc === "E2") {
+  if (sc === "E1" || sc === "E2" || sc === "E5") {
     const N = plan.e1.N;
     res = runPopulation({
       ...common,
@@ -164,28 +157,19 @@ export function runScenario(exp: Experiment, v: Variant, sc: ScenarioId, seed: s
       wildFrac: sc === "E2" ? ESC["E2_con_capturas"].fraccion_salvajes_por_generacion : 0,
     });
   } else {
-    const e = ESC["E3a_deriva_pura"];
+    const e = ESC["E3a_deriva_homocigoto"];
     res = runPopulation({
       ...common,
       N: plan.e3.N,
       gens: plan.e3.gens,
       cpp: e.crias_por_pareja,
       children: e.parejas * e.crias_por_pareja,
-      init: sc === "E3b" ? "wild" : sc === "E3a_homo" ? "clones_homo" : "clones",
+      init: sc === "E3b" ? "wild" : sc === "E3c" ? "clones" : "clones_homo",
+      homoGenome: e.genoma_clon,
       select: sc === "E3a_control" ? "random" : "top_speed",
     });
   }
-  return {
-    experiment: exp.id,
-    variant: v,
-    scenario: sc,
-    seed,
-    rows: res.rows,
-    hash: res.finalHash,
-    violations: res.violations,
-    violationSamples: res.violationSamples,
-    fallbackPairs: res.fallbackPairs,
-  };
+  return { experiment: exp.id, variant: v, scenario: sc, seed, rows: res.rows, hash: res.finalHash, violations: res.violations, violationSamples: res.violationSamples, fallbackPairs: res.fallbackPairs };
 }
 
 // ---------------------------------------------------------------------------
@@ -203,11 +187,13 @@ const meanRange = (rows: readonly Row[], k: string, g0: number, g1: number): num
 
 export type SeedMetrics = Record<string, number>;
 
+/** E1 y E5 (misma estructura: diversidad en la última generación, etc.). */
 export function e1Metrics(rows: readonly Row[]): SeedMetrics {
   const [g0a, g0b] = CRIT["sorpresa"].generaciones as [number, number];
   const last = rows[rows.length - 1] as Row;
   const first = rows[0] as Row;
   const F = num(last, "gen");
+  const muts = sumRange(rows, "mutaciones", 1, F);
   const m: SeedMetrics = {
     sorpresa: meanRange(rows, "sorpresa", g0a, g0b),
     sorpresa_sin_mutacion: meanRange(rows, "sorpresa_sin_mutacion", g0a, g0b),
@@ -215,18 +201,26 @@ export function e1Metrics(rows: readonly Row[]): SeedMetrics {
     div_distintas_min: Math.min(...LOCI.map((L) => num(last, `dist_todos_${L}`))),
     div_H_todos_min: Math.min(...LOCI.map((L) => num(last, `H_todos_${L}`))),
     div_H_D_min: Math.min(...LOCI.map((L) => num(last, `H_D_${L}`))),
-    div_H_ratio_min: Math.min(
-      ...LOCI.flatMap((L) => [num(last, `H_todos_${L}`) / num(first, `H_todos_${L}`), num(last, `H_D_${L}`) / num(first, `H_D_${L}`)]),
-    ),
+    div_H_ratio_min: Math.min(...LOCI.flatMap((L) => [num(last, `H_todos_${L}`) / num(first, `H_todos_${L}`), num(last, `H_D_${L}`) / num(first, `H_D_${L}`)])),
     div_maxfrec_D_max: Math.max(...LOCI.map((L) => num(last, `maxfrec_D_${L}`))),
-    mut_por_1000: (1000 * sumRange(rows, "mutaciones", 1, F)) / sumRange(rows, "n_crias", 1, F),
+    mut_por_1000: (1000 * muts) / sumRange(rows, "n_crias", 1, F),
     frac_crias_mutadas: sumRange(rows, "crias_con_mutacion", 1, F) / sumRange(rows, "n_crias", 1, F),
-    frac_mut_coincide_R: sumRange(rows, "mut_coincide_R_padre", 1, F) / sumRange(rows, "mutaciones", 1, F),
-    frac_mut_catalogo: sumRange(rows, "mut_en_catalogo", 1, F) / sumRange(rows, "mutaciones", 1, F),
+    mutaciones: muts,
+    frac_mut_coincide_R: sumRange(rows, "mut_coincide_R_padre", 1, F) / muts,
+    frac_mut_catalogo: sumRange(rows, "mut_en_catalogo", 1, F) / muts,
+    mut_clave_de_padre: sumRange(rows, "mut_clave_de_padre", 1, F),
+    respaldo_N0: sumRange(rows, "mut_respaldo_N0", 1, F),
+    respaldo_N1: sumRange(rows, "mut_respaldo_N1", 1, F),
+    respaldo_N2: sumRange(rows, "mut_respaldo_N2", 1, F),
+    respaldo_N3: sumRange(rows, "mut_respaldo_N3", 1, F),
     genedex_final: num(last, "genedex_total"),
     frac_D_hibrido_final: num(last, "frac_D_hibrido"),
-    frac_D_mutado_final: num(last, "frac_D_mutado"),
+    frac_criaturas_hibridas_final: num(last, "frac_criaturas_hibridas"),
     vel_delta_final: num(last, "vel_total_media") / num(first, "vel_total_media") - 1,
+    vel_D_delta_pts_final: num(last, "vel_D_media") - num(first, "vel_D_media"),
+    calidad_0: num(first, "calidad_media"),
+    calidad_final: num(last, "calidad_media"),
+    calidad_delta_final: num(last, "calidad_media") - num(first, "calidad_media"),
     gen_final: F,
   };
   for (const L of LOCI) m[`sorpresa_${L}`] = meanRange(rows, `sorpresa_${L}`, g0a, g0b);
@@ -247,23 +241,29 @@ export function e2Metrics(rows: readonly Row[]): SeedMetrics {
     genedex_final: num(last, "genedex_total"),
     sorpresa: meanRange(rows, "sorpresa", 1, 20),
     frac_D_hibrido_final: num(last, "frac_D_hibrido"),
+    frac_criaturas_hibridas_final: num(last, "frac_criaturas_hibridas"),
+    calidad_final: num(last, "calidad_media"),
     gen_final: F,
   };
 }
 
+/** E3a/E3b/E3c: Δ velocidad en puntos por gen D (spec v0.2) y en % (como v0.1). */
 export function e3Metrics(rows: readonly Row[]): SeedMetrics {
   const first = rows[0] as Row;
   const last = rows[rows.length - 1] as Row;
   const at = (g: number): Row | undefined => rows.find((r) => num(r, "gen") === g);
-  const v0 = num(first, "vel_total_media");
+  const v0 = num(first, "vel_D_media");
+  const d0 = num(first, "desv_vel_D_media");
   return {
-    delta_20: num(at(20), "vel_total_media") / v0 - 1,
-    delta_final: num(last, "vel_total_media") / v0 - 1,
-    desv_vel_D_final: num(last, "desv_vel_D_media"),
-    /** Parte de Δ debida a deriva de valores (Σ de valor − ancla en los 4 D); el resto es cambio de tipo de gen (ancla). */
-    delta_deriva_20: (4 * (num(at(20), "desv_vel_D_media") - num(first, "desv_vel_D_media"))) / v0,
-    delta_deriva_final: (4 * (num(last, "desv_vel_D_media") - num(first, "desv_vel_D_media"))) / v0,
-    vel0: v0,
+    delta_pts_20: num(at(20), "vel_D_media") - v0,
+    delta_pts_final: num(last, "vel_D_media") - v0,
+    /** Parte de deriva de valores (valor − ancla); el resto es cambio de tipo/ancla (QA S-05). */
+    deriva_pts_20: num(at(20), "desv_vel_D_media") - d0,
+    deriva_pts_final: num(last, "desv_vel_D_media") - d0,
+    delta_pct_20: num(at(20), "vel_D_media") / v0 - 1,
+    delta_pct_final: num(last, "vel_D_media") / v0 - 1,
+    calidad_delta_final: num(last, "calidad_media") - num(first, "calidad_media"),
+    vel0_D: v0,
     gen_final: num(last, "gen"),
   };
 }
@@ -272,65 +272,72 @@ export function e3Metrics(rows: readonly Row[]): SeedMetrics {
 // Resumen y criterios
 // ---------------------------------------------------------------------------
 
+export interface QuantileSummary {
+  readonly median: number;
+  readonly p90: number;
+  readonly medCI: { lo: number; hi: number };
+  readonly p90CI: { lo: number; hi: number };
+  readonly censored: number;
+  readonly mle: ReturnType<typeof geometricMLE>;
+  /** Cubetas de 10 crías (la última = ≥ 200), en nº de ensayos. */
+  readonly hist: number[];
+}
+
+export interface E4Summary {
+  readonly n: number;
+  readonly cap: number;
+  readonly gene: QuantileSummary;
+  readonly creature: QuantileSummary;
+}
+
 export interface VariantSummary {
   readonly experiment: string;
   readonly variant: Variant;
   readonly probMut: number;
-  /** Métricas por escenario: nombre → lista por semilla. */
   readonly perSeed: Partial<Record<ScenarioId, SeedMetrics[]>>;
-  readonly e4?: {
-    readonly n: number;
-    readonly median: number;
-    readonly p90: number;
-    readonly seedMedians: number[];
-    readonly creatureMedian: number;
-    readonly creatureCensored: number;
-    readonly creatureN: number;
-    readonly histogram: number[];
-  };
+  readonly e4?: E4Summary;
   readonly violations: number;
+  readonly violationSamples: string[];
   readonly fallbackPairs: number;
+}
+
+function qsum(xs: readonly number[], cap: number): QuantileSummary {
+  const h = new Array<number>(21).fill(0);
+  for (const x of xs) h[Math.min(20, Math.floor((x - 1) / 10))]! += 1;
+  return {
+    median: quantile(xs, 0.5),
+    p90: quantile(xs, 0.9),
+    medCI: quantileCI(xs, 0.5),
+    p90CI: quantileCI(xs, 0.9),
+    censored: xs.filter((x) => !Number.isFinite(x)).length,
+    mle: geometricMLE(xs, cap),
+    hist: h,
+  };
 }
 
 export function summarize(exp: Experiment, v: Variant, runs: readonly ScenarioRun[]): VariantSummary {
   const perSeed: Partial<Record<ScenarioId, SeedMetrics[]>> = {};
   let violations = 0;
   let fallbackPairs = 0;
-  let e4: VariantSummary["e4"];
+  const violationSamples: string[] = [];
+  let e4: E4Summary | undefined;
   for (const sc of exp.scenarios) {
     const rs = runs.filter((r) => r.scenario === sc);
     for (const r of rs) {
       violations += r.violations;
       fallbackPairs += r.fallbackPairs;
+      violationSamples.push(...r.violationSamples);
     }
-    if (sc === "E1") perSeed.E1 = rs.map((r) => e1Metrics(r.rows));
+    if (sc === "E1" || sc === "E5") perSeed[sc] = rs.map((r) => e1Metrics(r.rows));
     else if (sc === "E2") perSeed.E2 = rs.map((r) => e2Metrics(r.rows));
     else if (sc === "E4") {
-      const all = rs.flatMap((r) => r.geneCounts ?? []);
-      const cr = rs.flatMap((r) => r.creatureCounts ?? []);
-      const hist = new Array<number>(21).fill(0); // cubetas de 10 crías; la última = ≥200
-      for (const x of all) hist[Math.min(20, Math.floor((x - 1) / 10))]! += 1;
-      e4 = {
-        n: all.length,
-        median: quantile(all, 0.5),
-        p90: quantile(all, 0.9),
-        seedMedians: rs.map((r) => quantile(r.geneCounts ?? [], 0.5)),
-        creatureMedian: quantile(cr, 0.5),
-        creatureCensored: cr.filter((x) => !Number.isFinite(x)).length,
-        creatureN: cr.length,
-        histogram: hist,
-      };
+      const cap = ESC["E4_primera_hibrida"].tope_crias as number;
+      const g = rs.flatMap((r) => r.geneCounts ?? []);
+      const c = rs.flatMap((r) => r.creatureCounts ?? []);
+      e4 = { n: g.length, cap, gene: qsum(g, cap), creature: qsum(c, cap) };
     } else perSeed[sc] = rs.map((r) => e3Metrics(r.rows));
   }
-  return {
-    experiment: exp.id,
-    variant: v,
-    probMut: buildConfig(v.set).mutation.probPerLocus,
-    perSeed,
-    ...(e4 ? { e4 } : {}),
-    violations,
-    fallbackPairs,
-  };
+  return { experiment: exp.id, variant: v, probMut: buildConfig(v.set).mutation.probPerLocus, perSeed, ...(e4 ? { e4 } : {}), violations, violationSamples: violationSamples.slice(0, 5), fallbackPairs };
 }
 
 export interface Criterion {
@@ -339,59 +346,56 @@ export interface Criterion {
   readonly label: string;
   readonly threshold: string;
   readonly value: number;
-  readonly ci?: MeanCI;
+  readonly ci?: MeanCI | { readonly lo: number; readonly hi: number };
   readonly pass: boolean;
-  /** Semillas que cumplen / total (si aplica). */
   readonly seedsPass?: [number, number];
-  /** El IC cruza el umbral: resultado frágil. */
+  /** El IC cruza el umbral. */
   readonly fragile: boolean;
-  readonly fmt: "pct" | "num" | "int";
+  readonly fmt: "pct" | "num" | "int" | "pts";
+  /** Informativo (sin umbral en la spec): no cuenta en aprobados. */
+  readonly informative?: boolean;
 }
 
-function crit(
-  id: string,
-  group: string,
-  label: string,
-  threshold: string,
-  xs: readonly number[],
-  ok: (x: number) => boolean,
-  fmt: Criterion["fmt"],
-): Criterion {
+function crit(id: string, group: string, label: string, threshold: string, xs: readonly number[], ok: (x: number) => boolean, fmt: Criterion["fmt"], informative = false): Criterion {
   const ci = meanCI(xs);
-  const pass = ok(ci.mean);
-  return {
-    id,
-    group,
-    label,
-    threshold,
-    value: ci.mean,
-    ci,
-    pass,
-    seedsPass: [xs.filter(ok).length, xs.length],
-    fragile: xs.length > 1 && ok(ci.lo) !== ok(ci.hi),
-    fmt,
-  };
+  return { id, group, label, threshold, value: ci.mean, ci, pass: ok(ci.mean), seedsPass: [xs.filter(ok).length, xs.length], fragile: xs.length > 1 && ok(ci.lo) !== ok(ci.hi), fmt, ...(informative ? { informative } : {}) };
 }
+
+function fixed(id: string, group: string, label: string, threshold: string, value: number, ci: { lo: number; hi: number }, ok: (x: number) => boolean, fmt: Criterion["fmt"]): Criterion {
+  return { id, group, label, threshold, value, ci, pass: ok(value), fragile: ok(ci.lo) !== ok(ci.hi), fmt };
+}
+
+const pctS = (x: number): string => `${Math.round(x * 1000) / 10} %`.replace(".", ",");
+const numS = (x: number): string => String(x).replace(".", ",");
 
 export function evaluateCriteria(s: VariantSummary): Criterion[] {
   const out: Criterion[] = [];
   const e1 = s.perSeed.E1;
-  const pct = (x: number): string => `${Math.round(x * 1000) / 10} %`;
   if (e1) {
     const c = CRIT["sorpresa"];
     const col = (k: string): number[] => e1.map((m) => m[k] as number);
-    out.push(crit("sorpresa", "Sorpresa", "E1 % crías con D nuevo (gen 1–20)", `${pct(c.min)}–${pct(c.max)}`, col("sorpresa"), (x) => x >= c.min && x <= c.max, "pct"));
+    out.push(crit("sorpresa", "Sorpresa", "E1 % crías con D nuevo (gen 1–20)", `${pctS(c.min)}–${pctS(c.max)}`, col("sorpresa"), (x) => x >= c.min && x <= c.max, "pct"));
     const d = CRIT["diversidad"];
     const F = e1[0]?.["gen_final"];
     out.push(crit("div_distintas", "Diversidad", `E1 gen ${F}: mín. claves distintas por locus`, `≥ ${d.min_identidades_distintas_todos}`, col("div_distintas_min"), (x) => x >= d.min_identidades_distintas_todos, "num"));
-    out.push(crit("div_H_todos", "Diversidad", `E1 gen ${F}: mín. H todos los slots (bits)`, `≥ ${d.min_entropia_bits_todos}`, col("div_H_todos_min"), (x) => x >= d.min_entropia_bits_todos, "num"));
-    out.push(crit("div_H_D", "Diversidad", `E1 gen ${F}: mín. H solo D (bits)`, `≥ ${d.min_entropia_bits_D}`, col("div_H_D_min"), (x) => x >= d.min_entropia_bits_D, "num"));
-    out.push(crit("div_H_ratio", "Diversidad", `E1 gen ${F}: mín. H / H gen 0`, `≥ ${pct(d.min_fraccion_entropia_gen0)}`, col("div_H_ratio_min"), (x) => x >= d.min_fraccion_entropia_gen0, "pct"));
-    out.push(crit("div_maxfrec", "Diversidad", `E1 gen ${F}: máx. frecuencia de una clave en D`, `≤ ${pct(d.max_frecuencia_identidad_D)}`, col("div_maxfrec_D_max"), (x) => x <= d.max_frecuencia_identidad_D, "pct"));
+    out.push(crit("div_H_todos", "Diversidad", `E1 gen ${F}: mín. H todos los slots (bits)`, `≥ ${numS(d.min_entropia_bits_todos)}`, col("div_H_todos_min"), (x) => x >= d.min_entropia_bits_todos, "num"));
+    out.push(crit("div_H_D", "Diversidad", `E1 gen ${F}: mín. H solo D (bits)`, `≥ ${numS(d.min_entropia_bits_D)}`, col("div_H_D_min"), (x) => x >= d.min_entropia_bits_D, "num"));
+    out.push(crit("div_H_ratio", "Diversidad", `E1 gen ${F}: mín. H / H gen 0`, `≥ ${pctS(d.min_fraccion_entropia_gen0)}`, col("div_H_ratio_min"), (x) => x >= d.min_fraccion_entropia_gen0, "pct"));
+    out.push(crit("div_maxfrec", "Diversidad", `E1 gen ${F}: máx. frecuencia de una clave en D`, `≤ ${pctS(d.max_frecuencia_identidad_D)}`, col("div_maxfrec_D_max"), (x) => x <= d.max_frecuencia_identidad_D, "pct"));
     const mu = CRIT["mutacion"];
     const exp = 4000 * s.probMut;
-    out.push(crit("mut_1000", "Mutación", "E1 mutaciones / 1000 crías", `${Math.round(exp)} ± ${pct(mu.tolerancia_relativa)}`, col("mut_por_1000"), (x) => Math.abs(x - exp) <= mu.tolerancia_relativa * exp, "num"));
-    out.push(crit("mut_frac", "Mutación", "E1 % crías con ≥1 mutación", `${pct(mu.min_frac_crias_mutadas)}–${pct(mu.max_frac_crias_mutadas)}`, col("frac_crias_mutadas"), (x) => x >= mu.min_frac_crias_mutadas && x <= mu.max_frac_crias_mutadas, "pct"));
+    out.push(crit("mut_1000", "Mutación", "E1 mutaciones / 1000 crías", `4000·p = ${numS(Math.round(exp * 10) / 10)} ± ${pctS(mu.tolerancia_relativa)}`, col("mut_por_1000"), (x) => Math.abs(x - exp) <= mu.tolerancia_relativa * exp, "num"));
+    out.push(crit("mut_frac", "Mutación", "E1 % crías con ≥1 mutación", `${pctS(mu.min_frac_crias_mutadas)}–${pctS(mu.max_frac_crias_mutadas)}`, col("frac_crias_mutadas"), (x) => x >= mu.min_frac_crias_mutadas && x <= mu.max_frac_crias_mutadas, "pct"));
+  }
+  const e5 = s.perSeed.E5;
+  if (e5) {
+    const mo = CRIT["monocultivo_estrategia"];
+    const col = (k: string): number[] => e5.map((m) => m[k] as number);
+    const F = e5[0]?.["gen_final"];
+    out.push(crit("mono_distintas", "Monocultivo dirigido", `E5 gen ${F}: mín. claves distintas por locus`, `≥ ${mo.min_identidades_distintas_todos}`, col("div_distintas_min"), (x) => x >= mo.min_identidades_distintas_todos, "num"));
+    out.push(crit("mono_H_D", "Monocultivo dirigido", `E5 gen ${F}: mín. H solo D (bits)`, `≥ ${numS(mo.min_entropia_bits_D)}`, col("div_H_D_min"), (x) => x >= mo.min_entropia_bits_D, "num"));
+    out.push(crit("mono_maxfrec", "Monocultivo dirigido", `E5 gen ${F}: máx. frecuencia de una clave en D`, `≤ ${pctS(mo.max_frecuencia_identidad_D)}`, col("div_maxfrec_D_max"), (x) => x <= mo.max_frecuencia_identidad_D, "pct"));
+    out.push(crit("e5_calidad", "Calidad (§15.6)", `E5 Δ calidad media de las criaturas, gen ${F} − gen 0 (puntos)`, "no debe subir (≤ 0)", col("calidad_delta_final"), (x) => x <= 0, "pts", true));
   }
   const e2 = s.perSeed.E2;
   if (e2) {
@@ -400,36 +404,34 @@ export function evaluateCriteria(s: VariantSummary): Criterion[] {
     const F = e2[0]?.["gen_final"] as number;
     out.push(crit("dex_1_10", "Genedex", "E2 claves nuevas / 1000 crías (gen 1–10)", `≥ ${g.min_nuevas_por_1000_crias_gen_1_10}`, col("genedex_nuevas_1_10"), (x) => x >= g.min_nuevas_por_1000_crias_gen_1_10, "num"));
     out.push(crit("dex_final", "Genedex", `E2 claves nuevas / 1000 crías (gen ${F - 9}–${F})`, `≥ ${g.min_nuevas_por_1000_crias_gen_291_300}`, col("genedex_nuevas_final10"), (x) => x >= g.min_nuevas_por_1000_crias_gen_291_300, "num"));
-    out.push(crit("dex_rep", "Genedex", `E2 % mutaciones en clave ya registrada (gen ${F - 9}–${F})`, `${pct(g.min_frac_mutaciones_repetidas_gen_291_300)}–${pct(g.max_frac_mutaciones_repetidas_gen_291_300)}`, col("genedex_repetidas_final10"), (x) => x >= g.min_frac_mutaciones_repetidas_gen_291_300 && x <= g.max_frac_mutaciones_repetidas_gen_291_300, "pct"));
+    out.push(crit("dex_rep", "Genedex", `E2 % mutaciones en clave ya registrada (gen ${F - 9}–${F})`, `${pctS(g.min_frac_mutaciones_repetidas_gen_291_300)}–${pctS(g.max_frac_mutaciones_repetidas_gen_291_300)}`, col("genedex_repetidas_final10"), (x) => x >= g.min_frac_mutaciones_repetidas_gen_291_300 && x <= g.max_frac_mutaciones_repetidas_gen_291_300, "pct"));
     out.push(crit("dex_hib", "Genedex", "E2 híbridas distintas vistas", `= ${g.min_hibridas_distintas_vistas}`, col("hibridas_vistas"), (x) => x >= g.min_hibridas_distintas_vistas, "int"));
+    const h = CRIT["hibridas_vigilancia"];
+    out.push(crit("hib_D", "Vigilancia de híbridas", `E2 gen ${F}: % de D híbridos`, `≤ ${pctS(h.max_frac_D_hibridos)}`, col("frac_D_hibrido_final"), (x) => x <= h.max_frac_D_hibridos, "pct"));
+    out.push(crit("hib_cri", "Vigilancia de híbridas", `E2 gen ${F}: % de criaturas de familia híbrida`, `${pctS(h.min_frac_criaturas_hibridas)}–${pctS(h.max_frac_criaturas_hibridas)}`, col("frac_criaturas_hibridas_final"), (x) => x >= h.min_frac_criaturas_hibridas && x <= h.max_frac_criaturas_hibridas, "pct"));
   }
   if (s.e4) {
     const p = CRIT["primera_hibrida"];
-    const ci = meanCI(s.e4.seedMedians);
-    out.push({ id: "e4_med", group: "Primera híbrida", label: `E4 mediana crías hasta gen Vapor (${s.e4.n} ensayos)`, threshold: `${p.mediana_min}–${p.mediana_max}`, value: s.e4.median, ci, pass: s.e4.median >= p.mediana_min && s.e4.median <= p.mediana_max, fragile: false, fmt: "num" });
-    out.push({ id: "e4_p90", group: "Primera híbrida", label: "E4 p90 crías hasta gen Vapor", threshold: `≤ ${p.p90_max}`, value: s.e4.p90, pass: s.e4.p90 <= p.p90_max, fragile: false, fmt: "num" });
+    const e = s.e4;
+    out.push(fixed("e4_gen_med", "Primer gen híbrido", `E4 mediana crías hasta gen Vapor (${e.n} ensayos)`, `${p.gen_mediana_min}–${p.gen_mediana_max}`, e.gene.median, e.gene.medCI, (x) => x >= p.gen_mediana_min && x <= p.gen_mediana_max, "num"));
+    out.push(fixed("e4_gen_p90", "Primer gen híbrido", "E4 p90 crías hasta gen Vapor", `≤ ${p.gen_p90_max}`, e.gene.p90, e.gene.p90CI, (x) => x <= p.gen_p90_max, "num"));
+    out.push(fixed("e4_cri_med", "Primera criatura híbrida", `E4 mediana crías hasta criatura Vapor (${e.n} ensayos)`, `≤ ${p.criatura_mediana_max}`, e.creature.median, e.creature.medCI, (x) => x <= p.criatura_mediana_max, "num"));
+    out.push(fixed("e4_cri_p90", "Primera criatura híbrida", "E4 p90 crías hasta criatura Vapor", `≤ ${p.criatura_p90_max}`, e.creature.p90, e.creature.p90CI, (x) => x <= p.criatura_p90_max, "num"));
   }
   const dc = CRIT["deriva"];
   const e3a = s.perSeed.E3a;
   if (e3a) {
     const col = (k: string): number[] => e3a.map((m) => m[k] as number);
     const F = e3a[0]?.["gen_final"];
-    out.push(crit("der_20", "Deriva", "E3a Δ velocidad total gen 20", `+${pct(dc.gen20_min)}…+${pct(dc.gen20_max)}`, col("delta_20"), (x) => x >= dc.gen20_min && x <= dc.gen20_max, "pct"));
-    out.push(crit("der_final", "Deriva", `E3a Δ velocidad total gen ${F}`, `≤ +${pct(dc.gen100_max)}`, col("delta_final"), (x) => x <= dc.gen100_max, "pct"));
+    out.push(crit("der_20", "Deriva", "E3a homocigoto: Δ velocidad por gen D, gen 20 (puntos)", `+${numS(dc.gen20_min_puntos)} a +${numS(dc.gen20_max_puntos)}`, col("delta_pts_20"), (x) => x >= dc.gen20_min_puntos && x <= dc.gen20_max_puntos, "pts"));
+    out.push(crit("der_final", "Deriva", `E3a homocigoto: Δ velocidad por gen D, gen ${F} (puntos)`, `≤ +${numS(dc.gen100_max_puntos)}`, col("delta_pts_final"), (x) => x <= dc.gen100_max_puntos, "pts"));
   }
   const ctl = s.perSeed.E3a_control;
   if (ctl) {
     const F = ctl[0]?.["gen_final"];
-    out.push(crit("der_ctl", "Deriva", `E3a control |Δ| gen ${F}`, `≤ ${pct(dc.control_gen100_max_abs)}`, ctl.map((m) => Math.abs(m["delta_final"] as number)), (x) => x <= dc.control_gen100_max_abs, "pct"));
+    out.push(crit("der_ctl", "Deriva", `E3a control al azar: |Δ| gen ${F} (puntos)`, `≤ ${numS(dc.control_gen100_max_abs_puntos)}`, ctl.map((m) => Math.abs(m["delta_pts_final"] as number)), (x) => x <= dc.control_gen100_max_abs_puntos, "pts"));
   }
-  const homo = s.perSeed.E3a_homo;
-  if (homo) {
-    const col = (k: string): number[] => homo.map((m) => m[k] as number);
-    const F = homo[0]?.["gen_final"];
-    out.push(crit("der_homo_20", "Deriva (diagnóstico)", "E3a homocigoto Δ velocidad gen 20 (solo deriva de valores)", `+${pct(dc.gen20_min)}…+${pct(dc.gen20_max)}`, col("delta_20"), (x) => x >= dc.gen20_min && x <= dc.gen20_max, "pct"));
-    out.push(crit("der_homo_final", "Deriva (diagnóstico)", `E3a homocigoto Δ velocidad gen ${F}`, `≤ +${pct(dc.gen100_max)}`, col("delta_final"), (x) => x <= dc.gen100_max, "pct"));
-  }
-  out.push({ id: "inv", group: "Invariantes", label: "Violaciones (todas las escenas)", threshold: "0", value: s.violations, pass: s.violations <= CRIT["invariantes"].max_violaciones, fragile: false, fmt: "int" });
+  out.push({ id: "inv", group: "Invariantes", label: "Violaciones (todas las escenas; incluye clave mutada ∈ claves de los padres)", threshold: "0", value: s.violations, pass: s.violations <= CRIT["invariantes"].max_violaciones, fragile: false, fmt: "int" });
   return out;
 }
 
@@ -443,12 +445,10 @@ export interface DeterminismResult {
 }
 
 export function runDeterminism(plan: Plan, csvOf: (rows: readonly Row[]) => string): DeterminismResult {
-  const v = mainGrid([0.02])[0] as Variant;
-  const v3 = mainGrid([0.03])[0] as Variant;
-  const cfg = buildConfig(v.set);
+  const cfg = buildConfig({});
   const opts = {
     scenario: "E1",
-    variantId: v.id,
+    variantId: DEFAULT_VARIANT.id,
     cfg,
     seed: plan.seeds[0] as string,
     strategy: randomStrategy,
@@ -463,7 +463,7 @@ export function runDeterminism(plan: Plan, csvOf: (rows: readonly Row[]) => stri
   const a = runPopulation(opts);
   const b = runPopulation(opts);
   const c = runPopulation({ ...opts, seed: `${opts.seed}-otra` });
-  const p = runPopulation({ ...opts, pairedCfg: buildConfig(v3.set) });
+  const p = runPopulation({ ...opts, pairedCfg: buildConfig({ "mutacion.prob_por_locus": 0.03 }) });
   return {
     rerunHashEqual: a.finalHash === b.finalHash,
     rerunCsvEqual: csvOf(a.rows) === csvOf(b.rows),

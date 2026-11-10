@@ -2,10 +2,9 @@
  * CLI del simulador de genética. Uso:
  *   npm run sim -- [--quick] [--semillas N] [--semilla PREFIJO] [--generaciones N]
  *                  [--poblacion N] [--barrido id,id|todos] [--config id,id]
- *                  [--escenario E1,E2,E3a,E3a_control,E3a_homo,E3b,E4] [--estrategia id]
+ *                  [--escenario E1,E2,E3a,E3a_control,E3b,E3c,E4,E5] [--estrategia id]
  *                  [--hilos N] [--out DIR] [--sin-informe]
- * Barridos: principal, estrategia_velocidad, estrategia_purista,
- * estrategia_hibridas, pesos_R, forma, deriva, hibrida.
+ * Barridos (spec v0.2, presupuesto ajustado): v02, afinidad, arreglo_*.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { toCsv, sha256 } from "./csv.ts";
@@ -15,8 +14,11 @@ import {
   evaluateCriteria,
   experiments,
   makePlan,
+  DEFAULT_SEED_PREFIX,
   runDeterminism,
   runKey,
+  seedsFor,
+  V01_SEED_PREFIX,
   summarize,
   type Experiment,
   type ScenarioId,
@@ -42,7 +44,7 @@ interface Args {
 }
 
 function parseArgs(argv: readonly string[]): Args {
-  const a: Args = { quick: false, seedPrefix: "genoma", threads: 2, report: true };
+  const a: Args = { quick: false, seedPrefix: DEFAULT_SEED_PREFIX, threads: 2, report: true };
   const list = (s: string | undefined): string[] => (s ?? "").split(",").filter(Boolean);
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
@@ -112,13 +114,14 @@ class HelpShown extends Error {}
 const HELP = `Simulador de genética v0.1 (Proyecto Genoma)
   --quick               ejecución reducida (<30 s): N=200, 40 gen, 2 semillas, E4 1000 ensayos
   --semillas N          nº de semillas por configuración (completo: 5)
-  --semilla P           prefijo de semilla (semillas = P-1..P-N; por defecto "genoma")
+  --semilla P           prefijo de semilla (semillas = P-1..P-N; por defecto "${DEFAULT_SEED_PREFIX}",
+                        distinto del usado para elegir parámetros en v0.1, "${V01_SEED_PREFIX}")
   --generaciones N      generaciones de E1/E2 (≥20)
   --poblacion N         tamaño de población de E1/E2
-  --barrido a,b|todos   principal, estrategia_velocidad, estrategia_purista, estrategia_hibridas, pesos_R, forma, deriva, hibrida
-  --config a,b          limita configuraciones (p. ej. A-m2,C-m3)
-  --escenario a,b       E1, E2, E3a, E3a_control, E3a_homo, E3b, E4
-  --estrategia id       E1 con esa estrategia (azar, velocidad, purista, hibridas) sobre las configs elegidas
+  --barrido a,b|todos   v02 (config por defecto, todos los escenarios), afinidad (0,75 vs 0,5 en E1/E2), arreglo_* (si los hay)
+  --config a,b          limita configuraciones (p. ej. v02)
+  --escenario a,b       E1, E2, E3a, E3a_control, E3b, E3c, E4, E5
+  --estrategia id       E1 con esa estrategia (azar, velocidad, purista, hibridas) sobre la config por defecto
   --hilos N             procesos en paralelo (por defecto 2)
   --out DIR             carpeta de salida (por defecto sim/out/<modo>)
   --sin-informe         no genera informe HTML/MD`;
@@ -128,7 +131,7 @@ function selectExperiments(a: Args): Experiment[] {
   if (a.strategy) {
     const s = findStrategy(a.strategy);
     const principal = exps[0] as Experiment;
-    exps = [{ id: s.id === "azar" ? "principal" : `estrategia_${s.id}`, label: `Estrategia: ${s.label}`, variants: principal.variants, scenarios: ["E1"], strategy: s }];
+    exps = [{ id: s.id === "azar" ? "v02" : `estrategia_${s.id}`, label: `Estrategia: ${s.label}`, variants: principal.variants, scenarios: ["E1"], strategy: s }];
   } else if (a.sweeps && !a.sweeps.includes("todos")) {
     const want = a.sweeps;
     const unknown = want.filter((w) => !exps.some((e) => e.id === w));
@@ -154,13 +157,14 @@ async function main(): Promise<void> {
     throw e;
   }
   const plan = makePlan(args);
+  if (args.seedPrefix === V01_SEED_PREFIX) console.log(`AVISO: "${V01_SEED_PREFIX}" son las semillas con las que se eligieron los parámetros en v0.1; para validar usa otras (QA S-02).`);
   const exps = selectExperiments(args);
   if (exps.length === 0) throw new Error("nada que ejecutar con esos filtros");
   const outDir = args.out ?? `sim/out/${plan.mode}`;
   mkdirSync(outDir, { recursive: true });
 
   const jobs: Job[] = [];
-  for (const e of exps) for (const v of e.variants) for (const sc of e.scenarios) for (const seed of plan.seeds) jobs.push({ expId: e.id, strategyId: e.strategy.id, variant: v, scenario: sc, seed, plan, scenariosOfExp: e.scenarios });
+  for (const e of exps) for (const v of e.variants) for (const sc of e.scenarios) for (const seed of seedsFor(plan, sc)) jobs.push({ expId: e.id, strategyId: e.strategy.id, variant: v, scenario: sc, seed, plan, scenariosOfExp: e.scenarios });
   console.log(`Modo ${plan.mode}: ${exps.length} barridos, ${jobs.length} ejecuciones, semillas ${plan.seeds.join(" ")}, ${args.threads} hilos`);
 
   // Deduplicación: ejecuciones idénticas (misma config efectiva, escenario, estrategia y semilla) se calculan una vez.
@@ -218,7 +222,7 @@ async function main(): Promise<void> {
         ic95_lo: c.ci ? c.ci.lo : "",
         ic95_hi: c.ci ? c.ci.hi : "",
         semillas_ok: c.seedsPass ? `${c.seedsPass[0]}/${c.seedsPass[1]}` : "",
-        resultado: c.pass ? (c.fragile ? "aprobado (frágil)" : "aprobado") : c.fragile ? "suspendido (frágil)" : "suspendido",
+        resultado: (c.pass ? (c.fragile ? "aprobado (frágil)" : "aprobado") : c.fragile ? "suspendido (frágil)" : "suspendido") + (c.informative ? " [informativo]" : ""),
       });
     }
   }
@@ -242,13 +246,10 @@ async function main(): Promise<void> {
     for (const p of paths) console.log(`Informe: ${p}`);
   }
   // Tabla breve en consola
-  const principal = summaries.filter((s) => s.experiment === "principal");
-  if (principal.length) {
-    console.log("\nCriterios (principal): config  aprobados/total  suspendidos");
-    for (const s of principal) {
-      const cs = evaluateCriteria(s);
-      console.log(`  ${s.variant.id.padEnd(6)} ${cs.filter((c) => c.pass).length}/${cs.length}  ${cs.filter((c) => !c.pass).map((c) => c.id).join(" ")}`);
-    }
+  console.log("\nCriterios: barrido/config  aprobados/total (sin informativos)  suspendidos");
+  for (const s of summaries) {
+    const cs = evaluateCriteria(s).filter((c) => !c.informative);
+    console.log(`  ${`${s.experiment}/${s.variant.id}`.padEnd(18)} ${cs.filter((c) => c.pass).length}/${cs.length}  ${cs.filter((c) => !c.pass).map((c) => c.id).join(" ")}`);
   }
   console.log(`\nTotal: ${((performance.now() - t0) / 1000).toFixed(1)} s. Salida: ${outDir}/`);
 }

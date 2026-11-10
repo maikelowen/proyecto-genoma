@@ -48,76 +48,16 @@ export function buildConfig(set: Readonly<Record<string, unknown>>): GeneticsCon
   return parseGeneticsConfig(buildRaw(set));
 }
 
-const B = RAW["barridos_sim"];
-export const PESOS_D: Record<string, unknown> = B["herencia.pesos_D"];
-export const PESOS_R: Record<string, unknown> = B["herencia.pesos_R"];
+/** Configuración por defecto v0.2 (sin cambios sobre el JSON). */
+export const DEFAULT_VARIANT: Variant = { id: "v02", label: "v0.2 por defecto", set: {} };
 
-const PD_SHORT: Record<string, string> = { A_doc: "A", B: "B", C: "C" };
-
-function fmtPct(p: number): string {
-  return String(Math.round(p * 1000) / 10).replace(".", ",");
-}
-
-/** pesos_D × prob_por_locus (barrido principal, §11 prioridad 1). */
-export function mainGrid(muts: readonly number[] = [0.01, 0.02, 0.03]): Variant[] {
-  const out: Variant[] = [];
-  for (const pd of ["A_doc", "B", "C"]) {
-    for (const m of muts) {
-      out.push({
-        id: `${PD_SHORT[pd]}-m${Math.round(m * 100)}`,
-        label: `pesos_D ${PD_SHORT[pd]} · mutación ${fmtPct(m)} %`,
-        set: { "herencia.pesos_D": PESOS_D[pd], "mutacion.prob_por_locus": m },
-      });
-    }
-  }
-  return out;
-}
-
-/** pesos_R con un pesos_D/mutación fijos. */
-export function pesosRSweep(base: Variant): Variant[] {
-  const short: Record<string, string> = { R0: "R0", R_uniforme: "Runi", R_igual_D: "RigD" };
-  return Object.keys(PESOS_R).map((k) => ({
-    id: `${base.id}-${short[k] ?? k}`,
-    label: `${base.label} · pesos_R ${k}`,
-    set: { ...base.set, "herencia.pesos_R": PESOS_R[k] },
-  }));
-}
-
-/** deriva.kappa × deriva.sigma (para E3a). */
-export function driftSweep(base: Variant): Variant[] {
-  const out: Variant[] = [];
-  for (const k of B["deriva.kappa"] as number[]) {
-    for (const s of B["deriva.sigma"] as number[]) {
-      out.push({
-        id: `${base.id}-k${k}-s${s}`,
-        label: `${base.label} · κ ${k} · σ ${s}`,
-        set: { ...base.set, "deriva.kappa": k, "deriva.sigma": s },
-      });
-    }
-  }
-  return out;
-}
-
-/** mutacion.prob_hibrida_nueva (para E2/E4). */
-export function hybridSweep(base: Variant): Variant[] {
-  return (B["mutacion.prob_hibrida_nueva"] as number[]).map((h) => ({
-    id: `${base.id}-h${h}`,
-    label: `${base.label} · híbrida nueva ${fmtPct(h)} %`,
-    set: { ...base.set, "mutacion.prob_hibrida_nueva": h },
-  }));
+/** Variante de un solo parámetro sobre la config por defecto. */
+export function oneParam(id: string, label: string, path: string, value: unknown): Variant {
+  return { id, label, set: { [path]: value } };
 }
 
 export function findVariant(id: string, all: readonly Variant[]): Variant {
   const v = all.find((x) => x.id === id);
   if (!v) throw new Error(`configuración desconocida: ${id}. Disponibles: ${all.map((x) => x.id).join(", ")}`);
   return v;
-}
-
-/** mutacion.sigma_forma (afecta a cuánto se repiten las claves mutadas, E2). */
-export function shapeSigmaSweep(base: Variant): Variant[] {
-  return (B["mutacion.sigma_forma"] as number[]).map((x) => ({
-    id: `${base.id}-f${x}`,
-    label: `${base.label} · σ forma ${x}`,
-    set: { ...base.set, "mutacion.sigma_forma": x },
-  }));
 }

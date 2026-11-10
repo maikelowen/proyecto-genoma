@@ -28,6 +28,8 @@ import {
   createRng,
   createWildCreature,
   createWildPopulation,
+  creatureFamily,
+  creatureQuality,
   distribute,
   expressedStats,
   makeGene,
@@ -61,7 +63,12 @@ export interface PopRunOptions {
   readonly cpp: number;
   /** Crías a producir por generación. */
   readonly children: number;
+  /**
+   * wild = salvajes; clones = clones heterocigotos de un salvaje (E3c, antigua E3a v0.1);
+   * clones_homo = clones homocigotos de catálogo (E3a v0.2: D = R1 = R2 = `homoGenome[locus]`, calidad base, valores = ancla).
+   */
   readonly init: "wild" | "clones" | "clones_homo";
+  readonly homoGenome?: Readonly<Record<string, string>>;
   /** Fracción reemplazada por salvajes nuevos cada generación (E2). */
   readonly wildFrac: number;
   /** Supervivencia si children > N. */
@@ -126,6 +133,23 @@ export function createClones(rng: Rng, cfg: GeneticsConfig, n: number, homozygou
   return out;
 }
 
+/**
+ * E3a v0.2 (spec §10.1): N clones idénticos; en cada locus D = R1 = R2 =
+ * el gen de catálogo indicado, calidad = calidad.base, valores = ancla. Sin tiradas.
+ */
+export function createHomozygousClones(cfg: GeneticsConfig, n: number, ids: Readonly<Record<string, string>>): Creature[] {
+  const genome = {} as Record<LocusId, Locus>;
+  for (const L of LOCUS_IDS) {
+    const id = ids[L];
+    const t = id === undefined ? undefined : cfg.catalogById.get(id);
+    if (!t || t.locus !== L) throw new Error(`E3a: gen de catálogo inválido para ${L}: ${id}`);
+    const g = makeGene(t, cfg.quality.base, t.anchor, t.anchor, "base");
+    genome[L] = Object.freeze({ D: g, R1: g, R2: g });
+  }
+  const family = creatureFamily(genome as Genome, cfg);
+  return Array.from({ length: n }, (_, i) => ({ id: `c${i}`, genome: genome as Genome, family, generation: 0, parents: null, offspringCount: 0, birth: 0 }));
+}
+
 function entropy(counts: Map<string, number>, total: number): number {
   let h = 0;
   for (const c of counts.values()) {
@@ -184,12 +208,20 @@ export function popMetrics(pop: readonly Creature[], cfg: GeneticsConfig, fams: 
     sums[2] = (sums[2] as number) + s.resistencia;
   }
   for (const f of fams) row[`fam_${f}`] = (famCount.get(f) ?? 0) / pop.length;
+  let hybCreatures = 0;
+  for (const [f, k] of famCount) if (cfg.hybridById.has(f)) hybCreatures += k;
+  row["frac_criaturas_hibridas"] = hybCreatures / pop.length;
+  const qs = pop.map(creatureQuality).sort((a, b) => a - b);
+  row["calidad_media"] = qs.reduce((a, b) => a + b, 0) / qs.length;
+  row["calidad_p10"] = qs[Math.floor(0.1 * (qs.length - 1))] as number;
+  row["calidad_p90"] = qs[Math.ceil(0.9 * (qs.length - 1))] as number;
   row["frac_D_hibrido"] = hybD / (pop.length * 4);
   row["frac_criaturas_con_gen_hibrido"] = withHyb / pop.length;
   row["frac_D_mutado"] = mutatedD / (pop.length * 4);
   row["pot_total_media"] = (sums[0] as number) / pop.length;
   row["vel_total_media"] = (sums[1] as number) / pop.length;
   row["res_total_media"] = (sums[2] as number) / pop.length;
+  row["vel_D_media"] = (sums[1] as number) / (pop.length * 4);
   row["desv_vel_D_media"] = devVel / (pop.length * 4);
   return row;
 }
@@ -208,6 +240,8 @@ function breedMetrics(recs: readonly Rec[], cfg: GeneticsConfig, ds: DexState): 
   let muts = 0;
   let withMut = 0;
   let coincR = 0;
+  let parentKeyHits = 0;
+  const fallback = [0, 0, 0, 0];
   let catalog = 0;
   let added = 0;
   let rediscovered = 0;
@@ -231,6 +265,8 @@ function breedMetrics(recs: readonly Rec[], cfg: GeneticsConfig, ds: DexState): 
       const la = pa.genome[m.locus];
       const lb = pb.genome[m.locus];
       if ([la.R1, la.R2, lb.R1, lb.R2].some((g) => geneKey(g) === m.key)) coincR++;
+      if (m.parentKeys.includes(m.key)) parentKeyHits++; // spec v0.2 §4.5 (D-007): debe ser 0
+      fallback[m.fallbackLevel] = (fallback[m.fallbackLevel] as number) + 1;
     }
     const out = recordMutations(ds.dex, r, { firstSeen: ds.counter++ });
     added += out.added.length;
@@ -255,6 +291,11 @@ function breedMetrics(recs: readonly Rec[], cfg: GeneticsConfig, ds: DexState): 
     mut_coincide_R_padre: coincR,
     frac_mut_coincide_R_padre: muts ? coincR / muts : 0,
     mut_en_catalogo: catalog,
+    mut_clave_de_padre: parentKeyHits,
+    mut_respaldo_N0: fallback[0] as number,
+    mut_respaldo_N1: fallback[1] as number,
+    mut_respaldo_N2: fallback[2] as number,
+    mut_respaldo_N3: fallback[3] as number,
     genedex_nuevas: added,
     genedex_redescubiertas: rediscovered,
     genedex_total: ds.dex.size,
@@ -289,7 +330,12 @@ export function runPopulation(o: PopRunOptions): PopRunResult {
     }
   };
 
-  let pop: Creature[] = o.init === "wild" ? createWildPopulation(wildRng, cfg, o.N, { idPrefix: "w0_" }) : createClones(wildRng, cfg, o.N, o.init === "clones_homo");
+  let pop: Creature[] =
+    o.init === "wild"
+      ? createWildPopulation(wildRng, cfg, o.N, { idPrefix: "w0_" })
+      : o.init === "clones_homo"
+        ? createHomozygousClones(cfg, o.N, o.homoGenome ?? {})
+        : createClones(wildRng, cfg, o.N);
   pop.forEach(check);
   const base = (gen: number): Row => ({ escenario: o.scenario, config: o.variantId, semilla: o.seed, estrategia: o.strategy.id, gen });
   rows.push({ ...base(0), ...breedMetrics([], cfg, ds), ...popMetrics(pop, cfg, fams), violaciones: violations });
@@ -358,7 +404,13 @@ export function runPopulation(o: PopRunOptions): PopRunResult {
       });
     }
     pop = next;
-    rows.push({ ...base(g), ...breedMetrics(recs, cfg, ds), ...popMetrics(pop, cfg, fams), violaciones: violations });
+    const bm = breedMetrics(recs, cfg, ds);
+    const pk = Number(bm["mut_clave_de_padre"]);
+    if (pk > 0) {
+      violations += pk;
+      if (violationSamples.length < 5) violationSamples.push(`${o.scenario} ${o.variantId} ${o.seed} gen ${g}: ${pk} mutaciones con clave de un padre`);
+    }
+    rows.push({ ...base(g), ...bm, ...popMetrics(pop, cfg, fams), violaciones: violations });
   }
   return {
     rows,
@@ -384,58 +436,61 @@ export interface E4Options {
   readonly famB: string;
   readonly target: string;
   readonly cpp: number;
-  /** Ensayos (los primeros) en los que además se busca la primera CRIATURA de la familia objetivo. */
-  readonly creatureTrials: number;
-  /** Tope de crías por ensayo en la búsqueda de criatura (censura). */
-  readonly creatureCap: number;
+  /** Tope de crías por ensayo (spec v0.2 `tope_crias`); más allá, el ensayo queda censurado. */
+  readonly cap: number;
 }
 
 export interface E4Result {
   readonly rows: Row[];
+  /** Crías hasta el primer gen objetivo; Infinity = censurado. */
   readonly geneCounts: number[];
-  /** Crías hasta la primera criatura objetivo; Infinity = censurado (no apareció antes del tope). */
+  /** Crías hasta la primera criatura de familia objetivo; Infinity = censurado. */
   readonly creatureCounts: number[];
   readonly violations: number;
 }
 
-/** E4: salvaje puro famA × puro famB; pareja nueva cada `cpp` crías; contar crías hasta el primer gen `target`. */
+/**
+ * E4 (spec v0.2 §10.1): F1 de salvaje puro famA × puro famB; pareja nueva
+ * cada `cpp` crías; cada ensayo sigue hasta ver el primer gen Y la primera
+ * criatura de la familia objetivo, o hasta `cap` crías (censura). Flujo
+ * RNG propio por configuración y ensayo (QA S-01: antes se reutilizaba el
+ * mismo flujo en todas las configs y el error de muestreo iba en la misma dirección).
+ */
 export function runE4(o: E4Options): E4Result {
   const rows: Row[] = [];
   const geneCounts: number[] = [];
   const creatureCounts: number[] = [];
   let violations = 0;
-  const HARD_CAP = 100000;
   for (let t = 0; t < o.trials; t++) {
-    const rng = createRng(`${o.seed}|E4|${t}`);
-    const wantCreature = t < o.creatureTrials;
+    const rng = createRng(`${o.seed}|E4|${o.variantId}|${t}`);
     let n = 0;
     let firstGene = -1;
     let firstCreature = -1;
     let pairNo = 0;
-    while (firstGene < 0 || (wantCreature && firstCreature < 0 && n < o.creatureCap)) {
-      if (n >= HARD_CAP) throw new Error(`E4: ${HARD_CAP} crías sin gen ${o.target}`);
+    while ((firstGene < 0 || firstCreature < 0) && n < o.cap) {
       let a = createWildCreature(rng, o.cfg, { id: `a${pairNo}`, family: o.famA, pure: true });
       let b = createWildCreature(rng, o.cfg, { id: `b${pairNo}`, family: o.famB, pure: true });
       pairNo++;
-      for (let k = 0; k < o.cpp; k++) {
+      for (let k = 0; k < o.cpp && n < o.cap; k++) {
         const r = breed(a, b, rng, o.cfg, { id: `x${n}`, birth: 1 });
         a = r.parent1;
         b = r.parent2;
         n++;
         violations += checkInvariants(r.child, o.cfg).length;
+        for (const m of r.mutations) if (m.parentKeys.includes(m.key)) violations++;
         if (firstGene < 0 && LOCUS_IDS.some((L) => r.child.genome[L].D.family === o.target)) firstGene = n;
         if (firstCreature < 0 && r.child.family === o.target) firstCreature = n;
       }
     }
-    geneCounts.push(firstGene);
-    if (wantCreature) creatureCounts.push(firstCreature < 0 ? Infinity : firstCreature);
+    geneCounts.push(firstGene < 0 ? Infinity : firstGene);
+    creatureCounts.push(firstCreature < 0 ? Infinity : firstCreature);
     rows.push({
       escenario: "E4",
       config: o.variantId,
       semilla: o.seed,
       ensayo: t,
-      crias_hasta_gen_objetivo: firstGene,
-      crias_hasta_criatura_objetivo: wantCreature ? (firstCreature < 0 ? `>${o.creatureCap}` : firstCreature) : "",
+      crias_hasta_gen_objetivo: firstGene < 0 ? `>${o.cap}` : firstGene,
+      crias_hasta_criatura_objetivo: firstCreature < 0 ? `>${o.cap}` : firstCreature,
     });
   }
   return { rows, geneCounts, creatureCounts, violations };

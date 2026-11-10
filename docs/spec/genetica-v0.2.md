@@ -189,7 +189,7 @@ Sin tiradas extra (todo usa `nFo` ya consumido). N3 garantiza solución: hay com
 Conserva tipo, `calidad`, `ancla` y `origen`. Los valores derivan **con suma cero**:
 ```
 d[k]  = g.valores[k] − g.ancla[k]                                   // Σd = 0
-d'[k] = (1 − 0.10)·d[k] + 1.0·(n[k] − media(n))                     // [deriva.kappa] = 0,10 [v0.2]; [deriva.sigma]
+d'[k] = (1 − 0.075)·d[k] + 1.0·(n[k] − media(n))                     // [deriva.kappa] = 0,075 [v0.2.1]; [deriva.sigma]
 valores = repartir(g.ancla[k] + d'[k], loV, hiV, g.calidad)
 ```
 Límites: ruido σ = 1 por generación (efectivo ≈ 0,82 por estadística al restar la media), retorno al ancla del 10 %, techo duro ±10 sobre el ancla y [5, 60]. Subir velocidad cuesta potencia/resistencia en el mismo gen. El ancla solo cambia por mutación (sec. 4.3), también con suma fija.
