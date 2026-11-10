@@ -31,3 +31,10 @@
 - Un cambio "pequeño" de parámetro (κ 0,05 → 0,10) puede romper un criterio en otro escenario. Al validar, se valida la combinación en **todos** los escenarios.
 - El modo rápido sirve para depurar, no para concluir: con N = 200 y 40 generaciones, algunos criterios (Genedex) cambian de veredicto.
 - **No se valida con las semillas con que se eligió, ni se escriben a mano cifras o conclusiones en los informes** (QA V-01, V-02, V-04). κ 0,075 se eligió con `valida02-*` y se revalidó con `valida03-*`. El informe lee la config del JSON, indica commit y huella, y sus conclusiones son plantillas condicionales sobre los datos.
+
+## Lecciones (combate v0.1)
+- Simulador de combate: `npm run sim:combat` (`--quick` < 30 s; completo ≈ 6–7 min). Elige con `elige01-*`, valida con `valida01-*`, evalúa v0.1 con `combate01-*`; `--informe-desde DIR` regenera el informe sin simular.
+- **Mirar el uso además del resultado.** La prueba de sustitución daba ~50 % a los movimientos de coste 4–5 porque la IA u = 0 casi nunca los podía pagar: un "no roto" sin uso no es evidencia. Registrar siempre cuánto se usa lo que se prueba.
+- **Separar la causa con un diagnóstico que anule un factor** (estadísticas iguales en C2, tope de 40 turnos, IA con reserva) antes de proponer arreglos; así se vio que la duración es energía y no vida, y las familias son sobre todo perfil.
+- Prueba de sustitución en 2 tandas (400, y +1600 solo si el IC cruza un umbral) para caber en el presupuesto; el informe declara cada reducción frente a la spec.
+- Un arreglo puede mover otro criterio al borde (energía 3 deja "guardar compensa" en el límite): validar la combinación en todos los escenarios, como en genética.

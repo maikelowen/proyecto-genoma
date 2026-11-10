@@ -11,7 +11,8 @@
     "test": "node --test \"packages/**/*.test.ts\" \"sim/**/*.test.ts\"",
     "typecheck": "tsc -p .",
     "check": "npm run typecheck && npm test",
-    "sim": "node sim/genetics/cli.ts"
+    "sim": "node sim/genetics/cli.ts",
+    "sim:combat": "node sim/combat/cli.ts"
   },
   "devDependencies": {
     "typescript": "^6.0.0"
