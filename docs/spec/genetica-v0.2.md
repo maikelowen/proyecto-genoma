@@ -192,7 +192,7 @@ d[k]  = g.valores[k] − g.ancla[k]                                   // Σd = 0
 d'[k] = (1 − 0.075)·d[k] + 1.0·(n[k] − media(n))                     // [deriva.kappa] = 0,075 [v0.2.1]; [deriva.sigma]
 valores = repartir(g.ancla[k] + d'[k], loV, hiV, g.calidad)
 ```
-Límites: ruido σ = 1 por generación (efectivo ≈ 0,82 por estadística al restar la media), retorno al ancla del 10 %, techo duro ±10 sobre el ancla y [5, 60]. Subir velocidad cuesta potencia/resistencia en el mismo gen. El ancla solo cambia por mutación (sec. 4.3), también con suma fija.
+Límites: ruido σ = 1 por generación (efectivo ≈ 0,82 por estadística al restar la media), retorno al ancla del 7,5 % (κ 0,075, v0.2.1), techo duro ±10 sobre el ancla y [5, 60]. Subir velocidad cuesta potencia/resistencia en el mismo gen. El ancla solo cambia por mutación (sec. 4.3), también con suma fija.
 
 ---
 
@@ -279,7 +279,7 @@ La regla de la sec. 7 solo cambia la **etiqueta** de la criatura, no la frecuenc
 | `mutacion.prob_hibrida_afinidad` | **0,5** · 0,75 | efecto de la contrapartida B en E1/E2 |
 | `familia_criatura.peso_gen_hibrido` | 1 · **2** · 3 | confirmar A y su efecto en % de criaturas híbridas |
 | `calidad.distribucion_salvaje` | **triangular** · uniforme | rareza de calidad alta |
-| `deriva.kappa` | 0,05 · **0,10** · 0,15 | criterio de deriva con la suma cero |
+| `deriva.kappa` | 0,05 · **0,075** · 0,10 · 0,15 | criterio de deriva con la suma cero |
 | `mutacion.sigma_forma` | 0,15 · **0,25** | control de Genedex |
 | `mutacion.prob_hibrida_nueva` | 0,25 · **0,5** · 1,0 | control |
 
@@ -292,7 +292,7 @@ La regla de la sec. 7 solo cambia la **etiqueta** de la criatura, no la frecuenc
 |---|---|---|
 | G1 | R1/R2 sin reemplazo de slot con `pesos_R` planos | con reemplazo; R1/R2 fijos por padre |
 | G2′ [v0.2] | Calidad por gen 90 ± 5 %, fijada al nacer, copiada intacta; Σancla = Σvalores = calidad (D-008) | ancla libre; suma fija 90 sin margen (v0.1) |
-| G3′ [v0.2] | Deriva de suma cero + retorno κ 0,10 + techo ±10 | deriva que suma puntos (v0.1); κ 0,05 |
+| G3′ [v0.2] | Deriva de suma cero + retorno κ 0,075 (v0.2.1; antes 0,10) + techo ±10 | deriva que suma puntos (v0.1); κ 0,05 |
 | G4 | Forma en rejilla de 5 niveles; identidad = familia+locus+firma | hash de valores; rejilla de 11 |
 | G5′ [v0.2] | La mutación excluye las 6 claves de los padres; respaldo N0–N3 sin tiradas (D-007) | excluir solo los D (v0.1) |
 | G6′ [v0.2] | 7 híbridas, sin segundo orden; afinidad 0,5 | afinidad 0,75 (absorbente); 15 pares |
@@ -317,7 +317,7 @@ Ninguna de fondo. Para el director, sin bloquear: si el simulador de combate (10
 |---|---|---|---|
 | 3.1 pesos_D | 0,375/0,094/0,031 | 0,47/0,025/0,005 | Informe (sorpresa 26,5 %) |
 | 4.5 σ forma | 0,15 | 0,25 | Informe (Genedex repetidas 64,3 %) |
-| 6 κ deriva | 0,05 | 0,10 | Informe |
+| 6 κ deriva | 0,05 | 0,075 (v0.2.1) | Informes v0.1 y v0.2 |
 | 1.2, 1.4, 2.2, 4.2 | Σancla = 90 | Calidad por gen ∈ [85,5; 94,5]; Σancla = Σvalores = calidad | D-008 |
 | 1.5 | reparto solo en 4.2 | función común `repartir`; ajuste de redondeo en pasos de 0,01 | D-008, nota 6 |
 | 2.2 tiradas salvaje | 181 | 205 (+uq1, uq2 por gen) | D-008 |
@@ -341,7 +341,7 @@ Tiradas por cría: **280 (sin cambio)**. Tiradas por salvaje: **181 → 205**. C
 ## 15. Pendiente de validar en simulación
 1. Primera criatura híbrida en E4: mediana ≤ 40, p90 ≤ 120 (estimado 23 / 76).
 2. Vigilancia de híbridas en E2 (D ≤ 10 %; criaturas 3–25 %; estimado ≈ 8–9 %) y efecto de afinidad 0,5 vs 0,75 en E1 cerrada.
-3. Deriva E3a homocigoto con suma cero y κ 0,10 (estimado +4,5 a +5,5 puntos/gen en gen 20).
+3. Deriva E3a homocigoto con suma cero y κ 0,075 (medido en el informe v0.2: +6,21 en gen 20 y +7,30 en gen 100, con las semillas de validación; pendiente revalidar con semillas nuevas).
 4. Que D-007 no cambie la tasa de mutación ni la sorpresa (debería ser ±0,1 pp) y que el respaldo N3 no se use nunca o casi nunca (informar nº de usos de N1, N2, N3).
 5. Que con calidad, sorpresa, diversidad y Genedex sigan aprobando como con la combinación v0.2 del informe (16/18 + nuevos).
 6. Monocultivo dirigido E5 (≤ 60 %) y que la calidad media no suba en E5.
