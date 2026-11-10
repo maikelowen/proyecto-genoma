@@ -1,6 +1,6 @@
 /** Utilidades compartidas por los tests de combate y movimientos (no es un test). */
-import rawCombat from "../../../config/combate.v0.1.json" with { type: "json" };
-import rawMoves from "../../../config/movimientos.v0.1.json" with { type: "json" };
+import rawCombat from "../../../config/combate.v0.2.json" with { type: "json" };
+import rawMoves from "../../../config/movimientos.v0.2.json" with { type: "json" };
 import {
   deriveStats,
   parseCombatConfig,

@@ -105,7 +105,7 @@ export const FIX_VARIANTS: readonly Variant[] = [
   { id: "golpe20_desg050", label: "golpe básico 20 y desgaste +50 %/turno", set: { "dano.golpe_basico.potencia": 20, "desgaste.por_turno": 0.5 } },
 ];
 export const DIAG_VARIANTS: readonly Variant[] = [
-  { id: "diag_vida180", label: "diagnóstico: vida base 180 (¿es la vida?)", set: { "estadisticas.vida_base": 180 } },
+  { id: "diag_vida180", label: "diagnóstico: vida base 180 (¿es la vida?)", set: { "estadisticas.vida.base": 180 } },
   { id: "diag_tope40", label: "diagnóstico: tope de 40 turnos (¿cuánto durarían los empates?)", set: { "fin.turnos_max": 40 } },
   { id: "diag_ia_reserva3", label: "diagnóstico: ambas IA con reserva 3 (¿es la IA que gasta todo?)", set: { "ia.reserva_por_defecto": 3 } },
 ];
@@ -194,7 +194,7 @@ export class Groups {
 export function familyDiagVariants(chosen: Variant): { variant: Variant; equalStats: boolean; label: string }[] {
   return [
     { variant: { id: `${chosen.id}_statsiguales`, label: "", set: chosen.set }, equalStats: true, label: "mismas estadísticas para todas (P = V = R): queda solo el efecto de los movimientos" },
-    { variant: { id: `${chosen.id}_vida025`, label: "", set: { ...chosen.set, "estadisticas.alfa_vida": 0.25 } }, equalStats: false, label: "`estadisticas.alfa_vida` 0,5 → 0,25 (menos vida por especializarse en resistencia)" },
+    { variant: { id: `${chosen.id}_vida025`, label: "", set: { ...chosen.set, "estadisticas.vida.coef.resistencia": 0.25 } }, equalStats: false, label: "`estadisticas.alfa_vida` 0,5 → 0,25 (menos vida por especializarse en resistencia)" },
   ];
 }
 

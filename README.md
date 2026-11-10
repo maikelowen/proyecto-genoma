@@ -53,28 +53,51 @@ geneKey(r.child.genome.cabeza.D);  // "familia|locus|firma"
 
 Otras: `createWildCreature(rng, cfg, {id, family?, pure?, birth?})`, `breedingBlocker`, `creatureFamily(genome, cfg)`, `creatureQuality`, `qualityPercent`, `checkInvariants`, `expressedGenes`, `allGenes`, `locusKeys`, `isCatalogKey`, `distribute` (repartir §1.5), `makeGene`. Cada gen lleva `quality` (Σanchor = Σvalues = quality) y está congelado.
 
-## API de combate y movimientos (v0.1)
+## API de combate y movimientos (v0.2)
 
-Specs: `docs/spec/combate-v0.1.md`, `docs/spec/movimientos-v0.1.md` · notas: `docs/spec/notas-implementacion-combate-v0.1.md`.
+Specs: `docs/spec/combate-v0.2.md`, `docs/spec/movimientos-v0.2.md` · notas: `docs/spec/notas-implementacion-combate-v0.2.md` (y las de v0.1, que siguen vigentes). El núcleo solo carga las configs v0.2.
 
 ```ts
-import rawC from "./config/combate.v0.1.json" with { type: "json" };
-import rawM from "./config/movimientos.v0.1.json" with { type: "json" };
-import { parseCombatConfig, parseMovesConfig, generateMove, describeMove, buildCombatant,
-         createBattle, resolveTurn, validatePlan, createReferenceAi, runBattle } from "./packages/core/src/index.ts";
+import rawC from "./config/combate.v0.2.json" with { type: "json" };
+import rawM from "./config/movimientos.v0.2.json" with { type: "json" };
+import { parseCombatConfig, parseMovesConfig, buildBattleConfig, patchRawConfig, generateMove, describeMove,
+         buildCombatant, createBattle, resolveTurn, validatePlan, createReferenceAi, energyPrice, runBattle } from "./packages/core/src/index.ts";
 
-const cfg = { combat: parseCombatConfig(rawC), moves: parseMovesConfig(rawM, gcfg) };  // β en raw.estadisticas.beta_calidad
+const cfg = { combat: parseCombatConfig(rawC), moves: parseMovesConfig(rawM, gcfg) };
 const mv = generateMove(gene, cfg.moves);      // pura en la clave del gen; 8 tiradas propias
-describeMove(mv, cfg.moves);                   // "Mordida de Brasa (coste 3): 115 de daño a un enemigo + quemadura"
-const r = runBattle(teamA, teamB, "semilla", cfg, createReferenceAi({ reserve: 3 }), createReferenceAi());
+describeMove(mv, cfg.moves);                   // "Mordida de Pira (coste 3): 120 de daño a un enemigo + quemadura"
+const r = runBattle(teamA, teamB, "semilla", cfg, createReferenceAi({ reserve: 3 }), createReferenceAi({ kappa: 0 }));
 r.result; r.turns; r.log; r.hash;              // "A" | "B" | "empate"; log[turno] = eventos
+energyPrice(state, "A", cfg);                  // { lambda, targetCost (c*), bestRate } de la IA (§10.1)
 ```
 
 Turno a turno (cliente/servidor): `createBattle(combA, combB, cfg)` → `validatePlan(state, "A", plan, cfg)` →
 `resolveTurn(state, planA, planB, rng, cfg)` → `{ state, events }` (no muta la entrada; **24 tiradas por turno**).
 Una acción es `{ actor: 1–4, move: 0 (golpe) | 1–4 (locus), target: 1–4 }`; un plan inválido se sustituye por golpes básicos.
 Otras: `generateMoveForKey`, `validateMove`, `deriveStats`, `withMove` (prueba de sustitución), `planSynergy`,
-`damageAmount`, `eligibleActors`, `battleHash`. Para barrer `familias.fuerte`, borra `familias.tabla` en la copia del JSON.
+`actionPriority`, `damageAmount`, `eligibleActors`, `battleHash`. `Move.fallback` ∈ 0..4 (respaldo §4.1).
+
+### Configs modificadas (barridos)
+
+```ts
+const cfg2 = buildBattleConfig(rawC, rawM, gcfg, {
+  combat: { "ia.kappa": 0, "familias.tabla": undefined },             // undefined borra (la tabla se deriva de los anillos)
+  moves: { "presupuesto_por_coste.5": 60, "pesos_familia.arquetipo.llama.0": 5 },
+});
+const rawM2 = patchRawConfig(rawM, [[["overrides_catalogo", "sales", "roca.cuerpo.3"], "c1"]]);  // forma larga: claves con puntos o nuevas
+```
+
+`patchRawConfig` copia el JSON (no toca el original) y exige que cada ruta exista (una errata lanza `ConfigError`);
+después el parser valida todo. Cambiar sales o costes en el JSON **real** rompe a propósito el vector dorado del catálogo.
+
+### Palancas de balance (todas en config; el núcleo no tiene números de reglas)
+
+| Config | Claves |
+|---|---|
+| movimientos | `presupuesto_por_coste.1..5` (curva de presupuesto) · `coste_energia.{desplazamiento, escala_tamano, escala_azar}` · `escalables.{dano,cura,escudo}.potencia_por_punto`, topes (`max`, `max_individual`, `max_area_por_objetivo`), `minimo_puntos`, `fraccion_minima` · costes de pieza: `estados.ofensivos.*`, `estados.positivos.{prisa,regenerar}`, `energia_extra.coste`, `modificadores.{alcance,prioridad,perforar}.coste`, `modificadores.area.factor`, `modificadores.drenaje.{factor,fraccion}`, `condiciones.*.factor`, `condiciones.bonus` · mínimos de coste: `estados.aturdir_coste_min`, `energia_extra.coste_min`, `arquetipos.maldicion.coste_min` · pesos: `pesos_familia.{arquetipo,estado_ofensivo,estado_positivo,modificador,condicion}.<familia>[i]`, `pesos_locus_arquetipo`, `pesos_forma_arquetipo`, `probabilidades.*` · sales: `overrides_catalogo.sales` |
+| combate | `estadisticas.{vida,ataque,iniciativa}.{base, coef.potencia/velocidad/resistencia}`, `beta_calidad` · `energia.{inicial,por_turno,maximo}` · `orden.{jitter, prioridad_movimientos_aliado}` · `dano.varianza`, `dano.golpe_basico.potencia` · `familias.{fuerte,debil}` (borrando `tabla`) · `sinergia.bonus_por_n` · `estados.*` (valores y duraciones; `escudo.maximo`) · `desgaste.*` · IA: `ia.{kappa, bonus_ko, valor_estado.*, holgura_regenerar, valor_max_escudo, objetivos_area_estimados, factor_cura_estimada, prob_condicion_estimada, penalizacion_coste, reserva_por_defecto}` |
+
+Estructurales (el parser las fija): 24 tiradas por turno, 8 por movimiento, prefijos de semilla, 4 criaturas, órdenes de listas.
 
 ## Convenciones
 

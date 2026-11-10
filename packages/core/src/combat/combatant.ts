@@ -3,7 +3,7 @@ import { expressedGenes, expressedStats } from "../genetics/creature.ts";
 import type { Creature, FamilyId, GeneticsConfig } from "../genetics/types.ts";
 import { generateMove, type Move } from "../moves/generate.ts";
 import type { MovesConfig } from "../moves/config.ts";
-import type { CombatConfig } from "./config.ts";
+import type { CombatConfig, DerivedStatRule } from "./config.ts";
 
 /** Configs necesarias para combatir (motor + movimientos; genética vía moves.genetics). */
 export interface BattleConfig {
@@ -28,20 +28,26 @@ export interface Combatant {
   readonly moves: readonly Move[];
 }
 
-/** combate §1 — estadísticas derivadas a partir de P, V, R (sin funciones trascendentes). */
+/** combate §1 [v0.2] — Σ_s coef[s]·d_s con d_s = 3σ_s − 1. */
+function deviationSum(rule: DerivedStatRule, dP: number, dV: number, dR: number): number {
+  return rule.coef.potencia * dP + rule.coef.velocidad * dV + rule.coef.resistencia * dR;
+}
+
+/** combate §1 [v0.2] — estadísticas derivadas a partir de P, V, R (sin funciones trascendentes). */
 export function deriveStats(P: number, V: number, R: number, cfg: CombatConfig): Pick<Combatant, "stats" | "maxHp" | "attack" | "initiative"> {
   const s = cfg.stats;
   const T = P + V + R;
   if (!(T > 0)) throw new RangeError(`deriveStats: total no positivo (${T})`);
-  const sP = P / T;
-  const sV = V / T;
-  const sR = R / T;
+  // desviaciones de cuota dX = 3σX − 1
+  const dP = (3 * P) / T - 1;
+  const dV = (3 * V) / T - 1;
+  const dR = (3 * R) / T - 1;
   const q = 1 + (s.betaQuality * (T - s.totalRef)) / s.totalRef; // combate §1 factor de calidad
   return {
     stats: { P, V, R, T, q },
-    maxHp: Math.round(s.baseHp * (1 + s.alphaHp * (3 * sR - 1)) * q), // combate §1 vida máxima
-    attack: (1 + s.alphaPower * (3 * sP - 1)) * q, // combate §1 fA
-    initiative: s.baseInitiative + s.initiativeScale * (3 * sV - 1), // combate §1 iniciativa base
+    maxHp: Math.round(s.hp.base * (1 + deviationSum(s.hp, dP, dV, dR)) * q), // combate §1 vida máxima
+    attack: s.attack.base * (1 + deviationSum(s.attack, dP, dV, dR)) * q, // combate §1 fA
+    initiative: s.initiative.base + deviationSum(s.initiative, dP, dV, dR), // combate §1 iniciativa base (sin q)
   };
 }
 

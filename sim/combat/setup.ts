@@ -1,10 +1,11 @@
 /**
- * Configuración y construcción de equipos del simulador de combate v0.1.
+ * Configuración y construcción de equipos del simulador de combate (configs v0.2).
+ * [v0.2] Solo se ha adaptado la carga de config; el estudio (study/report) sigue siendo el de v0.1.
  * Carga los JSON (combate, movimientos, genética v0.2) y aplica cambios por
  * ruta sobre una COPIA; nunca modifica los ficheros de config/.
  */
-import rawCombat from "../../config/combate.v0.1.json" with { type: "json" };
-import rawMoves from "../../config/movimientos.v0.1.json" with { type: "json" };
+import rawCombat from "../../config/combate.v0.2.json" with { type: "json" };
+import rawMoves from "../../config/movimientos.v0.2.json" with { type: "json" };
 import rawGenetics from "../../config/genetica.v0.2.json" with { type: "json" };
 import {
   buildCombatant,
@@ -41,7 +42,7 @@ export interface Variant {
   readonly set: Readonly<Record<string, unknown>>;
 }
 
-export const BASE_VARIANT: Variant = { id: "v01", label: "v0.1 (JSON sin cambios)", set: {} };
+export const BASE_VARIANT: Variant = { id: "v02", label: "v0.2 (JSON sin cambios)", set: {} };
 
 function setPath(obj: RawConfig, path: string, value: unknown): void {
   const parts = path.split(".");

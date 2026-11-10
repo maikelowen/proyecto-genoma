@@ -176,7 +176,8 @@ export function energyCriteria(byReserve: readonly { u: number; a: Agg }[]): Cri
   const worstForZero = [...rates].sort((x, y) => y.wr.value - x.wr.value)[0]!;
   const zero = { value: 1 - worstForZero.wr.value, lo: 1 - worstForZero.wr.hi, hi: 1 - worstForZero.wr.lo };
   return [
-    between("energia_mejor", "Energía C4", `Mejor reserva u > 0 contra u = 0 (u = ${best.u})`, best.wr, E.min_mejor_reserva_vs_0 + 1e-12, Infinity, "pct"),
+    // [v0.2] criterio invertido: ninguna reserva u > 0 debe dominar (max_mejor_reserva_vs_0). Falta el de uso de coste 4–5 (min_uso_coste_4_5_si_pagable).
+    between("energia_mejor", "Energía C4", `Mejor reserva u > 0 contra u = 0 (u = ${best.u})`, best.wr, -Infinity, E.max_mejor_reserva_vs_0, "pct"),
     between("energia_cero", "Energía C4", `u = 0 contra su peor rival (u = ${worstForZero.u})`, zero, E.min_reserva0_vs_cualquiera, Infinity, "pct"),
   ];
 }

@@ -26,7 +26,7 @@
 - En los estadísticos, la tolerancia es de 5 errores estándar (`tol5`) con semilla fija: sin inestabilidad y sensibles a errores de ~1 punto.
 - Además de las frecuencias, probar las invariantes tras muchas generaciones con mutación alta, los casos borde construidos a mano (`makeCreature`, `hybridGene`) y llamadas directas a funciones internas para los respaldos.
 - Los tests de QA (`qa-genetica.test.ts`) no se debilitan: si hay que adaptarlos, solo se cambia lo que exige la API nueva.
-- `npm run check` debe tardar menos de 10 s (ahora mismo, ~6,5 s con combate).
+- `npm run check` debe tardar menos de 10 s (ahora mismo, ~6,2 s con combate v0.2).
 
 ## Lecciones
 - Una spec con "suma fija" necesita una función común de reparto (`distribute`) con un ajuste de redondeo explícito, no soluciones distintas en cada sitio.
@@ -36,3 +36,7 @@
 - Los JSON de config llevan claves `_doc`: los parsers cuentan claves con `dataKeys` (ignora `_…`).
 - En tests de reglas, controla todo lo que multiplica: `varianza = 0`, `jitter = 0`, golpe de potencia 0 y familias distintas en el equipo (la sinergia se cuela si 2+ usan movimiento).
 - Si una tabla derivable (familias) está en la config, se valida contra su regla y se permite borrarla para los barridos.
+- v0.2: reproducir los ejemplos y estimaciones de la spec (movimientos §8, cuotas §5.1, uso c4/c5, duración) valida a la vez la spec y el núcleo; hazlo antes de regenerar dorados.
+- Palancas: también los números "implícitos" de la IA salen de config (10·fA = `golpe_basico.potencia`, +50 % = `condiciones.bonus`, 10 − 3 = `maximo − por_turno`). Barridos con `patchRawConfig`/`buildBattleConfig` (rutas estrictas; forma larga para claves con puntos, como las sales).
+- Si un respaldo "siempre termina", el parser valida la desigualdad del peor caso (`fraccion_minima·B ≤ B − fac_area`) y un test comprueba que el último nivel no se alcanza.
+- Tests de IA: un solo actor vivo y huecos rellenos con movimientos inasequibles (coste 9), para calcular a mano el valor de cada plan.

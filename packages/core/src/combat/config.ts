@@ -1,5 +1,6 @@
 /**
- * Carga y validación de `config/combate.v0.1.json` (spec combate v0.1).
+ * Carga y validación de `config/combate.v0.2.json` (spec combate v0.2).
+ * Solo admite el formato v0.2; la v0.1 ya no se carga.
  *
  * Función pura: recibe el objeto JSON ya parseado y devuelve una
  * `CombatConfig` tipada e inmutable, o lanza `ConfigError` con la ruta.
@@ -8,7 +9,7 @@
  * `familias.fuerte/debil` hay que borrar `familias.tabla` (se deriva de
  * los anillos) o reescribirla: si existe, debe cuadrar con los anillos.
  */
-import type { FamilyId } from "../genetics/types.ts";
+import { STAT_IDS, type FamilyId, type StatId } from "../genetics/types.ts";
 import { arr, bool, checkId, dataKeys, fail, int, num, obj, sameList, str } from "./parse.ts";
 
 /** combate §8 — lista cerrada de estados, en este orden (orden canónico). */
@@ -39,6 +40,16 @@ export interface StatusRule {
   readonly maxStacks: number;
 }
 
+/** Derivada lineal en las desviaciones de cuota dX = 3σX − 1. */
+export interface DerivedStatRule {
+  readonly base: number;
+  readonly coef: Readonly<Record<StatId, number>>;
+}
+
+/** combate §10 [v0.2] — estados que valora la IA (ofensivos + prisa y regenerar). */
+export const AI_STATUS_IDS = ["quemadura", "ralentizar", "aturdir", "marca", "debilitar", "prisa", "regenerar"] as const;
+export type AiStatusId = (typeof AI_STATUS_IDS)[number];
+
 export interface CombatConfig {
   readonly version: string;
   /** combate §2 — estructural: 4 posiciones, delantera 1–2, trasera 3–4. */
@@ -48,18 +59,24 @@ export interface CombatConfig {
   /** combate §1 */
   readonly stats: {
     readonly totalRef: number;
-    readonly baseHp: number;
-    readonly alphaHp: number;
-    readonly alphaPower: number;
-    readonly baseInitiative: number;
-    readonly initiativeScale: number;
+    /** [v0.2] vida = base·(1 + Σ coef·d)·q */
+    readonly hp: DerivedStatRule;
+    /** [v0.2] fA = base·(1 + Σ coef·d)·q */
+    readonly attack: DerivedStatRule;
+    /** [v0.2] iniciativa = base + Σ coef·d (sin q) */
+    readonly initiative: DerivedStatRule;
     /** β del término de calidad (0, 0,04 o 0,06 según decida el dueño). */
     readonly betaQuality: number;
   };
   /** combate §3 */
   readonly energy: { readonly initial: number; readonly perTurn: number; readonly max: number };
   /** combate §4 */
-  readonly order: { readonly jitter: number; readonly priorityLevels: readonly [number, number] };
+  readonly order: {
+    readonly jitter: number;
+    readonly priorityLevels: readonly [number, number];
+    /** [v0.2] nivel de los movimientos de aliado (curación y protección). */
+    readonly allyPriority: number;
+  };
   /** combate §5 */
   readonly damage: { readonly variance: number; readonly min: number; readonly basicCost: number; readonly basicPower: number };
   /** combate §6 — tabla[atacante][defensor]. */
@@ -86,8 +103,15 @@ export interface CombatConfig {
   readonly ai: {
     readonly defaultReserve: number;
     readonly koBonus: number;
-    readonly statusPointValue: number;
+    /** [v0.2] κ del precio sombra λ = κ·máx r(m). */
+    readonly kappa: number;
+    /** [v0.2] valor en vida de cada estado aplicado. */
+    readonly statusValue: Readonly<Record<AiStatusId, number>>;
+    readonly regenSlack: number;
     readonly maxShieldValue: number;
+    readonly areaTargetsEstimate: number;
+    readonly healFactorEstimate: number;
+    readonly conditionProbEstimate: number;
     readonly costPenalty: number;
   };
 }
@@ -118,10 +142,33 @@ function ringTable(
   return t;
 }
 
+/**
+ * combate §1 [v0.2] — regla de una derivada: `base` y `coef` con exactamente
+ * potencia, velocidad y resistencia. Si `multiplicative`, comprueba que
+ * 1 + Σ coef·d > 0 en los 3 vértices de las cuotas (σ = 1 en una stat),
+ * así la vida y el ataque son positivos para cualquier criatura (es lineal en σ).
+ */
+function derivedRule(v: unknown, path: string, multiplicative: boolean): DerivedStatRule {
+  const o = obj(v, path);
+  const base = num(o["base"], `${path}.base`, multiplicative ? Number.MIN_VALUE : -Infinity);
+  const co = obj(o["coef"], `${path}.coef`);
+  sameList(dataKeys(co).slice().sort(), STAT_IDS.slice().sort(), `${path}.coef`);
+  const coef = {} as Record<StatId, number>;
+  for (const s of STAT_IDS) coef[s] = num(co[s], `${path}.coef.${s}`);
+  if (multiplicative) {
+    for (const top of STAT_IDS) {
+      let f = 1;
+      for (const s of STAT_IDS) f += coef[s] * (s === top ? 2 : -1); // d = 3σ − 1 con σ = 1 / 0
+      if (!(f > 0)) fail(`${path}.coef`, `deja la derivada ≤ 0 con todo en ${top}`);
+    }
+  }
+  return Object.freeze({ base, coef: Object.freeze(coef) });
+}
+
 export function parseCombatConfig(raw: unknown): CombatConfig {
   const r = obj(raw, "config");
   const version = str(r["version"], "version");
-  if (version !== "0.1") fail("version", `solo se admite la config de combate v0.1 (recibida '${version}')`);
+  if (version !== "0.2") fail("version", `solo se admite la config de combate v0.2 (recibida '${version}')`);
 
   // combate §2 — estructura fija del equipo
   const eq = obj(r["equipo"], "equipo");
@@ -130,17 +177,16 @@ export function parseCombatConfig(raw: unknown): CombatConfig {
   sameList(arr(eq["trasera"], "equipo.trasera"), [3, 4], "equipo.trasera");
 
   // combate §1
+  // combate §1 [v0.2]
   const st = obj(r["estadisticas"], "estadisticas");
   const stats = {
     totalRef: num(st["total_ref"], "estadisticas.total_ref", Number.MIN_VALUE),
-    baseHp: num(st["vida_base"], "estadisticas.vida_base", 1),
-    alphaHp: num(st["alfa_vida"], "estadisticas.alfa_vida", 0, 0.5),
-    alphaPower: num(st["alfa_potencia"], "estadisticas.alfa_potencia", 0, 0.5),
-    baseInitiative: num(st["iniciativa_base"], "estadisticas.iniciativa_base"),
-    initiativeScale: num(st["iniciativa_escala"], "estadisticas.iniciativa_escala", 0),
+    hp: derivedRule(st["vida"], "estadisticas.vida", true),
+    attack: derivedRule(st["ataque"], "estadisticas.ataque", true),
+    initiative: derivedRule(st["iniciativa"], "estadisticas.iniciativa", false),
     betaQuality: num(st["beta_calidad"], "estadisticas.beta_calidad", 0, 1),
   };
-  if (st["nivel"] !== false) fail("estadisticas.nivel", "v0.1 no tiene nivel (debe ser false)");
+  if (st["nivel"] !== false) fail("estadisticas.nivel", "v0.2 no tiene nivel (debe ser false)");
 
   // combate §3
   const en = obj(r["energia"], "energia");
@@ -154,7 +200,11 @@ export function parseCombatConfig(raw: unknown): CombatConfig {
   // combate §4
   const or = obj(r["orden"], "orden");
   sameList(arr(or["niveles_prioridad"], "orden.niveles_prioridad"), [0, 1], "orden.niveles_prioridad");
-  const order = { jitter: num(or["jitter"], "orden.jitter", 0), priorityLevels: [0, 1] as const };
+  const order = {
+    jitter: num(or["jitter"], "orden.jitter", 0),
+    priorityLevels: [0, 1] as const,
+    allyPriority: int(or["prioridad_movimientos_aliado"], "orden.prioridad_movimientos_aliado", 0, 1), // combate §4 [v0.2]
+  };
 
   // combate §5
   const da = obj(r["dano"], "dano");
@@ -244,12 +294,22 @@ export function parseCombatConfig(raw: unknown): CombatConfig {
   }
   const seedPrefix = str(obj(r["semilla"], "semilla")["prefijo"], "semilla.prefijo");
 
+  // combate §10 [v0.2]
   const ia = obj(r["ia"], "ia");
+  const ve = obj(ia["valor_estado"], "ia.valor_estado");
+  if (dataKeys(ve).length !== AI_STATUS_IDS.length) fail("ia.valor_estado", `claves esperadas: ${AI_STATUS_IDS.join(", ")}`);
+  const statusValue = {} as Record<AiStatusId, number>;
+  for (const id of AI_STATUS_IDS) statusValue[id] = num(ve[id], `ia.valor_estado.${id}`, 0);
   const ai = {
     defaultReserve: int(ia["reserva_por_defecto"], "ia.reserva_por_defecto", 0, energy.max),
     koBonus: num(ia["bonus_ko"], "ia.bonus_ko", 0),
-    statusPointValue: num(ia["valor_punto_estado"], "ia.valor_punto_estado", 0),
+    kappa: num(ia["kappa"], "ia.kappa", 0),
+    statusValue: Object.freeze(statusValue),
+    regenSlack: num(ia["holgura_regenerar"], "ia.holgura_regenerar", 0),
     maxShieldValue: num(ia["valor_max_escudo"], "ia.valor_max_escudo", 0),
+    areaTargetsEstimate: num(ia["objetivos_area_estimados"], "ia.objetivos_area_estimados", 0),
+    healFactorEstimate: num(ia["factor_cura_estimada"], "ia.factor_cura_estimada", 0),
+    conditionProbEstimate: num(ia["prob_condicion_estimada"], "ia.prob_condicion_estimada", 0, 1),
     costPenalty: num(ia["penalizacion_coste"], "ia.penalizacion_coste", 0),
   };
 

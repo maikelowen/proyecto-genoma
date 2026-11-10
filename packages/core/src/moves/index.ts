@@ -1,4 +1,4 @@
-/** API pública de movimientos v0.1. */
+/** API pública de movimientos v0.2. */
 export {
   ARCHETYPE_IDS,
   CONDITION_IDS,

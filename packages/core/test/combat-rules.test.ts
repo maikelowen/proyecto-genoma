@@ -1,4 +1,4 @@
-/** Tests de reglas del motor de combate v0.1 (spec docs/spec/combate-v0.1.md). */
+/** Tests de reglas del motor de combate v0.2 (spec docs/spec/combate-v0.2.md). */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -60,9 +60,22 @@ describe("estadísticas derivadas (combate §1)", () => {
     assert.equal(d.maxHp, 220);
     assert.ok(Math.abs(d.attack - 1) < 1e-12);
     assert.ok(Math.abs(d.initiative - 100) < 1e-12);
-    const sp = deriveStats(180, 90, 90, BCFG.combat); // σP = 0,5
-    assert.ok(Math.abs(sp.attack - 1.25) < 1e-12);
-    assert.equal(sp.maxHp, 193); // σR = 0,25 ⇒ 220 · 0,875
+    // [v0.2] σP = 0,5, σV = σR = 0,25 ⇒ dP = 0,5, dV = dR = −0,25
+    const sp = deriveStats(180, 90, 90, BCFG.combat);
+    assert.ok(Math.abs(sp.attack - (1 + 0.5 * 0.5 + 0.1 * -0.25)) < 1e-12); // 1,225
+    assert.equal(sp.maxHp, 190); // 220 · (1 − 0,45·0,25 − 0,10·0,25) = 189,75
+    assert.ok(Math.abs(sp.initiative - (100 - 50 * 0.25)) < 1e-12);
+    // velocidad: aporta vida, ataque e iniciativa (σV = 0,5)
+    const sv = deriveStats(90, 180, 90, BCFG.combat);
+    assert.equal(sv.maxHp, Math.round(220 * (1 + 0.45 * -0.25 + 0.1 * 0.5)));
+    assert.ok(Math.abs(sv.attack - (1 + 0.5 * -0.25 + 0.1 * 0.5)) < 1e-12);
+    assert.ok(Math.abs(sv.initiative - 125) < 1e-12);
+    // matriz configurable: con coef = 0 todo es la base
+    const flat = loadBattleConfig((r) => {
+      for (const d of ["vida", "ataque", "iniciativa"]) for (const k of ["potencia", "velocidad", "resistencia"]) r.estadisticas[d].coef[k] = 0;
+    }).combat;
+    const z = deriveStats(300, 30, 30, flat);
+    assert.deepEqual([z.maxHp, z.initiative], [Math.round(220 * z.stats.q), 100]);
     const hi = deriveStats(126, 126, 126, BCFG.combat); // T = 378
     assert.ok(Math.abs(hi.stats.q - (1 + (0.04 * 18) / 360)) < 1e-12);
     const b0 = loadBattleConfig((r) => (r.estadisticas.beta_calidad = 0)).combat;
@@ -81,7 +94,7 @@ describe("estadísticas derivadas (combate §1)", () => {
 });
 
 describe("energía y golpe básico (combate §3)", () => {
-  it("inicio 3, +2 por turno, máximo 10; se paga el plan", () => {
+  it("inicio 3, +3 por turno [v0.2], máximo 10; se paga el plan", () => {
     let s = createBattle(mkTeam("a", "llama"), mkTeam("b", "llama"), FLAT);
     assert.deepEqual(s.energy, [3, 3]);
     const seen: number[] = [];
@@ -89,16 +102,16 @@ describe("energía y golpe básico (combate §3)", () => {
       s = play(s, basics(), basics()).state;
       seen.push(s.energy[0]);
     }
-    assert.deepEqual(seen, [5, 7, 9, 10, 10]);
+    assert.deepEqual(seen, [6, 9, 10, 10, 10]);
     const t = createBattle(mkTeam("a", "llama", [mkMove({ cost: 3 })]), mkTeam("b", "llama"), FLAT);
     const r = play(t, lead(1, 1), basics());
     assert.equal(evs(r, "plan")[0]?.energy, 0);
-    assert.deepEqual(r.state.energy, [2, 5]);
+    assert.deepEqual(r.state.energy, [3, 6]);
   });
 
   it("golpe básico: coste 0 (válido con energía 0), potencia 10, familia de la criatura", () => {
     let s = createBattle(mkTeam("a", "llama", [mkMove({ cost: 3 })]), mkTeam("b", "brote"), FLAT10);
-    s = play(s, lead(1, 1), basics(), FLAT10).state; // A gasta 3 ⇒ 0 + 2
+    s = play(s, lead(1, 1), basics(), FLAT10).state; // A gasta 3 ⇒ 0 + 3
     s = { ...s, energy: [0, s.energy[1]] };
     assert.equal(validatePlan(s, "A", basics(), FLAT10), null);
     const r = play(s, basics(), basics(), FLAT10);
@@ -182,6 +195,29 @@ describe("orden e iniciativa (combate §4)", () => {
     const ini = (evs(play(st, basics(), basics()), "order")[0]?.queue ?? []).filter((x) => x.side === "A").map((x) => [x.actor, x.initiative]);
     assert.deepEqual(new Map(ini as [number, number][]), new Map([[1, 130], [2, 70], [3, 100], [4, 100]]));
   });
+  it("[v0.2] movimientos de aliado (curación y protección) con prioridad 1 implícita; el golpe básico, 0", () => {
+    const heal = mkMove({ archetype: "curacion", scalable: "cura", target: "aliado", power: 50 });
+    const shield = mkMove({ archetype: "proteccion", scalable: "escudo", target: "aliado", power: 50 });
+    const slow = mkTeam("a", "llama", [heal, shield]).map((c) => ({ ...c, initiative: 10 }));
+    const fast = mkTeam("b", "llama", [mkMove({ modifier: "prioridad" })]).map((c) => ({ ...c, initiative: 190 }));
+    const s = createBattle(slow, fast, FLAT);
+    const plan: Action[] = [{ actor: 3, move: 1, target: 1 }, { actor: 4, move: 2, target: 1 }, ...planOf([1, 2], 0, 1)];
+    const q = evs(play(s, plan, basics()), "order")[0]?.queue ?? [];
+    assert.deepEqual(q.slice(0, 2).map((x) => `${x.side}${x.actor}:${x.priority}`), ["A3:1", "A4:1"]);
+    assert.ok(q.filter((x) => x.side === "A" && x.actor <= 2).every((x) => x.priority === 0));
+    // con `prioridad` el rival empata a nivel 1 y decide la iniciativa
+    const q2 = evs(play(s, plan, [{ actor: 1, move: 1, target: 1 }, ...planOf([2, 3, 4], 0, 1)]), "order")[0]?.queue ?? [];
+    assert.equal(`${q2[0]?.side}${q2[0]?.actor}`, "B1");
+    // palanca: orden.prioridad_movimientos_aliado = 0 ⇒ actúan por iniciativa
+    const off = loadBattleConfig((r) => {
+      r.dano.varianza = 0;
+      r.orden.jitter = 0;
+      r.dano.golpe_basico.potencia = 0;
+      r.orden.prioridad_movimientos_aliado = 0;
+    });
+    const q3 = evs(play(createBattle(slow, fast, off), plan, basics(), off), "order")[0]?.queue ?? [];
+    assert.equal(q3[0]?.side, "B");
+  });
   it("con jitter: misma iniciativa base ⇒ cada lado primero ≈ 50 % (C1 informativo)", () => {
     const s = createBattle(mkTeam("a", "llama"), mkTeam("b", "llama"), BCFG);
     const rng = createRng("ini");
@@ -214,12 +250,12 @@ describe("daño, escudo, cura y drenaje (combate §5)", () => {
       assert.ok(amt >= 80 && amt <= 120, `${amt}`);
     }
   });
-  it("escudo absorbe primero, suma con máximo 150, perforar lo ignora", () => {
+  it("escudo absorbe primero, suma con máximo 200 [v0.2], perforar lo ignora", () => {
     const shield = mkMove({ archetype: "proteccion", scalable: "escudo", target: "aliado", power: 100 });
     const hit = mkMove({ power: 150 });
     const pierce = mkMove({ power: 150, modifier: "perforar" });
-    const A = mkTeam("a", "llama", [shield]).map((c) => ({ ...c, initiative: 150 }));
-    let s = createBattle(A, mkTeam("b", "llama", [hit, pierce]), FLAT);
+    // B es más rápido: el escudo llega antes solo por la prioridad de los movimientos de aliado
+    let s = createBattle(mkTeam("a", "llama", [shield]), mkTeam("b", "llama", [hit, pierce]).map((c) => ({ ...c, initiative: 150 })), FLAT);
     let r = play(s, lead(1, 1), lead(1, 1));
     assert.deepEqual(evs(r, "shield")[0], { type: "shield", side: "A", pos: 1, amount: 100, total: 100, condition: false });
     const dm = evs(r, "damage").find((e) => e.side === "A" && e.pos === 1);
@@ -227,11 +263,13 @@ describe("daño, escudo, cura y drenaje (combate §5)", () => {
     assert.equal(fighter(r.state, 0, 1).statuses.length, 0); // escudo agotado
     s = { ...r.state, energy: [10, 10] };
     r = play(s, lead(1, 1), basics()); // escudo 100
-    r = play({ ...r.state, energy: [10, 10] }, lead(1, 1), lead(2, 1)); // +100 ⇒ 150; perforar
-    assert.equal(evs(r, "shield")[0]?.total, 150);
+    r = play({ ...r.state, energy: [10, 10] }, lead(1, 1), lead(2, 1)); // +100 ⇒ 200; perforar
+    assert.equal(evs(r, "shield")[0]?.total, 200);
     const pd = evs(r, "damage").find((e) => e.side === "A" && e.pos === 1);
     assert.deepEqual([pd?.absorbed, pd?.hp], [0, 20]);
-    assert.equal(fighter(r.state, 0, 1).statuses.find((x) => x.id === "escudo")?.value, 150);
+    assert.equal(fighter(r.state, 0, 1).statuses.find((x) => x.id === "escudo")?.value, 200);
+    r = play({ ...r.state, energy: [10, 10] }, lead(1, 1), basics()); // +100 con 200 ⇒ sigue 200
+    assert.equal(evs(r, "shield")[0]?.total, 200);
   });
   it("cura hasta el máximo y drenaje = round(0,30 · vida perdida)", () => {
     const heal = mkMove({ archetype: "curacion", scalable: "cura", target: "aliado", power: 100 });
@@ -266,7 +304,7 @@ describe("daño, escudo, cura y drenaje (combate §5)", () => {
     const s = createBattle(mkTeam("a", "llama", [tac]), mkTeam("b", "llama"), FLAT);
     const r = play(s, lead(1, 1), basics());
     assert.deepEqual(evs(r, "energy")[0], { type: "energy", side: "A", amount: 1, energy: 1 });
-    assert.deepEqual(r.state.energy, [3, 5]);
+    assert.deepEqual(r.state.energy, [4, 6]);
     const r2 = play({ ...s, energy: [10, 3] }, lead(1, 1), basics());
     assert.equal(evs(r2, "energy")[0]?.energy, 8);
   });
@@ -345,7 +383,7 @@ describe("estados (combate §8)", () => {
     const s = createBattle(A, mkTeam("b", "llama", [mkMove({ cost: 1 })]), FLAT);
     const r = play(s, lead(1, 1), lead(1, 1));
     assert.deepEqual(evs(r, "cancel")[0], { type: "cancel", side: "B", actor: 1, reason: "aturdido", refund: 1 });
-    assert.deepEqual(r.state.energy, [2, 5]);
+    assert.deepEqual(r.state.energy, [3, 6]);
     assert.equal(fighter(r.state, 1, 1).skipTurn, 0);
   });
   it("aturdir tras actuar: pierde la acción siguiente; después, inmune 2 turnos", () => {
@@ -429,6 +467,6 @@ describe("planes inválidos (combate §3.2)", () => {
     assert.equal(p?.valid, false);
     assert.match(p?.reason ?? "", /energía/);
     assert.deepEqual(p?.actions, basics(1));
-    assert.deepEqual(r.state.energy, [5, 5]);
+    assert.deepEqual(r.state.energy, [6, 6]);
   });
 });

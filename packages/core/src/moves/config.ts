@@ -1,5 +1,6 @@
 /**
- * Carga y validación de `config/movimientos.v0.1.json` (spec movimientos v0.1).
+ * Carga y validación de `config/movimientos.v0.2.json` (spec movimientos v0.2).
+ * Solo admite el formato v0.2; la v0.1 ya no se carga.
  *
  * Función pura: recibe el JSON ya parseado y la config de genética
  * validada (para las 13 familias, híbridas, rejilla de forma y catálogo,
@@ -36,6 +37,8 @@ export interface ArchetypeRule {
   readonly forcedArea: boolean;
   /** Táctico: con c ≥ energia_extra.coste_min lleva +1 energía en vez de prisa. */
   readonly energyIfMinCost: boolean;
+  /** [v0.2] `coste_min`: con c menor, el arquetipo pasa a golpe_estado (movimientos §4). */
+  readonly minCost: number;
 }
 
 export interface MovesConfig {
@@ -44,13 +47,16 @@ export interface MovesConfig {
   readonly drawsPerMove: number;
   /** budget[c] para c = 1..5 (budget[0] = 0). */
   readonly budget: readonly number[];
-  readonly cost: { readonly min: number; readonly max: number; readonly sizeScale: number; readonly randomScale: number };
+  /** [v0.2] c = clamp(1 + floor(offset + forma[0]·sizeScale + u1·randomScale), min, max). */
+  readonly cost: { readonly min: number; readonly max: number; readonly offset: number; readonly sizeScale: number; readonly randomScale: number };
   readonly scalables: {
     readonly dano: { readonly perPoint: number; readonly max: number; readonly maxArea: number };
     readonly cura: { readonly perPoint: number; readonly max: number };
     readonly escudo: { readonly perPoint: number; readonly max: number };
     readonly step: number;
     readonly minPoints: number;
+    /** [v0.2] fac·fEsc·pts ≥ minFraction·presupuesto[c]. */
+    readonly minFraction: number;
   };
   readonly statusCost: Readonly<Record<OffensiveStatusId | PositiveStatusId, number>>;
   readonly stunMinCost: number;
@@ -111,7 +117,7 @@ function weights(v: unknown, path: string, len: number, needPositive: boolean): 
 export function parseMovesConfig(raw: unknown, genetics: GeneticsConfig): MovesConfig {
   const r = obj(raw, "config");
   const version = str(r["version"], "version");
-  if (version !== "0.1") fail("version", `solo se admite la config de movimientos v0.1 (recibida '${version}')`);
+  if (version !== "0.2") fail("version", `solo se admite la config de movimientos v0.2 (recibida '${version}')`);
   const seedPrefix = str(obj(r["semilla"], "semilla")["prefijo"], "semilla.prefijo");
   // movimientos §3: 8 tiradas por movimiento (u1..u8)
   const drawsPerMove = int(r["tiradas_por_movimiento"], "tiradas_por_movimiento", 8, 8);
@@ -121,6 +127,7 @@ export function parseMovesConfig(raw: unknown, genetics: GeneticsConfig): MovesC
   const cost = {
     min: int(ce["min"], "coste_energia.min", 1, 1),
     max: int(ce["max"], "coste_energia.max", 1, 9),
+    offset: num(ce["desplazamiento"], "coste_energia.desplazamiento", 0),
     sizeScale: num(ce["escala_tamano"], "coste_energia.escala_tamano", 0),
     randomScale: num(ce["escala_azar"], "coste_energia.escala_azar", 0),
   };
@@ -148,9 +155,10 @@ export function parseMovesConfig(raw: unknown, genetics: GeneticsConfig): MovesC
     escudo: { perPoint: num(ses["potencia_por_punto"], "escalables.escudo.potencia_por_punto", Number.MIN_VALUE), max: num(ses["max"], "escalables.escudo.max", 0) },
     step: int(sc["paso"], "escalables.paso", 1),
     minPoints: int(sc["minimo_puntos"], "escalables.minimo_puntos", 1),
+    minFraction: num(sc["fraccion_minima"], "escalables.fraccion_minima", 0, 1), // [v0.2]
   };
-  // movimientos §4.1: el respaldo "golpe" siempre cabe ⇒ presupuesto[min] ≥ mínimo de puntos
-  if ((budget[1] as number) < scalables.minPoints) fail("presupuesto_por_coste.1", "debe ser ≥ escalables.minimo_puntos (respaldo §4.1)");
+  // movimientos §3 [v0.2]: 0 < fraccion_minima < 1
+  if (!(scalables.minFraction > 0 && scalables.minFraction < 1)) fail("escalables.fraccion_minima", "debe estar en (0, 1)");
 
   // movimientos §2.2
   const es = obj(r["estados"], "estados");
@@ -183,6 +191,15 @@ export function parseMovesConfig(raw: unknown, genetics: GeneticsConfig): MovesC
     drainFactor: num(obj(mo["drenaje"], "modificadores.drenaje")["factor"], "modificadores.drenaje.factor", 1),
     drainFraction: num(obj(mo["drenaje"], "modificadores.drenaje")["fraccion"], "modificadores.drenaje.fraccion", 0, 1),
   };
+
+  // movimientos §3 [v0.2]: el respaldo §4.1 siempre termina. Tras quitar condición,
+  // modificador y estado/energía: L = presupuesto[c] y fac·pts ≥ presupuesto[c] − fac.
+  const facMax = modifiers.areaFactor;
+  for (let c = 1; c <= cost.max; c++) {
+    const b = budget[c] as number;
+    if (scalables.minFraction * b > b - facMax) fail(`presupuesto_por_coste.${c}`, `fraccion_minima·presupuesto > presupuesto − factor de área (respaldo §4.1 sin salida)`);
+  }
+  if (scalables.minPoints > Math.floor((budget[1] as number) / facMax)) fail("escalables.minimo_puntos", "debe ser ≤ floor(presupuesto[1] / factor de área) (respaldo §4.1)");
 
   // movimientos §2.5
   const co = obj(r["condiciones"], "condiciones");
@@ -231,7 +248,10 @@ export function parseMovesConfig(raw: unknown, genetics: GeneticsConfig): MovesC
     const mods = arr(o["modificadores"], `${p}.modificadores`).map((x, i) => str(x, `${p}.modificadores[${i}]`));
     for (const m of mods) if (!(MODIFIER_IDS as readonly string[]).includes(m)) fail(`${p}.modificadores`, `modificador desconocido '${m}'`);
     const energyIfMinCost = o["energia_si_coste_min"] === undefined ? false : bool(o["energia_si_coste_min"], `${p}.energia_si_coste_min`);
+    // [v0.2] coste_min opcional (maldición: 2)
+    const minCost = o["coste_min"] === undefined ? cost.min : int(o["coste_min"], `${p}.coste_min`, cost.min, cost.max);
     archetypes[id] = Object.freeze({
+      minCost,
       scalable,
       target,
       statusPool,
@@ -248,7 +268,11 @@ export function parseMovesConfig(raw: unknown, genetics: GeneticsConfig): MovesC
   for (const id of ARCHETYPE_IDS) {
     const a = archetypes[id];
     if (a.statusPool === "ofensivos" && a.target !== "enemigo") fail(`arquetipos.${id}`, "estados ofensivos requieren objetivo enemigo");
+    // combate §4 [v0.2]: los de aliado ya tienen prioridad implícita
+    if (a.target === "aliado" && a.modifiers.includes("prioridad")) fail(`arquetipos.${id}.modificadores`, "los movimientos de aliado no admiten 'prioridad' (la tienen implícita)");
   }
+  // movimientos §4 [v0.2]: el destino de coste_min (golpe_estado) no puede tener coste_min propio
+  if (archetypes.golpe_estado.minCost !== cost.min) fail("arquetipos.golpe_estado.coste_min", "golpe_estado es el destino de coste_min y no puede tenerlo");
 
   // movimientos §4 — pesos por familia base (≥ 0, alguno > 0) y por locus
   const pf = obj(r["pesos_familia"], "pesos_familia");

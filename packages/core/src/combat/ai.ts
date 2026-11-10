@@ -1,11 +1,12 @@
 /**
- * IA de referencia determinista (combate §10) y partida completa.
+ * IA de referencia determinista v0.2 (combate §10) y partida completa.
  * La IA no consume tiradas: solo lee el estado.
  */
 import { createRng } from "../rng.ts";
 import type { Creature } from "../genetics/types.ts";
 import type { Move } from "../moves/generate.ts";
 import { buildCombatant, type BattleConfig, type Combatant } from "./combatant.ts";
+import type { AiStatusId } from "./config.ts";
 import {
   actionMove,
   battleHash,
@@ -30,8 +31,20 @@ import {
 export type Ai = (state: BattleState, side: SideId, cfg: BattleConfig) => Plan;
 
 export interface ReferenceAiOptions {
-  /** combate §10 `reserva` (por defecto `ia.reserva_por_defecto`). */
+  /** combate §10.2 `reserva` (por defecto `ia.reserva_por_defecto`). */
   readonly reserve?: number;
+  /** combate §10.1 κ (por defecto `ia.kappa`): para enfrentar IA que ahorran y que no en la misma partida. */
+  readonly kappa?: number;
+}
+
+/** combate §10.1 [v0.2] — precio sombra de la energía de un bando en el turno actual. */
+export interface EnergyPrice {
+  /** λ = max(0, κ · máx r(m)), en vida equivalente por unidad de energía. */
+  readonly lambda: number;
+  /** c* = coste del movimiento con máximo r(m) (0 si no hay movimientos). */
+  readonly targetCost: number;
+  /** máx r(m) (−Infinity si no hay movimientos). */
+  readonly bestRate: number;
 }
 
 /** Simulación hipotética del turno (orden de posición, var = 1). */
@@ -40,20 +53,68 @@ interface Sim {
   neg: [boolean[], boolean[]];
   mark: [boolean[], boolean[]];
   acted: [boolean[], boolean[]];
+  /** Escudo de cada criatura del propio bando (combate §10.3, valor del escudo). */
+  shield: number[];
 }
 
 function hasStatus(f: FighterState, id: string): boolean {
   return f.statuses.some((s) => s.id === id);
 }
-
-/** combate §10 — IA de referencia. */
-export function createReferenceAi(opts: ReferenceAiOptions = {}): Ai {
-  return (state, side, cfg) => referencePlan(state, side, cfg, opts.reserve ?? cfg.combat.ai.defaultReserve);
+function shieldOf(f: FighterState): number {
+  const sh = f.statuses.find((s) => s.id === "escudo");
+  return sh ? sh.value : 0;
 }
 
-function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, reserve: number): Plan {
+/** combate §10 [v0.2] — IA de referencia. */
+export function createReferenceAi(opts: ReferenceAiOptions = {}): Ai {
+  return (state, side, cfg) => referencePlan(state, side, cfg, opts.reserve ?? cfg.combat.ai.defaultReserve, opts.kappa ?? cfg.combat.ai.kappa);
+}
+
+/**
+ * combate §10.1 [v0.2] — precio de la energía, una vez por turno y sin tiradas.
+ * H = media de (vida + escudo) de los enemigos vivos; para cada movimiento m
+ * de cada criatura viva del bando (orden de posición y locus):
+ * r(m) = (v̂ − potencia_golpe·fA) / coste. λ = κ · máx r; c* = coste del primero que lo alcanza.
+ */
+export function energyPrice(state: BattleState, side: SideId, cfg: BattleConfig, kappa: number = cfg.combat.ai.kappa): EnergyPrice {
   const C = cfg.combat;
   const M = cfg.moves;
+  const A = C.ai;
+  const s = sideIndex(side);
+  const enemies = state.fighters[1 - s] as readonly FighterState[];
+  let sum = 0;
+  let n = 0;
+  for (const f of enemies) {
+    if (f.ko) continue;
+    sum += f.hp + shieldOf(f);
+    n++;
+  }
+  const H = n > 0 ? sum / n : 0;
+  let bestRate = -Infinity;
+  let targetCost = 0;
+  state.teams[s].forEach((c, i) => {
+    if ((state.fighters[s][i] as FighterState).ko) return;
+    for (const m of c.moves) {
+      const k = m.area ? A.areaTargetsEstimate : 1;
+      let v = m.scalable === "dano" ? Math.min(m.power * c.attack, H) * k : m.scalable === "cura" ? m.power * A.healFactorEstimate * k : Math.min(m.power, A.maxShieldValue) * k;
+      if (m.condition) v *= 1 + M.conditions.bonus * A.conditionProbEstimate;
+      // rendimiento neto por energía: descuenta el golpe básico al que sustituye
+      const r = (v - C.damage.basicPower * c.attack) / m.cost;
+      if (r > bestRate) {
+        bestRate = r;
+        targetCost = m.cost;
+      }
+    }
+  });
+  // λ < 0 penalizaría guardar lo que no se puede gastar: se acota en 0 (notas v0.2)
+  const lambda = bestRate > 0 ? kappa * bestRate : 0;
+  return { lambda, targetCost, bestRate };
+}
+
+function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, reserve: number, kappa: number): Plan {
+  const C = cfg.combat;
+  const M = cfg.moves;
+  const A = C.ai;
   const s = sideIndex(side);
   const o = (1 - s) as 0 | 1;
   const team = state.teams[s];
@@ -65,14 +126,18 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
   const negOf = (fs: readonly FighterState[]): boolean[] => fs.map((f) => f.statuses.some((x) => C.statuses[x.id].kind === "negativo"));
   const weakened = team.map((_, i) => hasStatus(state.fighters[s][i] as FighterState, "debilitar"));
   const immune = state.fighters[o].map((f) => f.stunImmuneUntil >= t || hasStatus(f, "aturdir"));
+  // combate §10.1 — precio de la energía y tope de lo que vale guardar
+  const price = energyPrice(state, side, cfg, kappa);
+  const saveCap = Math.max(0, Math.min(price.targetCost, C.energy.max - C.energy.perTurn));
 
-  // Evalúa una combinación (índices de movimiento por actor). Devuelve valor y objetivos.
+  // combate §10.3 — evalúa una combinación (índices de movimiento por actor). Devuelve valor y objetivos.
   const evaluate = (combo: readonly number[], withSynergy: boolean): { value: number; targets: number[] } => {
     const sim: Sim = {
       hp: [state.fighters[0].map((f) => f.hp), state.fighters[1].map((f) => f.hp)],
       neg: [negOf(state.fighters[0]), negOf(state.fighters[1])],
       mark: [state.fighters[0].map((f) => hasStatus(f, "marca")), state.fighters[1].map((f) => hasStatus(f, "marca"))],
       acted: [[false, false, false, false], [false, false, false, false]],
+      shield: state.fighters[s].map(shieldOf),
     };
     const plan: Action[] = actors.map((a, i) => ({ actor: a, move: combo[i] as number, target: 1 }));
     const syn = withSynergy ? planSynergy(team, plan, C) : { bonus: [0, 0, 0, 0], combo: [false, false, false, false] };
@@ -82,9 +147,9 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
       cost += m ? m.cost : C.damage.basicCost;
     }
     const afterPay = e - cost;
-    let value = -C.ai.costPenalty * cost; // [penalizacion_coste]
+    // [v0.2] valor de lo que se guarda: λ · min(e − Σcoste, c*, máx − por_turno); − penalización (desempate)
+    let value = price.lambda * Math.min(afterPay, saveCap) - A.costPenalty * cost;
     const targets: number[] = [];
-    const statusValue = (id: keyof typeof M.statusCost): number => C.ai.statusPointValue * M.statusCost[id];
 
     actors.forEach((pos, i) => {
       const idx = pos - 1;
@@ -111,9 +176,9 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
       // objetivos afectados que siguen vivos en la simulación
       const affectedOf = (tSide: 0 | 1, tPos: number): number[] =>
         (m && m.area ? rowOf(tPos, C) : [tPos]).filter((p) => (sim.hp[tSide][p - 1] as number) > 0);
+      if (m && m.extraEnergy) value += price.lambda * M.extraEnergy.amount; // [v0.2] λ por energía extra
 
       if (!m || m.scalable === "dano") {
-        // daño: el enemigo válido con más daño esperado; empate → menos vida → menor posición
         // candidatos válidos AHORA (combate §3.2); la simulación solo puntúa
         const cands = validTargetPositions(m, state.fighters[o].map((f) => !f.ko), C);
         if (cands.length === 0) {
@@ -122,15 +187,21 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
         }
         const dmgTo = (p: number): number =>
           damageAmount(pot(o, p - 1), c.attack, m ? m.family : c.family, (enemyTeam[p - 1] as Combatant).family, sim.mark[o][p - 1] as boolean, weakened[idx] as boolean, 1, t, C);
+        // [v0.2] objetivo = el que maximiza Σ [min(daño, vida) + bonus_ko si daño ≥ vida];
+        // empate → menos vida → menor posición
         let best = cands[0] as number;
-        let bestD = -Infinity;
+        let bestV = -Infinity;
         for (const p of cands) {
-          let d = 0;
-          for (const q of affectedOf(o, p)) d += dmgTo(q);
-          const better = d > bestD || (d === bestD && (sim.hp[o][p - 1] as number) < (sim.hp[o][best - 1] as number));
+          let v = 0;
+          for (const q of affectedOf(o, p)) {
+            const hp = sim.hp[o][q - 1] as number;
+            const d = dmgTo(q);
+            v += Math.min(d, hp) + (d >= hp ? A.koBonus : 0);
+          }
+          const better = v > bestV || (v === bestV && (sim.hp[o][p - 1] as number) < (sim.hp[o][best - 1] as number));
           if (better) {
             best = p;
-            bestD = d;
+            bestV = v;
           }
         }
         targets.push(best);
@@ -138,18 +209,19 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
           const hp = sim.hp[o][q - 1] as number;
           const d = dmgTo(q);
           value += Math.min(d, hp);
-          if (d >= hp) value += C.ai.koBonus; // [bonus_ko]
+          if (d >= hp) value += A.koBonus; // [bonus_ko]
           sim.hp[o][q - 1] = hp - Math.min(d, hp);
           if (m && m.status && m.status !== "prisa" && d < hp) {
-            if (!(m.status === "aturdir" && immune[q - 1])) value += statusValue(m.status);
+            // [v0.2] valor_estado por estado ofensivo sobre un objetivo que sobrevive (aturdir sobre inmune: 0)
+            if (!(m.status === "aturdir" && immune[q - 1])) value += A.statusValue[m.status as AiStatusId];
             sim.neg[o][q - 1] = true;
             if (m.status === "marca") sim.mark[o][q - 1] = true;
           }
         }
-        if (m && m.status === "prisa") value += statusValue("prisa");
+        if (m && m.status === "prisa") value += A.statusValue.prisa;
         return;
       }
-      // aliados: cura → menor vida/máx; escudo → delantero con menos vida
+      // aliados: cura → menor vida/máx; escudo → delantero con menos vida (si no hay, trasero)
       const alive = sim.hp[s].map((h) => h > 0);
       let best = -1;
       if (m.scalable === "cura") {
@@ -180,17 +252,21 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
       targets.push(best);
       for (const q of affectedOf(s, best)) {
         const amount = Math.round(pot(s, q - 1));
+        const maxHp = (team[q - 1] as Combatant).maxHp;
         if (m.scalable === "cura") {
-          const missing = (team[q - 1] as Combatant).maxHp - (sim.hp[s][q - 1] as number);
-          const heal = Math.min(amount, missing);
+          const heal = Math.min(amount, maxHp - (sim.hp[s][q - 1] as number));
           value += heal;
           sim.hp[s][q - 1] = (sim.hp[s][q - 1] as number) + heal;
         } else {
-          value += Math.min(amount, C.ai.maxShieldValue); // [valor_max_escudo]
+          // [v0.2] descuenta el escudo que ya tiene (incluido el puesto antes en este plan)
+          const cur = sim.shield[q - 1] as number;
+          value += Math.max(0, Math.min(amount, A.maxShieldValue - cur));
+          sim.shield[q - 1] = Math.min(C.statuses.escudo.value, cur + amount);
         }
-        if (m.status === "regenerar") value += statusValue("regenerar");
+        // [v0.2] regenerar: min(valor, vida que falta tras la cura + holgura)
+        if (m.status === "regenerar") value += Math.min(A.statusValue.regenerar, maxHp - (sim.hp[s][q - 1] as number) + A.regenSlack);
       }
-      if (m.status === "prisa") value += statusValue("prisa");
+      if (m.status === "prisa") value += A.statusValue.prisa;
     });
     return { value, targets };
   };
@@ -198,7 +274,7 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
   const toPlan = (combo: readonly number[], targets: readonly number[]): Action[] =>
     actors.map((actor, i) => ({ actor, move: combo[i] as number, target: targets[i] as number }));
 
-  // combate §10.1 — ¿algún movimiento asequible, solo, deja KO a un enemigo? (estado actual, var = 1, sin sinergia)
+  // combate §10.2 — ¿algún movimiento asequible, solo, deja KO a un enemigo? (estado actual, var = 1, sin sinergia)
   const moveCanKo = (c: Combatant, pos: number, m: Move): boolean => {
     const me = state.fighters[s][pos - 1] as FighterState;
     for (const p of validTargetPositions(m, state.fighters[o].map((f) => !f.ko), C)) {
@@ -231,7 +307,7 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
     }
   }
 
-  // combate §10.2 — enumeración lexicográfica (golpe = 0, movimientos 1–4), Σcoste ≤ e
+  // combate §10.3 — enumeración lexicográfica (golpe = 0, movimientos 1–4), Σcoste ≤ e
   const options = actors.map((pos) => {
     const c = team[pos - 1] as Combatant;
     const list = [0];

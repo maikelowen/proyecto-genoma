@@ -1,5 +1,5 @@
 /**
- * Generación procedural de movimientos (spec movimientos v0.1 §4):
+ * Generación procedural de movimientos (spec movimientos v0.2 §4):
  * gen → movimiento, función pura de la clave `familia|locus|firma`.
  * Consume siempre `tiradas_por_movimiento` (8) tiradas de un RNG propio
  * sembrado con la clave, así que no toca ningún otro RNG.
@@ -49,8 +49,8 @@ export interface Move {
   readonly scalablePoints: number;
   readonly points: number;
   readonly budget: number;
-  /** §4.1: 0 sin respaldo; 1 quitó condición; 2 quitó modificador; 3 pasó a golpe. */
-  readonly fallback: 0 | 1 | 2 | 3;
+  /** §4.1 [v0.2]: 0 sin respaldo; 1 quitó condición; 2 quitó modificador; 3 quitó estado/energía; 4 pasó a golpe. */
+  readonly fallback: 0 | 1 | 2 | 3 | 4;
 }
 
 /** Descompone una clave de gen y obtiene la forma desde la firma (genética v0.2 §8). */
@@ -126,9 +126,9 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
   const [u1, u2, u3, u4, u5, u6, u7, u8] = u as [number, number, number, number, number, number, number, number];
   const [size, elong, angular, ornament] = shape as [number, number, number, number];
 
-  // §4 coste: c = clamp(1 + floor(forma[0]·3.5 + u1·1.5), 1, 5)
+  // §4 coste [v0.2]: c = clamp(1 + floor(desplazamiento + forma[0]·escala_tamano + u1·escala_azar), 1, 5)
   const cc = mcfg.cost;
-  const c = Math.min(cc.max, Math.max(cc.min, 1 + Math.floor(size * cc.sizeScale + u1 * cc.randomScale)));
+  const c = Math.min(cc.max, Math.max(cc.min, 1 + Math.floor(cc.offset + size * cc.sizeScale + u1 * cc.randomScale)));
 
   // §4 arquetipo: familia + locus + forma[2] (ofensivo/defensivo)
   const wA = familyWeights("arquetipo", family, mcfg);
@@ -140,6 +140,8 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
     wA[i] = w;
   });
   let archetype = ARCHETYPE_IDS[weightedPick(wA, u2)] as ArchetypeId;
+  // §4 [v0.2] coste_min (maldición: c ≥ 2); si no llega, golpe_estado, sin tiradas
+  if (c < mcfg.archetypes[archetype].minCost) archetype = "golpe_estado";
   const rule = mcfg.archetypes[archetype];
 
   // §4 estado (u3)
@@ -179,9 +181,10 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
   }
   const rootIdx = Math.floor(u8 * 4);
 
-  // §4.1 ensamblado con respaldo (sin tiradas extra)
+  // §4.1 [v0.2] ensamblado con respaldo (sin tiradas extra)
   const md = mcfg.modifiers;
-  let fallback: 0 | 1 | 2 | 3 = 0;
+  const budget = mcfg.budget[c] as number;
+  let fallback: 0 | 1 | 2 | 3 | 4 = 0;
   let area = false;
   let fac = 1;
   let fixed = 0;
@@ -195,20 +198,23 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
     fixed = modifier === "alcance" || modifier === "prioridad" || modifier === "perforar" ? md[modifier] : 0;
     fEsc = (condition ? 1 + mcfg.conditions.bonus * mcfg.conditions.factor[condition] : 1) * (modifier === "drenaje" ? md.drainFactor : 1);
     extra = (status ? mcfg.statusCost[status] : 0) + (extraEnergy ? mcfg.extraEnergy.cost : 0);
-    const L = (mcfg.budget[c] as number) - fixed - fac * extra;
+    const L = budget - fixed - fac * extra;
     pts = L > 0 ? Math.floor(L / (fac * fEsc)) : 0;
-    if (pts >= mcfg.scalables.minPoints) break;
+    // §2.1 [v0.2]: pts ≥ mínimo y el escalable se lleva ≥ fraccion_minima del presupuesto
+    if (pts >= mcfg.scalables.minPoints && fac * fEsc * pts >= mcfg.scalables.minFraction * budget) break;
     if (condition) {
       condition = null; // 1.º se quita la condición
       fallback = 1;
     } else if (modifier) {
       modifier = null; // 2.º se quita el modificador
       fallback = 2;
-    } else {
-      archetype = "golpe"; // 3.º pasa a golpe (siempre cabe)
-      status = null;
+    } else if (status || extraEnergy) {
+      status = null; // 3.º [v0.2] se quitan estado y energía (conserva el arquetipo)
       extraEnergy = 0;
       fallback = 3;
+    } else {
+      archetype = "golpe"; // 4.º pasa a golpe (con el parser actual no se llega)
+      fallback = 4;
     }
   }
   const fr = mcfg.archetypes[archetype];
@@ -236,7 +242,7 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
     condition,
     scalablePoints: pts,
     points,
-    budget: mcfg.budget[c] as number,
+    budget,
     fallback,
   });
 }
@@ -262,6 +268,7 @@ export function validateMove(m: Move, mcfg: MovesConfig): string[] {
   if (!Number.isInteger(m.scalablePoints) || m.scalablePoints < mcfg.scalables.minPoints) errs.push(`escalable con ${m.scalablePoints} puntos`);
   const rule = mcfg.archetypes[m.archetype];
   if (!rule) return [...errs, `arquetipo desconocido '${m.archetype}'`];
+  if (m.cost < rule.minCost) errs.push(`${m.archetype} con coste ${m.cost} < mínimo ${rule.minCost}`); // §3.3 [v0.2]
   if (m.scalable !== rule.scalable || m.target !== rule.target) errs.push("escalable u objetivo no corresponden al arquetipo");
   const cap = scalableCap(m.scalable, m.area, mcfg);
   if (!(m.power > 0) || m.power > cap || m.power > m.scalablePoints * scalablePerPoint(m.scalable, mcfg) + eps) errs.push(`potencia ${m.power} inválida (tope ${cap})`);
@@ -294,6 +301,8 @@ export function validateMove(m: Move, mcfg: MovesConfig): string[] {
   const extra = (m.status ? mcfg.statusCost[m.status] : 0) + (m.extraEnergy ? mcfg.extraEnergy.cost : 0);
   const expected = fixed + fac * extra + fac * fEsc * m.scalablePoints;
   if (Math.abs(expected - m.points) > eps) errs.push(`puntos ${m.points} ≠ fórmula ${expected}`);
+  // §3.1 [v0.2]: el escalable se lleva al menos fraccion_minima del presupuesto
+  if (budget !== undefined && fac * fEsc * m.scalablePoints < mcfg.scalables.minFraction * budget - eps) errs.push(`escalable por debajo del ${mcfg.scalables.minFraction} del presupuesto`);
   return errs;
 }
 

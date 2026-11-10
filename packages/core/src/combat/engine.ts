@@ -1,5 +1,5 @@
 /**
- * Motor de combate v0.1 (spec docs/spec/combate-v0.1.md).
+ * Motor de combate v0.2 (spec docs/spec/combate-v0.2.md).
  *
  * Estado inmutable: `resolveTurn` no modifica el estado de entrada y
  * devuelve uno nuevo más el registro de eventos del turno. Consume
@@ -255,6 +255,18 @@ function hasNegative(w: Work, cfg: CombatConfig): boolean {
   return w.statuses.some((s) => cfg.statuses[s.id].kind === "negativo");
 }
 
+/**
+ * combate §4 [v0.2] — nivel de prioridad: 1 con `prioridad`; los movimientos
+ * de aliado, `orden.prioridad_movimientos_aliado`; el resto (y el golpe), 0.
+ */
+export function actionPriority(m: Move | null, cfg: CombatConfig): number {
+  const levels = cfg.order.priorityLevels;
+  let p = levels[0];
+  if (m && m.modifier === "prioridad") p = levels[1];
+  if (m && m.target === "aliado") p = Math.max(p, cfg.order.allyPriority);
+  return p;
+}
+
 /** combate §5 — desgaste del turno t. */
 export function wearFactor(turn: number, cfg: CombatConfig): number {
   return 1 + cfg.wear.perTurn * Math.max(0, turn - cfg.wear.fromTurn);
@@ -353,7 +365,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
         action: a,
         move: m,
         cost: actionCost(c, a.move, C),
-        priority: m && m.modifier === "prioridad" ? C.order.priorityLevels[1] : C.order.priorityLevels[0],
+        priority: actionPriority(m, C),
         initiative: ini,
       });
     }

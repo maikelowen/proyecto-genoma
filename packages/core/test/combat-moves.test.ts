@@ -1,7 +1,7 @@
-/** Tests de movimientos v0.1 (spec docs/spec/movimientos-v0.1.md) y parsers de config. */
+/** Tests de movimientos v0.2 (spec docs/spec/movimientos-v0.2.md) y parsers de config. */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import goldenCatalog from "./fixtures/movimientos-catalogo.v0.1.json" with { type: "json" };
+import goldenCatalog from "./fixtures/movimientos-catalogo.v0.2.json" with { type: "json" };
 import {
   ARCHETYPE_IDS,
   ConfigError,
@@ -9,8 +9,10 @@ import {
   generateMove,
   generateMoveForKey,
   geneKey,
+  buildBattleConfig,
   parseCombatConfig,
   parseMovesConfig,
+  patchRawConfig,
   validateMove,
   weightedPick,
   type Move,
@@ -25,8 +27,33 @@ describe("parsers de config (combate y movimientos)", () => {
     assert.equal(BCFG.combat.stats.betaQuality, 0.04);
     assert.equal(BCFG.combat.draws.perTurn, 24);
     assert.equal(BCFG.combat.families.table["llama"]?.["brote"], 1.25);
-    assert.deepEqual(MC.budget, [0, 8, 18, 29, 42, 56]);
+    assert.deepEqual(MC.budget, [0, 11, 20, 30, 41, 53]);
     assert.equal(MC.drawsPerMove, 8);
+    assert.equal(MC.scalables.minFraction, 0.4);
+    assert.equal(MC.archetypes.maldicion.minCost, 2);
+    assert.equal(BCFG.combat.energy.perTurn, 3);
+    assert.equal(BCFG.combat.order.allyPriority, 1);
+    assert.equal(BCFG.combat.statuses.escudo.value, 200);
+    assert.equal(BCFG.combat.ai.kappa, 0.9);
+    assert.equal(BCFG.combat.ai.statusValue.quemadura, 36);
+  });
+
+  it("patchRawConfig / buildBattleConfig: copia con cambios por ruta, sin tocar el original", () => {
+    const raw = rawMovesClone();
+    const before = JSON.stringify(raw);
+    const p = patchRawConfig(raw, { "presupuesto_por_coste.5": 60, "pesos_familia.arquetipo.llama.0": 9 });
+    assert.equal(JSON.stringify(raw), before);
+    assert.equal(p.presupuesto_por_coste["5"], 60);
+    assert.equal(p.pesos_familia.arquetipo.llama[0], 9);
+    const long = patchRawConfig(raw, [[["overrides_catalogo", "sales", "llama.cola.2"], "r9"]]);
+    assert.equal(long.overrides_catalogo.sales["llama.cola.2"], "r9");
+    assert.throws(() => patchRawConfig(raw, { "ia.kapa": 1 }), ConfigError); // errata: la ruta no existe
+    assert.throws(() => patchRawConfig(raw, { "pesos_familia.arquetipo.llama.9": 1 }), ConfigError);
+    assert.throws(() => patchRawConfig(raw, { "no.existe.nada": 1 }), ConfigError);
+    const cfg = buildBattleConfig(rawCombatClone(), raw, GCFG, { combat: { "ia.kappa": 0, "familias.tabla": undefined }, moves: { "presupuesto_por_coste.5": 60 } });
+    assert.equal(cfg.combat.ai.kappa, 0);
+    assert.equal(cfg.moves.budget[5], 60);
+    assert.equal(cfg.combat.families.table["llama"]?.["brote"], 1.25); // tabla derivada de los anillos
   });
 
   it("β configurable (0 / 0,06) y tabla derivada al borrarla (barrido de fuerte)", () => {
@@ -42,7 +69,15 @@ describe("parsers de config (combate y movimientos)", () => {
 
   it("combate: rechaza configs incoherentes", () => {
     const bad: [string, (r: any) => void][] = [
-      ["version", (r) => (r.version = "0.2")],
+      ["version", (r) => (r.version = "0.1")],
+      ["estadisticas.vida.coef", (r) => delete r.estadisticas.vida.coef.potencia],
+      ["estadisticas.ataque.coef", (r) => (r.estadisticas.ataque.coef.potencia = -0.6)], // fA ≤ 0 con todo en velocidad
+      ["estadisticas.iniciativa.coef.velocidad", (r) => (r.estadisticas.iniciativa.coef.velocidad = "50")],
+      ["orden.prioridad_movimientos_aliado", (r) => (r.orden.prioridad_movimientos_aliado = 2)],
+      ["ia.valor_estado", (r) => delete r.ia.valor_estado.prisa],
+      ["ia.valor_estado.quemadura", (r) => (r.ia.valor_estado.quemadura = -1)],
+      ["ia.kappa", (r) => (r.ia.kappa = -0.1)],
+      ["ia.prob_condicion_estimada", (r) => (r.ia.prob_condicion_estimada = 1.5)],
       ["tiradas.por_turno", (r) => (r.tiradas.por_turno = 23)],
       ["familias.tabla", (r) => (r.familias.fuerte = 1.3)], // tabla desfasada
       ["familias.tabla.llama.marea", (r) => (r.familias.tabla.llama.marea = 1)],
@@ -70,6 +105,15 @@ describe("parsers de config (combate y movimientos)", () => {
       ["orden_modificadores", (r) => r.orden_modificadores.reverse()],
       ["overrides_catalogo.sales.no.existe", (r) => (r.overrides_catalogo.sales["no.existe"] = "x")],
       ["arquetipos.golpe.modificadores", (r) => r.arquetipos.golpe.modificadores.push("volar")],
+      ["version", (r) => (r.version = "0.1")],
+      ["escalables.fraccion_minima", (r) => (r.escalables.fraccion_minima = 0)],
+      ["escalables.fraccion_minima", (r) => (r.escalables.fraccion_minima = 1)],
+      ["presupuesto_por_coste.1", (r) => (r.escalables.fraccion_minima = 0.9)], // 0,9·11 > 11 − 1,75: respaldo sin salida
+      ["escalables.minimo_puntos", (r) => (r.escalables.minimo_puntos = 7)], // > floor(11 / 1,75)
+      ["arquetipos.maldicion.coste_min", (r) => (r.arquetipos.maldicion.coste_min = 6)],
+      ["arquetipos.golpe_estado.coste_min", (r) => (r.arquetipos.golpe_estado.coste_min = 2)],
+      ["arquetipos.curacion.modificadores", (r) => r.arquetipos.curacion.modificadores.push("prioridad")],
+      ["coste_energia.desplazamiento", (r) => delete r.coste_energia.desplazamiento],
     ];
     for (const [path, patch] of bad) {
       const raw = rawMovesClone();
@@ -155,21 +199,89 @@ describe("generación de movimientos (movimientos §4)", () => {
     }
   });
 
-  it("respaldo §4.1 (sin tiradas extra): con piezas caras se quita condición/modificador o pasa a golpe", () => {
+  it("respaldo §4.1 [v0.2] (sin tiradas extra): quita condición, modificador y estado/energía conservando el arquetipo", () => {
     const cfg = loadBattleConfig(undefined, (r) => {
       r.modificadores.alcance.coste = 60;
       r.modificadores.prioridad.coste = 60;
       r.estados.ofensivos.marca = 60;
+      r.estados.ofensivos.debilitar = 60;
+      r.estados.positivos.regenerar = 60;
+      r.energia_extra.coste = 60;
       r.condiciones.reserva.factor = 60;
     }).moves;
     const levels = new Set<number>();
-    for (const t of GCFG.catalog) {
-      const m = generateMove(t, cfg);
-      assert.deepEqual(validateMove(m, cfg), [], m.id);
+    const fams = [...GCFG.baseFamilies, ...GCFG.hybrids.map((h) => h.id)];
+    for (let i = 0; i < 600; i++) {
+      const sig = [i % 5, (i >> 1) % 5, (i * 3) % 5, (i * 7) % 5].join("");
+      const m = generateMoveForKey(`${fams[i % fams.length]}|${["cabeza", "cuerpo", "extremidades", "cola"][(i >> 2) % 4]}|${sig}`, cfg);
+      assert.deepEqual(validateMove(m, cfg), [], m.key);
       levels.add(m.fallback);
-      if (m.fallback === 3) assert.equal(m.archetype, "golpe");
+      if (m.fallback === 3) {
+        assert.equal(m.status, null);
+        assert.equal(m.extraEnergy, 0);
+        assert.equal(m.modifier, null);
+        assert.equal(m.condition, null);
+      }
     }
-    assert.ok(levels.has(2) && levels.has(3), [...levels].join(","));
+    assert.ok(levels.has(1) && levels.has(2) && levels.has(3), [...levels].join(","));
+    assert.ok(!levels.has(4), "con un parser válido nunca pasa a golpe");
+    // el arquetipo se conserva en el nivel 3 (p. ej. un táctico sin energía o una curación sin regenerar)
+    const arch3 = new Set<string>();
+    for (let i = 0; i < 600; i++) {
+      const sig = [i % 5, (i >> 1) % 5, (i * 3) % 5, (i * 7) % 5].join("");
+      const m = generateMoveForKey(`${fams[i % fams.length]}|${["cabeza", "cuerpo", "extremidades", "cola"][(i >> 2) % 4]}|${sig}`, cfg);
+      if (m.fallback === 3) arch3.add(m.archetype);
+    }
+    assert.ok([...arch3].some((a) => a !== "golpe"), [...arch3].join(","));
+  });
+
+  it("regla del 40 % [v0.2]: el escalable se lleva ≥ fraccion_minima·presupuesto en toda la muestra", () => {
+    const fams = [...GCFG.baseFamilies, ...GCFG.hybrids.map((h) => h.id)];
+    for (let i = 0; i < 1500; i++) {
+      const sig = [(i * 11) % 5, (i >> 1) % 5, (i * 3) % 5, (i >> 3) % 5].join("");
+      const m = generateMoveForKey(`${fams[i % fams.length]}|${["cabeza", "cuerpo", "extremidades", "cola"][i % 4]}|${sig}`, MC);
+      const fac = m.area ? MC.modifiers.areaFactor : 1;
+      const fEsc = (m.condition ? 1 + MC.conditions.bonus * MC.conditions.factor[m.condition] : 1) * (m.modifier === "drenaje" ? MC.modifiers.drainFactor : 1);
+      assert.ok(fac * fEsc * m.scalablePoints >= 0.4 * m.budget, m.key);
+      if (m.archetype === "maldicion") assert.ok(m.cost >= 2, m.key); // coste_min
+    }
+  });
+
+  it("coste [v0.2]: c medio ≈ 2 + 2·forma[0] (spec §4: 2,0 / 2,5 / 3,0 / 3,5 / 4,0)", () => {
+    // c = clamp(1 + floor(0,25 + 2·f + 2,5·u)); con u uniforme la media exacta es la de la tabla
+    const fams = [...GCFG.baseFamilies, ...GCFG.hybrids.map((h) => h.id)];
+    for (const d of [0, 1, 2, 3, 4]) {
+      let sum = 0;
+      let n = 0;
+      for (let i = 0; i < 1250; i++) {
+        const sig = `${d}${i % 5}${(i >> 2) % 5}${(i >> 4) % 5}`;
+        sum += generateMoveForKey(`${fams[i % fams.length]}|${["cabeza", "cuerpo", "extremidades", "cola"][(i >> 6) % 4]}|${sig}`, MC).cost;
+        n++;
+      }
+      const expected = 2 + 0.5 * d;
+      assert.ok(Math.abs(sum / n - expected) < 0.12, `forma ${d}: ${sum / n} (esperado ${expected})`);
+    }
+  });
+
+  it("ejemplos de la spec (movimientos §8) y cuotas del catálogo (§5.1)", () => {
+    const ex = (k: string): Move => generateMoveForKey(k, MC);
+    const a = ex("brote|cabeza|0222");
+    assert.deepEqual([a.cost, a.archetype, a.power, a.area, a.status, a.condition], [2, "maldicion", 45, true, "debilitar", "reserva"]);
+    const b = ex("brote|extremidades|0321");
+    assert.deepEqual([b.cost, b.archetype, b.power, b.area, b.status, b.condition], [3, "curacion", 60, true, "regenerar", "reserva"]);
+    const c = ex("roca|cabeza|3131");
+    assert.deepEqual([c.cost, c.archetype, c.power, c.target], [4, "proteccion", 200, "aliado"]);
+    const d = ex("llama|cola|2423");
+    assert.deepEqual([d.cost, d.archetype, d.power, d.status], [3, "golpe_estado", 120, "quemadura"]);
+    const q = { apoyo_min: 2, apoyo_max: 4, max_por_arquetipo: 4, golpe_min: 2, golpe_estado_min: 2 };
+    for (const f of GCFG.baseFamilies) {
+      const n = (a: string): number => catalog.filter((m) => m.family === f && m.archetype === a).length;
+      const apoyo = n("proteccion") + n("curacion");
+      assert.ok(apoyo >= q.apoyo_min && apoyo <= q.apoyo_max, `${f}: apoyo ${apoyo}`);
+      for (const a of ARCHETYPE_IDS) assert.ok(n(a) <= q.max_por_arquetipo, `${f}: ${a} ${n(a)}`);
+      assert.ok(n("golpe") >= q.golpe_min && n("golpe_estado") >= q.golpe_estado_min, f);
+    }
+    assert.equal(Object.keys(MC.salts).length, 17);
   });
 
   it("sal de revisión: cambia solo ese movimiento (movimientos §5)", () => {
@@ -199,6 +311,10 @@ describe("generación de movimientos (movimientos §4)", () => {
     assert.ok(validateMove({ ...m, archetype: "maldicion" }, MC).length > 0);
     assert.ok(validateMove({ ...m, status: "aturdir", cost: 1, budget: 8 }, MC).length > 0);
     assert.ok(validateMove({ ...m, extraEnergy: 1 }, MC).length > 0);
+    // [v0.2] maldición con c < 2 y escalable por debajo del 40 %
+    assert.ok(validateMove({ ...m, archetype: "maldicion", area: true, cost: 1, budget: 11 }, MC).some((e) => e.includes("mínimo")));
+    const small = { ...m, power: 10, scalablePoints: 2, points: 2 };
+    assert.ok(validateMove(small, MC).some((e) => e.includes("presupuesto")));
   });
 
   it("describeMove: texto corto en español con nombre, coste y piezas", () => {
