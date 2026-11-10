@@ -23,6 +23,10 @@
 - Afirmaciones del tipo "siempre hay solución": búscales un contraejemplo y exige un respaldo total.
 - **Vectores dorados regenerados:** compara el viejo con el nuevo campo a campo. Solo deben cambiar los campos afectados por el cambio declarado.
 - Coherencia entre spec, JSON y tests después de cada cambio de parámetro. Haz grep del valor viejo en la spec.
+- **Topes frente a presupuesto:** comprueba con una muestra grande qué fracción de lo generado llega al tope. En v0.2, el 100 % de las curas de coste 4–5 estaban recortadas (K-01). El código era fiel a la spec y el fallo estaba en la spec.
+- **Simetría:** un equipo contra sí mismo no prueba nada. Usa un estado espejo (plan de A = plan de B) y parejas X–Y / Y–X con la misma semilla.
+- **Parches de config:** si se pueden crear claves y el parser ignora las desconocidas, una errata en un barrido no falla. Hay que probarlo.
+- **"No depende de X":** mira el IC y el recuento de semillas en cada instante. Con la media sola, una diferencia de 14 puntos pasa por "no depende" (G-01).
 
 ## Formato de entrega
 - Veredicto (APROBADO / CON CAMBIOS / RECHAZADO), tabla de hallazgos (ID, severidad, fichero:línea, reproducción, arreglo) y checklist marcada.
