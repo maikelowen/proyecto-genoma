@@ -7,7 +7,9 @@ Definida por Miguel (dueño del juego). Es la referencia obligatoria para todo e
 ## Público y tono
 - Público objetivo: 18–40 años.
 - Estética de anime: lo que hace que no resulte infantil es la **actitud**, no la anatomía. Expresiones con carácter: párpados a media asta, miradas de lado, sonrisas chulescas, colmillos, ceño fruncido, aburrimiento, euforia. Nunca grotescas.
-- **Actitud de "pequeños diablos" (Miguel, 2026-11-11):** lo oscuro es la **actitud**, no el color (los colores siguen vivos). Siniestras, traviesas, con malas intenciones: cejas en V, miradas de reojo, pupilas rasgadas, sonrisas torcidas. **Dientes con gracia**: colmillos marcados, un diente torcido o separado, sonrisa de media luna, colmillos inferiores… pocos y con personalidad, no una fila de sierra. Pequeños cuernos o detalles diabólicos son bienvenidos. Algunas cute están bien como variedad (minoría). Nunca grotescas ni gore.
+- **Actitud de "pequeños diablos" (Miguel, 2026-11-11):** lo oscuro es la **actitud**, no el color (los colores siguen vivos). Siniestras, traviesas, con malas intenciones: cejas en V, miradas de reojo, pupilas rasgadas, sonrisas torcidas. **Dientes con gracia**: colmillos marcados, un diente torcido o separado, sonrisa de media luna, colmillos inferiores… pocos y con personalidad, no una fila de sierra. Pequeños cuernos o detalles diabólicos son bienvenidos.
+- **Ojos de color (Miguel, 2026-11-11):** el ojo no es blanco; es de un color luminoso que contrasta con el cuerpo (p. ej. amarillo en Llama, cian en Marea, lila en Sombra), con pupila rasgada oscura. Forma de almendra o triángulo según la actitud.
+- **Base aprobada como punto de partida (2026-11-11):** el último boceto del chat ("pequeños diablos": colores vivos, silueta por familia, cejas en V, cuernos pequeños, dientes con personalidad) combinado con los ojos de color del boceto anterior. Algunas cute están bien como variedad (minoría). Nunca grotescas ni gore.
 - Trazo **fino y limpio** (no contorno grueso uniforme), del color oscuro de la familia.
 - Colores planos con un tono de sombra o de luz; **brillo/aura** alrededor del alma; se presentan sobre **fondo oscuro**.
 
@@ -44,4 +46,4 @@ Híbridas: mezcla de forma y paleta de sus dos familias, con más detalle.
 ## Implicaciones técnicas (director)
 - Arte vectorial generado por código a partir de los genes; determinista.
 - Validación: avance pequeño (2 almas por familia + mutada + híbrida + fila a 48 px) revisado por Miguel antes del visor completo.
-- Bocetos de referencia aprobados como dirección: los del chat del 2026-11-11 (almas sobre fondo oscuro), con la corrección de formas de cuerpo por familia.
+- **Referencia visual aprobada: `docs/arte/referencia-almas.svg`** (boceto a mano del 2026-11-11; marca el tono, no el acabado). El avance anterior de criaturas (`docs/arte/avance-estilo.html`, `client/art/`) queda descartado como estilo; se puede reutilizar su estructura técnica.
