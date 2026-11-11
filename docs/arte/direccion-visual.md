@@ -7,6 +7,7 @@ Definida por Miguel (dueño del juego). Es la referencia obligatoria para todo e
 ## Público y tono
 - Público objetivo: 18–40 años.
 - Estética de anime: lo que hace que no resulte infantil es la **actitud**, no la anatomía. Expresiones con carácter: párpados a media asta, miradas de lado, sonrisas chulescas, colmillos, ceño fruncido, aburrimiento, euforia. Nunca grotescas.
+- **Más oscuras que cute (Miguel, 2026-11-11):** la mayoría con aire de "malas" — miradas amenazantes o maliciosas, ojos que brillan, sonrisas con dientes, colores más profundos y apagados con acentos luminosos. Algunas cute están bien como variedad (minoría). Siguen sin ser grotescas ni gore.
 - Trazo **fino y limpio** (no contorno grueso uniforme), del color oscuro de la familia.
 - Colores planos con un tono de sombra o de luz; **brillo/aura** alrededor del alma; se presentan sobre **fondo oscuro**.
 
