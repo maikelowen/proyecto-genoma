@@ -1,51 +1,46 @@
 # Dirección visual — Proyecto Genoma
 
-Definida por Miguel (dueño del juego) el 2026-11-10. Es la referencia obligatoria para todo el arte, procedural o dibujado. Todo diseño debe ser 100 % original: las referencias marcan el tono, nunca se copian formas, personajes ni paletas concretas.
+Definida por Miguel (dueño del juego). Es la referencia obligatoria para todo el arte, procedural o dibujado. Todo diseño debe ser 100 % original: las referencias marcan el tono, nunca se copian formas, personajes ni paletas concretas.
 
-## Tono general
-- Criaturas agradables y simpáticas, que apetezca coleccionar y cuidar.
-- Escala de 1 (muy mona) a 10 (bestia): **4** (ajustado el 2026-11-10 tras ver el primer boceto: "algo menos cute y un pelín más definidos").
-- Qué significa en la práctica (interpretación del director, a validar con el visor):
-  - Menos "bebé": proporciones algo menos infantiles (la cabeza sigue siendo grande, pero no exagerada), menos mofletes y rubor.
-  - Más definidas: siluetas más marcadas y distintas por familia, rasgos anatómicos propios (hocicos, crestas, garras pequeñas, colas con forma) en lugar de una misma "bola con ojos" para todas.
-  - Expresiones con más carácter: cejas y párpados que transmitan actitud (decididas, pícaras, despistadas).
-  - Las formas siguen siendo curvas y amables; las puntas, solo en detalles.
-- Con personalidad y algo de carácter, no solo ternura: un poco traviesas, valientes o despistadas. **Nunca agresivas ni grotescas.**
+> **v2 (2026-11-11): cambio de concepto en exploración, preferido por Miguel: de "criaturas" a "almas".** El primer avance procedural (criaturas cuadrúpedas, contorno grueso) fue rechazado por infantil. Tras dos rondas de bocetos, Miguel prefiere almas con estética de anime. Pendiente de confirmar como decisión definitiva al ver el siguiente avance. La versión anterior de esta guía está en el historial de git.
 
-## Proporciones
-- Cabeza grande respecto al cuerpo: aproximadamente 1/3 de la altura o más.
-- Cuerpos redondeados y compactos, patas cortas.
-- Ojos grandes y expresivos: son lo que más personalidad da.
-- Siluetas reconocibles aunque sean pequeñas (en el móvil se verán a tamaño reducido).
+## Público y tono
+- Público objetivo: 18–40 años.
+- Estética de anime: lo que hace que no resulte infantil es la **actitud**, no la anatomía. Expresiones con carácter: párpados a media asta, miradas de lado, sonrisas chulescas, colmillos, ceño fruncido, aburrimiento, euforia. Nunca grotescas.
+- Trazo **fino y limpio** (no contorno grueso uniforme), del color oscuro de la familia.
+- Colores planos con un tono de sombra o de luz; **brillo/aura** alrededor del alma; se presentan sobre **fondo oscuro**.
 
-## Formas
-- Curvas y suaves en todas las familias base.
-- Puntas y ángulos reservados para dar un toque a ciertas partes (cuernos, crestas, aletas), no para el cuerpo entero.
+## Concepto: almas (inspiradas en el hitodama, la llama-alma del folclore japonés)
+- Un alma es un núcleo con llama superior, rostro expresivo y apéndices que crecen con la rareza.
+- Referencias de tono aportadas por Miguel: almas de un anime conocido (*Soul Eater*) y una ilustración de almas que evolucionan (orbe con llama, luego patas, alas o halo). **Prohibido copiar el diseño de *Soul Eater***: bola con rizo de llama y cara. Nuestro lenguaje propio: forma de cuerpo por familia, núcleo brillante interior y apéndices como evolución.
 
-## Contorno
-- Grueso, oscuro y uniforme.
-- No negro puro: una versión oscura del color principal.
-- Debe definir bien cada parte, porque las criaturas se montan por piezas.
+## Silueta por familia (regla clave)
+Cada familia se reconoce por la **forma del cuerpo**, no solo por el color. Ninguna alma comparte silueta base con otra familia.
 
-## Color
-- Paleta limitada: 2–3 colores por criatura más un acento.
-- Colores vivos pero no chillones, ligeramente saturados.
-- Cada familia con una paleta reconocible: Llama, rojos y naranjas cálidos; Marea, azules y turquesas; Brote, verdes y amarillos; etc.
-- Sombreado simple: un solo tono de sombra, sin degradados.
+| Familia | Forma del cuerpo | Llama superior | Paleta |
+| --- | --- | --- | --- |
+| Llama | Cuerpo de llama: alto, ondulante, asimétrico | Lenguas de fuego dentadas | Rojos y naranjas |
+| Marea | Gota u ola, blanda, con remolino | Cresta en ola | Azules y turquesas |
+| Brote | Semilla o bulbo con hojas o raíces | Brote con hoja | Verdes y amarillos |
+| Roca | Peñasco facetado con grietas y cristales | Esquirlas de cristal | Piedra y turquesa |
+| Voltio | Cristal o cápsula angular con chispas | Rayo en zigzag | Amarillos con acento azul |
+| Sombra | Humo irregular, bordes que se deshacen | Penacho de humo | Violetas e índigo |
 
-## Evolución del estilo con la rareza
-- Comunes: las más simples y redondas.
-- Híbridas y mutadas: algo más de detalle y carácter (más partes, formas más llamativas), sin perder el tono amable.
+Híbridas: mezcla de forma y paleta de sus dos familias, con más detalle.
 
-## Referencias de tono (solo ambiente, no para copiar)
-- Sprites de la 1.ª generación de Pokémon: claridad, contorno y proporciones.
-- Temtem: criaturas modernas y amables con colores vivos.
-- Cassette Beasts: personalidad con formas sencillas.
-- Slime Rancher: expresividad con formas mínimas.
-- Ilustración de Nintendo en general: limpia, legible y alegre.
+## Variación individual (desde los genes)
+- **Tamaño y proporciones distintos**: almas pequeñas y compactas, grandes y estiradas, anchas, finas. No todas del mismo tamaño ni forma.
+- Correspondencia con el genoma:
+  - Cabeza → **rostro**: ojos, párpados, cejas y boca (la actitud).
+  - Cuerpo → **núcleo**: forma dentro de la silueta de su familia, brillo, grietas o facetas.
+  - Cola → **llama superior**.
+  - Extremidades → **apéndices**: brazos de energía, alas, patas, cuernos, halo… Discretos en las comunes; grandes y llamativos en las raras y mutadas.
+
+## Evolución con la rareza
+- Comunes: forma de familia limpia, apéndices discretos.
+- Raras, híbridas y mutadas: apéndices llamativos (alas, halos, patas), más detalle, brillo más intenso. Siempre con la misma actitud de anime.
 
 ## Implicaciones técnicas (director)
-- El arte se genera por código (vectorial) a partir de los genes: plantillas por locus con variantes elegidas por los parámetros de forma del gen; la familia define la paleta.
-- Las piezas necesitan puntos de anclaje definidos para que el conjunto no parezca hecho de piezas sueltas.
-- La "expresión" de los ojos es una pieza clave: conviene que tenga sus propias variantes.
-- Validación: un visor que muestre cientos de criaturas aleatorias y criadas, revisado por Miguel, antes de construir el cliente del juego.
+- Arte vectorial generado por código a partir de los genes; determinista.
+- Validación: avance pequeño (2 almas por familia + mutada + híbrida + fila a 48 px) revisado por Miguel antes del visor completo.
+- Bocetos de referencia aprobados como dirección: los del chat del 2026-11-11 (almas sobre fondo oscuro), con la corrección de formas de cuerpo por familia.
