@@ -9,10 +9,11 @@
   },
   "scripts": {
     "test": "node --test \"packages/**/*.test.ts\" \"sim/**/*.test.ts\"",
-    "typecheck": "tsc -p .",
+    "typecheck": "tsc -p . && tsc -p client",
     "check": "npm run typecheck && npm test",
     "sim": "node sim/genetics/cli.ts",
-    "sim:combat": "node sim/combat/cli.ts"
+    "sim:combat": "node sim/combat/cli.ts",
+    "build:combate": "node client/build-combate.mjs"
   },
   "devDependencies": {
     "typescript": "^6.0.0"
