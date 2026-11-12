@@ -101,6 +101,25 @@ después el parser valida todo. Cambiar sales o costes en el JSON **real** rompe
 | movimientos | `presupuesto_por_coste.1..5` (curva de presupuesto) · `coste_energia.{desplazamiento, escala_tamano, escala_azar}` · `escalables.{dano,cura,escudo}.potencia_por_punto`, topes (`max`, `max_individual`, `max_area_por_objetivo`), `minimo_puntos`, `fraccion_minima` · costes de pieza: `estados.ofensivos.*`, `estados.positivos.{prisa,regenerar}`, `energia_extra.coste`, `modificadores.{alcance,prioridad,perforar}.coste`, `modificadores.area.factor`, `modificadores.drenaje.{factor,fraccion}`, `condiciones.*.factor`, `condiciones.bonus` · mínimos de coste: `estados.aturdir_coste_min`, `energia_extra.coste_min`, `arquetipos.maldicion.coste_min` · pesos: `pesos_familia.{arquetipo,estado_ofensivo,estado_positivo,modificador,condicion}.<familia>[i]`, `pesos_locus_arquetipo`, `pesos_forma_arquetipo`, `probabilidades.*` · sales: `overrides_catalogo.sales` |
 | combate | `estadisticas.{vida,ataque,iniciativa}.{base, coef.potencia/velocidad/resistencia}`, `beta_calidad` · `energia.{inicial,por_turno,maximo}` · `orden.{jitter, prioridad_movimientos_aliado}` · `dano.varianza`, `dano.golpe_basico.potencia` · `familias.{fuerte,debil}` (borrando `tabla`) · `sinergia.bonus_por_n` · `estados.*` (valores y duraciones; `escudo.maximo`) · `desgaste.*` · IA: `ia.{kappa, bonus_ko, valor_estado.*, holgura_regenerar, valor_max_escudo, objetivos_area_estimados, factor_cura_estimada, prob_condicion_estimada, penalizacion_coste, reserva_por_defecto}` |
 
+### Variantes de combate v0.3 (en estudio, desactivadas por defecto)
+
+Spec: `docs/spec/combate-variantes-v0.3.md` · notas: `docs/spec/notas-implementacion-combate-v0.3.md`. Con todas desactivadas el combate es idéntico a v0.2.1. Ninguna cambia las 24 tiradas por turno.
+
+| Variante | Claves (`combate` salvo que se indique) |
+|---|---|
+| V1 golpe básico con efecto por familia | `variantes.golpe_basico_efecto.{activo, componente_hibrida, efectos.<familia>.{tipo, estado, probabilidad, cantidad}}` |
+| V2 descanso de un turno | `variantes.descanso.{activo, turnos}` → `FighterState.rest`, `restingMoves(state, bando, pos)` |
+| V3 más energía | `energia.por_turno` (3 → 4) |
+| V4 objetivo automático por carriles | `variantes.objetivo_automatico.{activo, escudo_provocar_al_usuario}` → `Action.target` se ignora (0); `autoTarget(state, bando, actor, mov, cfg)` da la previsión; `laneOrder`, `suggestFormation` |
+| Provocar | `variantes.provocar.{duracion, valor_ia}` y, en movimientos, `provocar.{activo, coste, arquetipos, pesos_familia.<familia>}` → `Move.taunt`, evento `taunt` |
+
+```ts
+const v = buildBattleConfig(rawC, rawM, gcfg, {
+  combat: { "variantes.golpe_basico_efecto.activo": true, "variantes.descanso.activo": true, "energia.por_turno": 4, "variantes.objetivo_automatico.activo": true },
+  moves: { "provocar.activo": true },   // cambia 2 de los 72 movimientos del catálogo (determinista)
+});
+```
+
 Estructurales (el parser las fija): 24 tiradas por turno, 8 por movimiento, prefijos de semilla, 4 criaturas, órdenes de listas.
 
 ## Convenciones

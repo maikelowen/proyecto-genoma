@@ -24,6 +24,7 @@ import type { AiStatusId } from "./config.ts";
 import { createReferenceAi, energyPrice, type Ai } from "./ai.ts";
 import {
   actionMove,
+  autoTarget,
   damageAmount,
   eligibleActors,
   resolveTurn,
@@ -121,14 +122,19 @@ function actionOptions(state: BattleState, s: 0 | 1, pos: number, cfg: BattleCon
   moves.forEach((m, k) => {
     const cost = m ? m.cost : C.damage.basicCost;
     if (cost > e) return;
+    // variantes v0.3 V2: un movimiento en descanso no es una opción
+    if (m && C.variants.rest.active && ((me.rest ?? [])[k - 1] ?? 0) > 0) return;
     const ally = m !== null && m.target === "aliado";
     const tSide = ally ? s : o;
     const fs = state.fighters[tSide];
-    for (const p of validTargetPositions(m, fs.map((f) => !f.ko), C)) {
+    // variantes v0.3 V4: una sola opción por movimiento, con el objetivo que daría ahora la regla automática (solo para puntuar)
+    const autoPos = C.variants.autoTarget.active ? autoTarget(state, s === 0 ? "A" : "B", pos, k, cfg) : null;
+    for (const p of C.variants.autoTarget.active ? (autoPos === null ? [] : [autoPos]) : validTargetPositions(m, fs.map((f) => !f.ko), C)) {
       const affected = (m && m.area ? rowOf(p, C) : [p]).filter((q) => !(fs[q - 1] as FighterState).ko);
       let v = -lambda * cost;
       if (m && m.extraEnergy) v += lambda * M.extraEnergy.amount;
       if (m && m.status === "prisa") v += A.statusValue.prisa;
+      if (m && m.taunt) v += C.variants.taunt.aiValue; // variantes v0.3 V4
       for (const q of affected) {
         const f = fs[q - 1] as FighterState;
         const tc = state.teams[tSide][q - 1] as Combatant;
@@ -209,6 +215,7 @@ export function createSearchAi(options: SearchAiOptions = {}): Ai {
     if (state.result !== null) return [];
     const actors = eligibleActors(state, side);
     if (actors.length === 0) return [];
+    const auto = cfg.combat.variants.autoTarget.active;
 
     // 1. candidatos (sin duplicados, en orden determinista)
     const cands: Plan[] = [];
@@ -234,7 +241,8 @@ export function createSearchAi(options: SearchAiOptions = {}): Ai {
     const cur: Option[] = [];
     const rec = (i: number, spent: number): void => {
       if (i === actors.length) {
-        combos.push({ plan: cur.map((op, j) => ({ actor: actors[j] as number, move: op.move, target: op.target })), score: comboScore(state, s, actors, cur, cfg), idx: combos.length });
+        // variantes v0.3 V4: el plan no lleva objetivo (0); `op.target` solo sirve para puntuar
+        combos.push({ plan: cur.map((op, j) => ({ actor: actors[j] as number, move: op.move, target: auto ? 0 : op.target })), score: comboScore(state, s, actors, cur, cfg), idx: combos.length });
         return;
       }
       for (const op of opts[i] as Option[]) {

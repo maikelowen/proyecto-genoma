@@ -49,6 +49,12 @@ export interface Move {
   readonly scalablePoints: number;
   readonly points: number;
   readonly budget: number;
+  /**
+   * variantes v0.3 §2 V4: lleva la pieza "provocar" (al usuario). El campo solo
+   * existe (`true`) en los movimientos que la llevan: con la variante
+   * desactivada ningún movimiento cambia.
+   */
+  readonly taunt?: true;
   /** §4.1 [v0.2]: 0 sin respaldo; 1 quitó condición; 2 quitó modificador; 3 quitó estado/energía; 4 pasó a golpe. */
   readonly fallback: 0 | 1 | 2 | 3 | 4;
 }
@@ -147,6 +153,7 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
   // §4 estado (u3)
   let status: MoveStatusId | null = null;
   let extraEnergy: 0 | 1 = 0;
+  let taunt = false;
   if (rule.energyIfMinCost) {
     // táctico: prisa; con c ≥ 3, energía extra en su lugar (u3 no se usa)
     if (c >= mcfg.extraEnergy.minCost) extraEnergy = 1;
@@ -163,6 +170,17 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
     const i = weightedPick(w, u3);
     const s = i < 0 ? "ninguno" : (pool[i] as string);
     status = s === "ninguno" ? null : (s as MoveStatusId);
+    // variantes v0.3 §2 V4 — provocar ocupa el hueco del estado con la misma u3 (sin tiradas
+    // extra): si u3 ≥ T/(T + w) sustituye al estado sorteado; por debajo, nada cambia.
+    if (mcfg.taunt.active && mcfg.taunt.archetypes.includes(archetype)) {
+      const wp = tauntWeight(family, mcfg);
+      let total = 0;
+      for (const x of w) total += x;
+      if (wp > 0 && u3 * (total + wp) >= total) {
+        status = null;
+        taunt = true;
+      }
+    }
   }
 
   // §4 modificador (u4, u5): pesos con 0 en los no permitidos
@@ -197,7 +215,7 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
     fac = area ? md.areaFactor : 1;
     fixed = modifier === "alcance" || modifier === "prioridad" || modifier === "perforar" ? md[modifier] : 0;
     fEsc = (condition ? 1 + mcfg.conditions.bonus * mcfg.conditions.factor[condition] : 1) * (modifier === "drenaje" ? md.drainFactor : 1);
-    extra = (status ? mcfg.statusCost[status] : 0) + (extraEnergy ? mcfg.extraEnergy.cost : 0);
+    extra = (status ? mcfg.statusCost[status] : 0) + (extraEnergy ? mcfg.extraEnergy.cost : 0) + (taunt ? mcfg.taunt.cost : 0);
     const L = budget - fixed - fac * extra;
     pts = L > 0 ? Math.floor(L / (fac * fEsc)) : 0;
     // §2.1 [v0.2]: pts ≥ mínimo y el escalable se lleva ≥ fraccion_minima del presupuesto
@@ -208,9 +226,10 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
     } else if (modifier) {
       modifier = null; // 2.º se quita el modificador
       fallback = 2;
-    } else if (status || extraEnergy) {
-      status = null; // 3.º [v0.2] se quitan estado y energía (conserva el arquetipo)
+    } else if (status || extraEnergy || taunt) {
+      status = null; // 3.º [v0.2] se quitan estado y energía (conserva el arquetipo); [v0.3] y provocar
       extraEnergy = 0;
+      taunt = false;
       fallback = 3;
     } else {
       archetype = "golpe"; // 4.º pasa a golpe (con el parser actual no se llega)
@@ -244,7 +263,16 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
     points,
     budget,
     fallback,
+    ...(taunt ? { taunt: true as const } : {}),
   });
+}
+
+/** variantes v0.3 §2 V4: peso de provocar de una familia (híbrida = suma de sus 2 componentes). */
+function tauntWeight(family: FamilyId, mcfg: MovesConfig): number {
+  const t = mcfg.taunt.familyWeights;
+  const h = mcfg.genetics.hybridById.get(family);
+  if (!h) return t[family] ?? 0;
+  return (t[h.components[0]] ?? 0) + (t[h.components[1]] ?? 0);
 }
 
 function scalablePerPoint(s: ScalableId, mcfg: MovesConfig): number {
@@ -290,6 +318,11 @@ export function validateMove(m: Move, mcfg: MovesConfig): string[] {
     if (m.area) errs.push("energía extra con área");
     if (m.status !== null) errs.push("energía extra y estado a la vez");
   }
+  // variantes v0.3 §2 V4: provocar solo con la variante activa, en sus arquetipos y en el hueco del estado
+  if (m.taunt !== undefined) {
+    if (m.taunt !== true || !mcfg.taunt.active || !mcfg.taunt.archetypes.includes(m.archetype)) errs.push("provocar no permitido");
+    if (m.status !== null) errs.push("provocar y estado a la vez");
+  }
   if (m.modifier !== null && !rule.modifiers.includes(m.modifier)) errs.push(`modificador '${m.modifier}' no permitido en ${m.archetype}`);
   if (m.condition !== null && !(CONDITION_IDS as readonly string[]).includes(m.condition)) errs.push(`condición '${m.condition}' desconocida`);
   if (m.area !== (rule.forcedArea || m.modifier === "area")) errs.push("área incoherente con arquetipo/modificador");
@@ -298,7 +331,7 @@ export function validateMove(m: Move, mcfg: MovesConfig): string[] {
   const fac = m.area ? md.areaFactor : 1;
   const fixed = m.modifier === "alcance" || m.modifier === "prioridad" || m.modifier === "perforar" ? md[m.modifier] : 0;
   const fEsc = (m.condition ? 1 + mcfg.conditions.bonus * mcfg.conditions.factor[m.condition] : 1) * (m.modifier === "drenaje" ? md.drainFactor : 1);
-  const extra = (m.status ? mcfg.statusCost[m.status] : 0) + (m.extraEnergy ? mcfg.extraEnergy.cost : 0);
+  const extra = (m.status ? mcfg.statusCost[m.status] : 0) + (m.extraEnergy ? mcfg.extraEnergy.cost : 0) + (m.taunt ? mcfg.taunt.cost : 0);
   const expected = fixed + fac * extra + fac * fEsc * m.scalablePoints;
   if (Math.abs(expected - m.points) > eps) errs.push(`puntos ${m.points} ≠ fórmula ${expected}`);
   // §3.1 [v0.2]: el escalable se lleva al menos fraccion_minima del presupuesto
@@ -332,6 +365,7 @@ export function describeMove(m: Move, mcfg: MovesConfig): string {
   const parts = [`${m.name} (coste ${m.cost}): ${main}`];
   if (m.status) parts.push(`+ ${STATUS_TEXT[m.status]}`);
   if (m.extraEnergy) parts.push(`+ ${mcfg.extraEnergy.amount} de energía al bando`);
+  if (m.taunt) parts.push("+ provocar (los ataques enemigos de un objetivo van al usuario)");
   let text = parts.join(" ");
   const notes: string[] = [];
   if (m.modifier === "prioridad") notes.push("prioridad");

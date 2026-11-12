@@ -50,6 +50,34 @@ export interface DerivedStatRule {
 export const AI_STATUS_IDS = ["quemadura", "ralentizar", "aturdir", "marca", "debilitar", "prisa", "regenerar"] as const;
 export type AiStatusId = (typeof AI_STATUS_IDS)[number];
 
+/** variantes v0.3 §2 V1 — estados que puede aplicar el golpe básico (ofensivos al objetivo; prisa y regenerar al usuario). */
+export const BASIC_EFFECT_STATUS_IDS = ["quemadura", "ralentizar", "aturdir", "marca", "debilitar", "prisa", "regenerar"] as const;
+export type BasicEffectStatusId = (typeof BASIC_EFFECT_STATUS_IDS)[number];
+
+/**
+ * variantes v0.3 §2 V1 — efecto menor del golpe básico de una familia base.
+ * `estado`: lo aplica con probabilidad `chance` (usa la 2.ª tirada de varianza
+ * de la posición, que un golpe de un solo objetivo no gasta: sin tiradas extra).
+ * `cura` / `escudo`: cantidad fija sobre el usuario.
+ */
+export type BasicEffect =
+  | { readonly kind: "ninguno" }
+  | { readonly kind: "estado"; readonly status: BasicEffectStatusId; readonly chance: number }
+  | { readonly kind: "cura"; readonly amount: number }
+  | { readonly kind: "escudo"; readonly amount: number };
+
+/** variantes v0.3 §2 — opciones en estudio; todas desactivadas por defecto (también si falta el bloque `variantes`). */
+export interface CombatVariants {
+  /** V1 — golpe básico con efecto por familia base (las híbridas usan el de su componente `hybridComponent`). */
+  readonly basicEffect: { readonly active: boolean; readonly hybridComponent: 0 | 1; readonly effects: Readonly<Record<FamilyId, BasicEffect>> };
+  /** V2 — el movimiento usado descansa `turns` turnos (el golpe básico no descansa). */
+  readonly rest: { readonly active: boolean; readonly turns: number };
+  /** V4 — objetivo automático por carriles; `tauntShieldsSelf`: el escudo de un movimiento con provocar va al usuario. */
+  readonly autoTarget: { readonly active: boolean; readonly tauntShieldsSelf: boolean };
+  /** V4 — pieza provocar: nº de finales de turno que dura y valor para la IA (vida equivalente). */
+  readonly taunt: { readonly duration: number; readonly aiValue: number };
+}
+
 export interface CombatConfig {
   readonly version: string;
   /** combate §2 — estructural: 4 posiciones, delantera 1–2, trasera 3–4. */
@@ -114,6 +142,58 @@ export interface CombatConfig {
     readonly conditionProbEstimate: number;
     readonly costPenalty: number;
   };
+  /** variantes v0.3 §2 (V3 no tiene bloque: es `energia.por_turno`). */
+  readonly variants: CombatVariants;
+}
+
+/** variantes v0.3 — valores con el bloque `variantes` ausente: todo desactivado. */
+const NO_EFFECT: BasicEffect = Object.freeze({ kind: "ninguno" });
+
+/** variantes v0.3 §2 — bloque `variantes` (opcional). Los efectos se definen para las familias del anillo base, exactamente. */
+function parseVariants(v: unknown, baseRing: readonly string[]): CombatVariants {
+  const effects: Record<FamilyId, BasicEffect> = {};
+  for (const f of baseRing) effects[f] = NO_EFFECT;
+  if (v === undefined) {
+    return Object.freeze({
+      basicEffect: Object.freeze({ active: false, hybridComponent: 0 as const, effects: Object.freeze(effects) }),
+      rest: Object.freeze({ active: false, turns: 1 }),
+      autoTarget: Object.freeze({ active: false, tauntShieldsSelf: true }),
+      taunt: Object.freeze({ duration: 1, aiValue: 0 }),
+    });
+  }
+  const r = obj(v, "variantes");
+  // V1
+  const gb = obj(r["golpe_basico_efecto"], "variantes.golpe_basico_efecto");
+  const ef = obj(gb["efectos"], "variantes.golpe_basico_efecto.efectos");
+  sameList(dataKeys(ef).slice().sort(), baseRing.slice().sort(), "variantes.golpe_basico_efecto.efectos");
+  for (const f of baseRing) {
+    const p = `variantes.golpe_basico_efecto.efectos.${f}`;
+    const o = obj(ef[f], p);
+    const kind = str(o["tipo"], `${p}.tipo`);
+    if (kind === "ninguno") effects[f] = NO_EFFECT;
+    else if (kind === "estado") {
+      const status = str(o["estado"], `${p}.estado`);
+      if (!(BASIC_EFFECT_STATUS_IDS as readonly string[]).includes(status)) fail(`${p}.estado`, `debe ser uno de ${BASIC_EFFECT_STATUS_IDS.join(", ")}`);
+      effects[f] = Object.freeze({ kind, status: status as BasicEffectStatusId, chance: num(o["probabilidad"], `${p}.probabilidad`, 0, 1) });
+    } else if (kind === "cura" || kind === "escudo") {
+      effects[f] = Object.freeze({ kind, amount: int(o["cantidad"], `${p}.cantidad`, 0) });
+    } else fail(`${p}.tipo`, "debe ser ninguno|estado|cura|escudo");
+  }
+  const hc = int(gb["componente_hibrida"], "variantes.golpe_basico_efecto.componente_hibrida", 0, 1) as 0 | 1;
+  // V2
+  const de = obj(r["descanso"], "variantes.descanso");
+  // V4
+  const oa = obj(r["objetivo_automatico"], "variantes.objetivo_automatico");
+  const pv = obj(r["provocar"], "variantes.provocar");
+  return Object.freeze({
+    basicEffect: Object.freeze({ active: bool(gb["activo"], "variantes.golpe_basico_efecto.activo"), hybridComponent: hc, effects: Object.freeze(effects) }),
+    rest: Object.freeze({ active: bool(de["activo"], "variantes.descanso.activo"), turns: int(de["turnos"], "variantes.descanso.turnos", 1) }),
+    autoTarget: Object.freeze({
+      active: bool(oa["activo"], "variantes.objetivo_automatico.activo"),
+      tauntShieldsSelf: bool(oa["escudo_provocar_al_usuario"], "variantes.objetivo_automatico.escudo_provocar_al_usuario"),
+    }),
+    taunt: Object.freeze({ duration: int(pv["duracion"], "variantes.provocar.duracion", 1), aiValue: num(pv["valor_ia"], "variantes.provocar.valor_ia", 0) }),
+  });
 }
 
 /** combate §6: tabla derivada de los anillos (siguiente = fuerte, anterior = débil). */
@@ -337,5 +417,6 @@ export function parseCombatConfig(raw: unknown): CombatConfig {
     draws: Object.freeze(draws),
     seedPrefix,
     ai: Object.freeze(ai),
+    variants: parseVariants(r["variantes"], baseRing),
   });
 }

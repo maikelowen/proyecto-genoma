@@ -43,3 +43,7 @@
 - IA con búsqueda: el plan del rival no depende del nuestro (elección simultánea), así que se modela una vez por decisión; números aleatorios comunes entre candidatos (simulación i = misma semilla) para que las diferencias sean del plan, no del azar.
 - Honestidad de la IA: su azar sale de `createRng("search|bando|turno|hash del estado")` y nunca recibe el RNG de la partida; el test sustituye `Math.random`/reloj por funciones que lanzan. Presupuesto en nº de simulaciones, no en ms.
 - Medir una IA de búsqueda contra el mismo rival que modela es su mejor caso: añade siempre un control contra un rival fuera del modelo.
+- Variantes en estudio: opción de config desactivada por defecto y bloque opcional en el parser; los campos nuevos de estado, movimiento y eventos solo existen cuando la variante se usa (un campo siempre presente cambia los hashes y las semillas de la IA de búsqueda).
+- Azar nuevo sin tiradas nuevas: usar una tirada fija que la acción no gasta (la 2.ª de varianza en un golpe de un objetivo) mantiene las 24 por turno y los barridos pareados.
+- Una pieza nueva de la gramática se sortea en la cola de una tirada existente (`u ≥ T/(T + w)`): por debajo del umbral el catálogo no cambia, y el cambio al activarla es mínimo y enumerable.
+- Reglas de objetivo en una sola función sobre una "vista" (vivos, vida, provocar): la usan el motor al ejecutar, la previsión de la interfaz y la simulación de la IA; en tests de planes, cuidado con Σcoste > energía (el plan inválido se vuelve golpes y el test mide otra cosa).

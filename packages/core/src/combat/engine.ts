@@ -8,7 +8,7 @@
  */
 import { cyrb128, type Rng } from "../rng.ts";
 import type { Move } from "../moves/generate.ts";
-import { STATUS_IDS, type CombatConfig, type StatusId } from "./config.ts";
+import { STATUS_IDS, type BasicEffect, type CombatConfig, type StatusId } from "./config.ts";
 import type { BattleConfig, Combatant } from "./combatant.ts";
 
 export type SideId = "A" | "B";
@@ -32,6 +32,13 @@ export interface FighterState {
   readonly skipTurn: number;
   /** Último turno con inmunidad a aturdir, o 0. */
   readonly stunImmuneUntil: number;
+  /**
+   * variantes v0.3 V2 — turnos de descanso que le quedan a cada movimiento
+   * (índice = movimiento − 1; 0 = disponible). Solo existe con `variantes.descanso` activo.
+   */
+  readonly rest?: readonly number[];
+  /** variantes v0.3 V4 — finales de turno que le quedan a "provocar". Solo existe si es > 0. */
+  readonly taunt?: number;
 }
 
 export interface BattleState {
@@ -48,6 +55,8 @@ export interface BattleState {
  * Acción de una criatura: `actor` y `target` son posiciones 1–4;
  * `move` = 0 golpe básico, 1–4 movimiento por locus. El bando del
  * objetivo lo fija el movimiento (enemigo o aliado).
+ * variantes v0.3 V4 (objetivo automático): `target` se ignora (puede faltar
+ * en la entrada; por convenio, 0) y el motor lo normaliza a 0.
  */
 export interface Action {
   readonly actor: number;
@@ -79,6 +88,8 @@ export type BattleEvent =
   | { readonly type: "heal"; readonly side: SideId; readonly pos: number; readonly amount: number; readonly hp: number; readonly condition: boolean }
   | { readonly type: "shield"; readonly side: SideId; readonly pos: number; readonly amount: number; readonly total: number; readonly condition: boolean }
   | { readonly type: "energy"; readonly side: SideId; readonly amount: number; readonly energy: number }
+  /** variantes v0.3 V4 — `pos` provoca durante `turns` finales de turno. */
+  | { readonly type: "taunt"; readonly side: SideId; readonly pos: number; readonly turns: number }
   | { readonly type: "ko"; readonly side: SideId; readonly pos: number }
   | { readonly type: "burn"; readonly side: SideId; readonly pos: number; readonly amount: number; readonly hp: number }
   | { readonly type: "regen"; readonly side: SideId; readonly pos: number; readonly amount: number; readonly hp: number }
@@ -141,6 +152,100 @@ function aliveMask(fs: readonly { readonly ko: boolean }[]): boolean[] {
   return fs.map((f) => !f.ko);
 }
 
+// ---------------------------------------------------------------- variantes v0.3
+
+/** variantes v0.3 V2 — movimientos (1–4) de la criatura `pos` que están en descanso este turno. */
+export function restingMoves(state: BattleState, side: SideId, pos: number): number[] {
+  const rest = (state.fighters[sideIndex(side)][pos - 1] as FighterState).rest;
+  const out: number[] = [];
+  if (rest) rest.forEach((n, k) => { if (n > 0) out.push(k + 1); });
+  return out;
+}
+
+/** variantes v0.3 V1 — efecto del golpe básico de un combatiente (híbridas: el de su componente configurada). */
+export function basicEffectOf(c: Combatant, cfg: BattleConfig): BasicEffect | null {
+  const be = cfg.combat.variants.basicEffect;
+  if (!be.active) return null;
+  const own = be.effects[c.family];
+  if (own) return own;
+  const h = cfg.moves.genetics.hybridById.get(c.family);
+  return (h ? be.effects[h.components[be.hybridComponent]] : undefined) ?? null;
+}
+
+/** variantes v0.3 V4 — carril de una posición: 0 izquierda (1 y 3), 1 derecha (2 y 4). */
+export function laneOf(pos: number): 0 | 1 {
+  return ((pos - 1) % 2) as 0 | 1;
+}
+
+/**
+ * variantes v0.3 V4 — orden de preferencia de objetivos enemigos para el actor
+ * en `actorPos`: delantera de su carril, la otra delantera, trasera de su
+ * carril, la otra trasera. Con `backFirst` (`alcance`), primero las traseras.
+ */
+export function laneOrder(actorPos: number, backFirst: boolean, cfg: CombatConfig): number[] {
+  const lane = laneOf(actorPos);
+  const front = [cfg.frontRow[lane] as number, cfg.frontRow[1 - lane] as number];
+  const back = [cfg.backRow[lane] as number, cfg.backRow[1 - lane] as number];
+  return backFirst ? [...back, ...front] : [...front, ...back];
+}
+
+/** Vista del bando objetivo para decidir objetivos (estado real o simulación de la IA). */
+export interface TargetView {
+  readonly alive: readonly boolean[];
+  readonly hp: readonly number[];
+  /** Criaturas que están provocando (solo cuenta para ataques enemigos de un objetivo). */
+  readonly taunting: readonly boolean[];
+}
+
+/**
+ * variantes v0.3 V4 — objetivo automático (posición 1–4, o undefined si no hay
+ * ninguno) del movimiento `m` (null = golpe básico) usado por `actorPos`.
+ * `targetTeam`/`view` son del bando objetivo (el propio en movimientos de aliado).
+ * - Enemigo: `laneOrder`; si es de un solo objetivo y hay enemigos provocando, solo entre ellos.
+ * - Cura: aliado con menor vida/máx. Escudo: delantero con menos vida; sin delanteros,
+ *   el aliado con menos vida. Empates: menor posición. Con provocar y
+ *   `escudo_provocar_al_usuario`, el escudo va al usuario.
+ */
+export function autoTargetPosition(m: Move | null, actorPos: number, targetTeam: readonly Combatant[], view: TargetView, cfg: CombatConfig): number | undefined {
+  const alive = [1, 2, 3, 4].filter((p) => view.alive[p - 1]);
+  if (alive.length === 0) return undefined;
+  if (m && m.target === "aliado") {
+    if (m.taunt && m.scalable === "escudo" && cfg.variants.autoTarget.tauntShieldsSelf && view.alive[actorPos - 1]) return actorPos;
+    if (m.scalable === "cura") {
+      let best = alive[0] as number;
+      for (const p of alive) {
+        // vida/máx sin dividir: hp_p · máx_best < hp_best · máx_p
+        if ((view.hp[p - 1] as number) * (targetTeam[best - 1] as Combatant).maxHp < (view.hp[best - 1] as number) * (targetTeam[p - 1] as Combatant).maxHp) best = p;
+      }
+      return best;
+    }
+    const front = cfg.frontRow.filter((p) => view.alive[p - 1]);
+    const pool = front.length > 0 ? front : alive;
+    let best = pool[0] as number;
+    for (const p of pool) if ((view.hp[p - 1] as number) < (view.hp[best - 1] as number)) best = p;
+    return best;
+  }
+  const order = laneOrder(actorPos, m !== null && m.modifier === "alcance", cfg);
+  if (!(m && m.area)) {
+    const taunter = order.find((p) => view.alive[p - 1] && view.taunting[p - 1]);
+    if (taunter !== undefined) return taunter;
+  }
+  return order.find((p) => view.alive[p - 1]);
+}
+
+/**
+ * variantes v0.3 V4 — objetivo que tendría AHORA la acción (para la interfaz y
+ * la IA). El motor lo decide al ejecutar, así que puede cambiar si alguien cae
+ * antes o un enemigo provoca. Devuelve null si no hay objetivo.
+ */
+export function autoTarget(state: BattleState, side: SideId, actor: number, move: number, cfg: BattleConfig): number | null {
+  const s = sideIndex(side);
+  const m = actionMove(state.teams[s][actor - 1] as Combatant, move);
+  const tSide = m && m.target === "aliado" ? s : ((1 - s) as 0 | 1);
+  const fs = state.fighters[tSide];
+  return autoTargetPosition(m, actor, state.teams[tSide], { alive: aliveMask(fs), hp: fs.map((f) => f.hp), taunting: fs.map((f) => !f.ko && (f.taunt ?? 0) > 0) }, cfg.combat) ?? null;
+}
+
 /**
  * combate §7 — bonus de sinergia por posición (0 para quien usa golpe o no
  * actúa) y si cada criatura tiene compañero de grupo (condición combo_familia).
@@ -164,6 +269,8 @@ export function planSynergy(team: readonly Combatant[], plan: Plan, cfg: CombatC
  * combate §3.2 — valida un plan. Devuelve null si es válido o el motivo.
  * Válido: una acción por criatura viva no aturdida (ni más ni menos),
  * movimiento existente, objetivo válido ahora y Σcoste ≤ energía.
+ * variantes v0.3: con objetivo automático (V4) no se mira `target`; con
+ * descanso (V2) un movimiento en descanso invalida el plan.
  */
 export function validatePlan(state: BattleState, side: SideId, plan: Plan, cfg: BattleConfig): string | null {
   const s = sideIndex(side);
@@ -184,8 +291,14 @@ export function validatePlan(state: BattleState, side: SideId, plan: Plan, cfg: 
     if (!Number.isInteger(move) || move < 0 || move > c.moves.length) return `movimiento inválido ${move} (actor ${actor})`;
     const m = actionMove(c, move);
     const tSide = m && m.target === "aliado" ? s : ((1 - s) as 0 | 1);
-    const valid = validTargetPositions(m, aliveMask(state.fighters[tSide]), cfg.combat);
-    if (!Number.isInteger(target) || !valid.includes(target)) return `objetivo inválido ${target} (actor ${actor})`;
+    if (!cfg.combat.variants.autoTarget.active) {
+      const valid = validTargetPositions(m, aliveMask(state.fighters[tSide]), cfg.combat);
+      if (!Number.isInteger(target) || !valid.includes(target)) return `objetivo inválido ${target} (actor ${actor})`;
+    }
+    // variantes v0.3 V2: el movimiento usado no se puede repetir mientras descansa
+    if (move !== 0 && cfg.combat.variants.rest.active && (((state.fighters[s][actor - 1] as FighterState).rest ?? [])[move - 1] ?? 0) > 0) {
+      return `movimiento ${move} en descanso (actor ${actor})`;
+    }
     cost += actionCost(c, move, cfg.combat);
   }
   if (seen.size !== eligible.length) return "falta la acción de alguna criatura";
@@ -196,6 +309,8 @@ export function validatePlan(state: BattleState, side: SideId, plan: Plan, cfg: 
 /** combate §3.2 — plan de respaldo: golpe básico contra el primer objetivo válido. */
 export function fallbackPlan(state: BattleState, side: SideId, cfg: CombatConfig): Action[] {
   const s = sideIndex(side);
+  // variantes v0.3 V4: sin objetivo (0)
+  if (cfg.variants.autoTarget.active) return eligibleActors(state, side).map((actor) => ({ actor, move: 0, target: 0 }));
   const valid = validTargetPositions(null, aliveMask(state.fighters[1 - s] as readonly FighterState[]), cfg);
   return eligibleActors(state, side).map((actor) => ({ actor, move: 0, target: valid[0] ?? 1 }));
 }
@@ -226,6 +341,10 @@ interface Work {
   acted: boolean;
   stunnedNow: boolean;
   hasAction: boolean;
+  /** variantes v0.3: descanso por movimiento, provocar y movimiento ejecutado este turno (0 = ninguno). */
+  rest: number[];
+  taunt: number;
+  usedSlot: number;
 }
 
 interface Entry {
@@ -302,6 +421,7 @@ export function damageAmount(
 export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: Rng, cfg: BattleConfig): TurnResult {
   const C = cfg.combat;
   const M = cfg.moves;
+  const V = C.variants;
   if (state.result !== null) throw new RangeError("resolveTurn: la partida ya ha terminado");
   const t = state.turn;
   const events: BattleEvent[] = [];
@@ -309,7 +429,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
   events.push({ type: "turn", turn: t, energy: [energy[0], energy[1]] });
 
   const W: [Work[], Work[]] = [0, 1].map((s) =>
-    state.fighters[s as 0 | 1].map((f) => ({
+    state.fighters[s as 0 | 1].map((f, i) => ({
       hp: f.hp,
       ko: f.ko,
       statuses: f.statuses.map((x) => ({ ...x })),
@@ -318,6 +438,9 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
       acted: false,
       stunnedNow: false,
       hasAction: false,
+      rest: (state.teams[s as 0 | 1][i] as Combatant).moves.map((_, k) => (f.rest ? (f.rest[k] ?? 0) : 0)),
+      taunt: f.taunt ?? 0,
+      usedSlot: 0,
     })),
   ) as [Work[], Work[]];
 
@@ -328,7 +451,8 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
   for (const s of [0, 1] as const) {
     const side = SIDE_IDS[s];
     const reason = validatePlan(state, side, plans[s], cfg);
-    const plan: Plan = reason === null ? plans[s].map((a) => ({ actor: a.actor, move: a.move, target: a.target })) : fallbackPlan(state, side, C);
+    // variantes v0.3 V4: el objetivo del plan se ignora y se normaliza a 0
+    const plan: Plan = reason === null ? plans[s].map((a) => ({ actor: a.actor, move: a.move, target: V.autoTarget.active ? 0 : a.target })) : fallbackPlan(state, side, C);
     plans[s] = plan;
     let cost = 0;
     for (const a of plan) cost += actionCost(state.teams[s][a.actor - 1] as Combatant, a.move, C);
@@ -386,6 +510,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
     w.hp = 0;
     w.ko = true;
     w.statuses = [];
+    w.taunt = 0;
     events.push({ type: "ko", side: SIDE_IDS[s], pos: i + 1 });
   };
 
@@ -447,10 +572,23 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
     }
     me.acted = true;
     const m = e.move;
+    if (m) me.usedSlot = e.action.move; // variantes v0.3 V2: ejecutado (aunque se pierda) ⇒ descansa
     const tSide: 0 | 1 = m && m.target === "aliado" ? e.side : ((1 - e.side) as 0 | 1);
-    // combate §2: reobjetivo a la primera válida por posición ascendente
-    const valid = validTargetPositions(m, aliveMask(W[tSide]), C);
-    const tPos = valid.includes(e.action.target) ? e.action.target : valid[0];
+    const taunting = W[tSide].map((w) => !w.ko && w.taunt > 0);
+    let tPos: number | undefined;
+    if (V.autoTarget.active) {
+      // variantes v0.3 V4: objetivo automático, decidido al ejecutar
+      tPos = autoTargetPosition(m, e.idx + 1, state.teams[tSide], { alive: aliveMask(W[tSide]), hp: W[tSide].map((w) => w.hp), taunting }, C);
+    } else {
+      // combate §2: reobjetivo a la primera válida por posición ascendente
+      const valid = validTargetPositions(m, aliveMask(W[tSide]), C);
+      tPos = valid.includes(e.action.target) ? e.action.target : valid[0];
+      // variantes v0.3 (provocar con objetivo manual): un ataque enemigo de un solo objetivo se desvía a quien provoca
+      if (tPos !== undefined && tSide !== e.side && !(m && m.area) && !taunting[tPos - 1]) {
+        const taunter = laneOrder(e.idx + 1, false, C).find((p) => taunting[p - 1]);
+        if (taunter !== undefined) tPos = taunter;
+      }
+    }
     if (tPos === undefined) {
       events.push({ type: "lost", side, actor: e.idx + 1 });
       continue;
@@ -499,7 +637,28 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
         events.push({ type: "drain", side, pos: e.idx + 1, amount: heal, hp: me.hp });
       }
     }
-    if (!m) continue;
+    if (!m) {
+      // variantes v0.3 V1: efecto menor del golpe básico según la familia base
+      const fx = basicEffectOf(c, cfg);
+      if (fx && fx.kind === "estado") {
+        // probabilidad con la 2.ª tirada de varianza de la posición (el golpe solo gasta la 1.ª)
+        const u = varU[(e.side * C.teamSize + e.idx) * C.draws.variancePerAction + 1] as number;
+        if (u < fx.chance) {
+          if (fx.status === "prisa" || fx.status === "regenerar") applyStatus(e.side, e.idx, fx.status);
+          else if (!(W[tSide][tPos - 1] as Work).ko) applyStatus(tSide, tPos - 1, fx.status);
+        }
+      } else if (fx && fx.kind === "cura") {
+        const heal = Math.min(fx.amount, c.maxHp - me.hp);
+        me.hp += heal;
+        events.push({ type: "heal", side, pos: e.idx + 1, amount: heal, hp: me.hp, condition: false });
+      } else if (fx && fx.kind === "escudo") {
+        const cur = getStatus(me, "escudo");
+        const total = Math.min(C.statuses.escudo.value, (cur ? cur.value : 0) + fx.amount);
+        putStatus(me, "escudo", C.statuses.escudo.duration, total);
+        events.push({ type: "shield", side, pos: e.idx + 1, amount: fx.amount, total, condition: false });
+      }
+      continue;
+    }
     // estado
     if (m.status === "prisa") {
       if (!me.ko) applyStatus(e.side, e.idx, "prisa"); // movimientos §2.2: prisa al usuario
@@ -525,6 +684,11 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
           events.push({ type: "shield", side: SIDE_IDS[tSide], pos: p, amount, total, condition: met });
         }
       }
+    }
+    // variantes v0.3 V4: provocar (al usuario)
+    if (m.taunt && !me.ko) {
+      me.taunt = V.taunt.duration;
+      events.push({ type: "taunt", side, pos: e.idx + 1, turns: me.taunt });
     }
     // energía extra (movimientos §2.3)
     if (m.extraEnergy) {
@@ -560,6 +724,16 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
     }
   }
 
+  // variantes v0.3: fin de turno de provocar (duración −1) y de los descansos (V2)
+  for (const s of [0, 1] as const) {
+    for (const w of W[s]) {
+      if (w.taunt > 0) w.taunt -= 1;
+      if (!V.rest.active) continue;
+      for (let k = 0; k < w.rest.length; k++) if ((w.rest[k] as number) > 0) w.rest[k] = (w.rest[k] as number) - 1;
+      if (w.usedSlot > 0) w.rest[w.usedSlot - 1] = V.rest.turns;
+    }
+  }
+
   // 7. victoria / empate (combate §9)
   const aliveA = W[0].some((w) => !w.ko);
   const aliveB = W[1].some((w) => !w.ko);
@@ -571,7 +745,16 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
   if (result !== null) events.push({ type: "end", result });
 
   const freeze = (ws: Work[]): FighterState[] =>
-    ws.map((w) => ({ hp: w.hp, ko: w.ko, statuses: w.statuses.map((x) => ({ id: x.id, turns: x.turns, value: x.value })), skipTurn: w.skipTurn, stunImmuneUntil: w.stunImmuneUntil }));
+    ws.map((w) => ({
+      hp: w.hp,
+      ko: w.ko,
+      statuses: w.statuses.map((x) => ({ id: x.id, turns: x.turns, value: x.value })),
+      skipTurn: w.skipTurn,
+      stunImmuneUntil: w.stunImmuneUntil,
+      // variantes v0.3: campos solo presentes con la variante en uso (sin ellas, el estado es idéntico al de v0.2)
+      ...(V.rest.active ? { rest: w.rest.slice() } : {}),
+      ...(w.taunt > 0 ? { taunt: w.taunt } : {}),
+    }));
   const next: BattleState = {
     turn: result === null ? t + 1 : t,
     // combate §3.1: e = min(máx, e + por_turno) al empezar el turno siguiente

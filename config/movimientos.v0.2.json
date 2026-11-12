@@ -111,6 +111,13 @@
       "_doc": "El objetivo no ha actuado aún este turno."
     }
   },
+  "provocar": {
+    "_doc": "[v0.3, variante V4] Pieza 'provocar' de la gramática, desactivada por defecto (con 'activo' = false el catálogo no cambia). Ocupa el hueco del estado en los arquetipos de 'arquetipos' (de aliado) y se aplica al usuario. Sorteo sin tiradas extra, con la misma u3 del estado: si u3 ≥ T/(T + w), con T = suma de los pesos de estado positivo del arquetipo y w = peso de provocar de la familia (híbridas: suma de sus 2 componentes), el estado sorteado se sustituye por provocar; por debajo, el movimiento queda igual que sin la variante. 'coste' en puntos de presupuesto (×factor de área, como un estado).",
+    "activo": false,
+    "coste": 3,
+    "arquetipos": ["proteccion"],
+    "pesos_familia": { "llama": 0, "marea": 1, "brote": 1, "roca": 3, "voltio": 0, "sombra": 0 }
+  },
   "probabilidades": {
     "_doc": "p_mod = base + escala*forma[1]; p_cond = base + escala*forma[3].",
     "mod_base": 0.15,

@@ -388,6 +388,37 @@
     "prob_condicion_estimada": 0.5,
     "penalizacion_coste": 0.001
   },
+  "variantes": {
+    "_doc": "[v0.3] Variantes en estudio (docs/spec/combate-variantes-v0.3.md §2). TODAS desactivadas por defecto: con 'activo' = false el combate es idéntico a v0.2.1. Se activan con patchRawConfig/buildBattleConfig. V3 (más energía) no tiene bloque: es 'energia.por_turno' (3 → 4). Ninguna cambia las 24 tiradas por turno.",
+    "golpe_basico_efecto": {
+      "_doc": "V1. Efecto menor del golpe básico según la familia BASE del alma (híbridas: el de su componente nº 'componente_hibrida', 0 o 1). tipo 'estado': aplica el estado con esa probabilidad (ofensivos al objetivo si sobrevive; prisa/regenerar al usuario) usando la 2.ª tirada de varianza de la posición, que el golpe no gasta. tipo 'cura'/'escudo': cantidad fija al usuario. tipo 'ninguno': sin efecto. Calibrados a ≈ 4–5 de vida equivalente (un movimiento de coste 1 rinde ≈ 20 sobre el básico).",
+      "activo": false,
+      "componente_hibrida": 0,
+      "efectos": {
+        "llama": { "tipo": "estado", "estado": "quemadura", "probabilidad": 0.15 },
+        "marea": { "tipo": "estado", "estado": "ralentizar", "probabilidad": 0.75 },
+        "brote": { "tipo": "cura", "cantidad": 5 },
+        "roca": { "tipo": "escudo", "cantidad": 6 },
+        "voltio": { "tipo": "estado", "estado": "prisa", "probabilidad": 0.5 },
+        "sombra": { "tipo": "estado", "estado": "marca", "probabilidad": 1 }
+      }
+    },
+    "descanso": {
+      "_doc": "V2. El movimiento ejecutado en el turno t no se puede elegir en los 'turnos' turnos siguientes (el golpe básico no descansa). Una acción cancelada (KO o aturdida, con devolución) no descansa.",
+      "activo": false,
+      "turnos": 1
+    },
+    "objetivo_automatico": {
+      "_doc": "V4. El plan no lleva objetivo (se ignora; se normaliza a 0). Carril = (posición − 1) mod 2: 1 y 3 izquierda, 2 y 4 derecha. Ataque de un objetivo: delantera de su carril, la otra delantera, trasera de su carril, la otra trasera ('alcance': primero las traseras). Cura: aliado con menor vida/máx. Escudo: delantero con menos vida (si no hay, el aliado con menos vida); con 'escudo_provocar_al_usuario', el escudo de un movimiento con provocar va al usuario. Se decide al ejecutar.",
+      "activo": false,
+      "escudo_provocar_al_usuario": true
+    },
+    "provocar": {
+      "_doc": "Pieza 'provocar' (movimientos.v0.2.json → provocar): durante 'duracion' finales de turno (contando el del turno en que se usa) los ataques enemigos de un solo objetivo van a esa alma. 'valor_ia': valor que le da la IA de referencia, en vida equivalente.",
+      "duracion": 1,
+      "valor_ia": 20
+    }
+  },
   "escenarios_sim": {
     "C1_aleatorio": {
       "_doc": "Equipos de 4 salvajes (genética v0.2), formación por orden de generación; IA reserva 0 en ambos.",

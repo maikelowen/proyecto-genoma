@@ -92,6 +92,16 @@ export interface MovesConfig {
     readonly core: Readonly<Record<ArchetypeId, string>>;
     readonly roots: Readonly<Record<FamilyId, readonly string[]>>;
   };
+  /**
+   * variantes v0.3 §2 V4 — pieza "provocar" (desactivada por defecto). Ocupa el
+   * hueco del estado en `archetypes`; `familyWeights` por familia base.
+   */
+  readonly taunt: {
+    readonly active: boolean;
+    readonly cost: number;
+    readonly archetypes: readonly ArchetypeId[];
+    readonly familyWeights: Readonly<Record<FamilyId, number>>;
+  };
   /** overrides_catalogo.sales: id de gen del catálogo → sal. */
   readonly salts: Readonly<Record<string, string>>;
   /** Genética validada (familias, híbridas, rejilla, catálogo). */
@@ -310,6 +320,25 @@ export function parseMovesConfig(raw: unknown, genetics: GeneticsConfig): MovesC
     roots[f] = Object.freeze(list);
   }
 
+  // variantes v0.3 §2 V4 — pieza provocar (bloque opcional; ausente = desactivada)
+  const tauntWeights: Record<FamilyId, number> = {};
+  for (const f of genetics.baseFamilies) tauntWeights[f] = 0;
+  let taunt = { active: false, cost: 0, archetypes: [] as ArchetypeId[], familyWeights: tauntWeights };
+  if (r["provocar"] !== undefined) {
+    const pv = obj(r["provocar"], "provocar");
+    const pw = obj(pv["pesos_familia"], "provocar.pesos_familia");
+    if (dataKeys(pw).length !== genetics.baseFamilies.length) fail("provocar.pesos_familia", "debe tener exactamente las familias base");
+    for (const f of genetics.baseFamilies) tauntWeights[f] = num(pw[f], `provocar.pesos_familia.${f}`, 0);
+    const list = arr(pv["arquetipos"], "provocar.arquetipos").map((x, i) => str(x, `provocar.arquetipos[${i}]`));
+    for (const a of list) {
+      const rule = (archetypes as Record<string, ArchetypeRule | undefined>)[a];
+      // solo arquetipos de aliado que sortean su estado (no el táctico): el hueco que ocupa provocar
+      if (!rule || rule.target !== "aliado" || rule.energyIfMinCost) fail("provocar.arquetipos", `'${a}' no es un arquetipo de aliado`);
+    }
+    if (new Set(list).size !== list.length) fail("provocar.arquetipos", "arquetipos repetidos");
+    taunt = { active: bool(pv["activo"], "provocar.activo"), cost: num(pv["coste"], "provocar.coste", 0), archetypes: list as ArchetypeId[], familyWeights: tauntWeights };
+  }
+
   // movimientos §5 — sales de revisión (solo genes del catálogo)
   const sa = obj(obj(r["overrides_catalogo"], "overrides_catalogo")["sales"], "overrides_catalogo.sales");
   const salts: Record<string, string> = {};
@@ -338,6 +367,7 @@ export function parseMovesConfig(raw: unknown, genetics: GeneticsConfig): MovesC
     locusWeights: Object.freeze(locusWeights),
     shapeWeights: Object.freeze(shapeWeights),
     names: Object.freeze({ core: Object.freeze(core), roots: Object.freeze(roots) }),
+    taunt: Object.freeze({ ...taunt, archetypes: Object.freeze(taunt.archetypes), familyWeights: Object.freeze(tauntWeights) }),
     salts: Object.freeze(salts),
     genetics,
   });
