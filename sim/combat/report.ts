@@ -30,7 +30,7 @@ const ivp = (i: Interval): string => `${pct(i.value)} (${pct(i.lo)}–${pct(i.hi
 const verdict = (c: Criterion): string => (c.pass ? "aprobado" : "suspendido") + (c.fragile ? " (frágil)" : "") + (c.informative ? " [inf.]" : "");
 const esc = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-type Block =
+export type Block =
   | { t: "h1" | "h2" | "h3" | "p" | "sub"; text: string }
   | { t: "list"; items: string[] }
   | { t: "table"; head: string[]; rows: string[][]; status?: number; num?: number[] }
@@ -381,7 +381,7 @@ function narrative(d: ReportInput): { title: string; blocks: Block[] } {
 
 // --------------------------------------------------------------- render
 
-function renderHtml(title: string, blocks: readonly Block[]): string {
+export function renderHtml(title: string, blocks: readonly Block[]): string {
   const body = blocks
     .map((b) => {
       switch (b.t) {
@@ -438,7 +438,7 @@ ${body}
 `;
 }
 
-function renderMd(blocks: readonly Block[]): string {
+export function renderMd(blocks: readonly Block[]): string {
   return (
     blocks
       .map((b) => {

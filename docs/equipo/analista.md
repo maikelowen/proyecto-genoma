@@ -44,3 +44,9 @@
 - **Mirar los topes antes de mover una curva:** la convexidad no hacía nada porque los topes de potencia (daño 250, cura 180, escudo 200) recortaban justo los costes altos (QA K-01). Con una curva nueva, comprobar qué fracción de cada coste llega al tope.
 - **Población entera ≠ muestra:** el catálogo (72) se cuenta exacto; un IC de Wilson sobre "0 de 72" marca "frágil" un criterio que se cumple. La incertidumbre de cada movimiento va en su veredicto "dudoso".
 - Parches por ruta: la forma larga crea claves (QA K-02); el simulador exige que cada sal apunte a un gen del catálogo y la CLI rechaza las semillas con que se eligió.
+
+## Lecciones (variantes de combate v0.3)
+- `npm run sim:variantes` (`--quick` < 30 s; completo ≈ 8 min; `--fase diagnostico|elegir|validar`; `--informe-desde DIR`). Evalúa con `var03`; `elige03` y `valida04` quedan reservadas para el ajuste. Cada combinación es un parche con huella propia y se comprueba que cambia la config antes de simular.
+- **Un escenario puede no ejercitar la pieza que se estudia:** provocar va en 2 de 72 movimientos y con salvajes casi no sale (Q-02); solo se vio su efecto en C2 (hunde a brote). Registrar el uso de cada pieza nueva y, si un criterio se rompe, quitar la pieza en un diagnóstico pareado antes de culpar a la variante entera.
+- **Contar opciones reales, no las teóricas:** con descanso se esperaban 3 de 4 movimientos y son 3,7, porque el 62 % de las acciones son golpes básicos. La entropía por alma tiene sesgo con partidas cortas: dar también una medida agregada.
+- Dejar los resultados en disco por fases y lanzar lo largo de forma que un corte no lo pierda (una ejecución entera se perdió); no ajustar números encima de un defecto conocido del núcleo (Q-01): marcar las cifras como provisionales.
