@@ -31,6 +31,9 @@
 - **Configs iguales con resultados distintos:** mira si el `id` de la variante entra en la semilla. Compara configs con `isDeepStrictEqual` antes de culpar a la config (C-03).
 - **Tras adoptar una propuesta:** las etiquetas de "base" (`v02`) mienten y los tests autorreferentes dejan de fijar valores (C-04 y C-05).
 - **"No depende de X":** mira el IC y el recuento de semillas en cada instante. Con la media sola, una diferencia de 14 puntos pasa por "no depende" (G-01).
+- **Efecto gratis sobre un estado con duración:** si una acción de coste 0 usa la misma rutina que un movimiento (`putStatus`), comprueba si renueva la duración de algo grande que ya estaba puesto (Q-01: el escudo de 6 del básico hacía permanente uno de 155).
+- **Pieza nueva "en el catálogo":** cuenta cuántos movimientos la llevan, a qué coste y en cuántos equipos aparece, y prueba si la palanca indicada puede subirlo. Si casi no aparece, el estudio mide la variante sin ella (Q-02).
+- **`npm run check` con otro agente trabajando:** si falla por ficheros sin confirmar ajenos al commit, repítelo sobre `git archive <commit>` en `/tmp` y di las dos cosas.
 
 ## Formato de entrega
 - Veredicto (APROBADO / CON CAMBIOS / RECHAZADO), tabla de hallazgos (ID, severidad, fichero:línea, reproducción, arreglo) y checklist marcada.
