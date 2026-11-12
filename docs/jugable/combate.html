@@ -137,6 +137,59 @@ details.help .log{border:0;margin:4px 0;padding:0}
 @media (max-width:480px){.bar{width:64px;height:7px}.float{bottom:calc(100% + 52px)}}
 @media (prefers-reduced-motion:reduce){.plat svg{animation:none;opacity:.55}.bar.lowbar{animation:none}}
 .floor{left:-60%;right:-60%;top:36.5%;bottom:auto;height:300%;transform:perspective(380px) rotateX(70deg);transform-origin:50% 0;-webkit-mask-image:linear-gradient(transparent,#000 12%);mask-image:linear-gradient(transparent,#000 12%);background-size:auto,140px 74px,auto}
+
+/* ===== Bandeja de órdenes (v0.3): una sola pantalla, sin scroll ===== */
+#app.battle{height:100vh;height:100dvh;display:flex;flex-direction:column;gap:4px;padding:6px 8px 8px;overflow:hidden}
+#app.battle .stage{flex:1 1 0;min-height:0;height:auto;width:100%;margin:30px auto 2px}
+#app.battle .turnbar{margin:0;flex:none;gap:8px}
+#app.battle .turnbar .score{margin-left:auto;font-size:12px}
+.tbr{display:flex;gap:6px}.btn.sm{padding:4px 9px;font-size:13px}
+#app.battle .energy{margin:0;flex:none;flex-wrap:nowrap}
+#app.battle .energy .num{font-size:13px;white-space:nowrap}
+.tray{flex:none;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;display:grid;grid-template-columns:minmax(0,1fr);gap:5px}
+.tray.anim{min-height:96px;align-content:center;justify-items:center}
+.thead{display:flex;align-items:center;gap:8px;min-height:30px;min-width:0}
+.thead b{white-space:nowrap}.thead small{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tnote{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap}.tnote.hot{color:var(--acc);font-weight:700}
+.thead svg{flex:none}
+.opts5{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.opts5.msg{display:flex;align-items:center;min-height:130px;color:var(--dim);padding:0 8px}
+.opts5 .opt{padding:3px 6px;min-width:0;gap:0;justify-content:center}
+.opt .oname{display:flex;align-items:center;gap:5px;min-width:0;font-size:13px}.opt .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.opt .onum{flex:none;min-width:17px;height:17px;border-radius:9px;background:var(--line);font-size:11px;line-height:17px;text-align:center;font-weight:800}
+.opt.on .onum{background:var(--acc);color:#0b0d13}
+.opt .mdesc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+.opt.rest{opacity:.5;cursor:not-allowed;border-style:dashed}.opt .mdesc.rest{display:flex;align-items:center;gap:4px;color:var(--warn)}
+.opt.ro{cursor:default}.opt.ro .onum{background:#4a2030}
+.tray .confirm{padding:11px}
+@media (min-width:760px){
+  .tray{grid-template-columns:minmax(0,1fr) 180px}
+  .thead,.opts5{grid-column:1}.tray .confirm{grid-column:2;grid-row:1/3;height:100%;font-size:18px}
+  .opts5{grid-template-columns:repeat(5,minmax(0,1fr))}.opts5.msg{min-height:50px}
+  .opt .mdesc{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+}
+.tip{position:fixed;z-index:200;background:#0b0d13;border:1px solid var(--acc);border-radius:8px;padding:6px 9px;font-size:12.5px;pointer-events:none}
+.tip[hidden]{display:none}
+/* capa de nombre/vida por encima de todos los iconos */
+.iw{--s:124px;position:absolute;left:var(--x);top:var(--y);translate:-50% -50%;width:var(--s);height:var(--s);pointer-events:none;z-index:60}
+.iw.back{--s:104px}
+.iw.mine .uname{color:#a9d2ff}.iw.foe .uname{color:#ffb3c4}
+.iw.mine .bar{transform:skewX(-18deg)}.iw.foe .bar{transform:skewX(18deg)}
+.iw.mine .bar i{background:#5fd4ff}.iw.foe .bar i{background:#ff5d7a}
+.iw.peek .hpn,.iw.hov .hpn{display:block}
+.iw.ko .info{display:none}
+.iw .info{z-index:2}
+.ord{position:absolute;right:-4px;top:2px;min-width:22px;height:22px;border-radius:11px;background:var(--acc);color:#0b0d13;border:2px solid #0b0d13;font:800 12px/18px system-ui;text-align:center}
+.iw.ko .ord{display:none}
+.unit.sel-foe .selring{display:block}
+.ov{position:fixed;inset:0;z-index:300;background:#000a;display:flex;align-items:flex-end;justify-content:center;padding:8px}
+.ovp{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:100%;max-width:720px;max-height:80%;overflow:auto;padding:10px}
+.ovh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ovp .log{border:0;margin:0;padding:0}.ovp p{font-size:13px;margin:6px 0}
+#app.battle .endbox{margin:0;width:100%;padding:6px 10px}.endbox h2{font-size:18px}.endbox p{margin:2px 0}
+#app.battle .endbox .actions{margin:6px 0 0}
+#app.battle .sub{margin:0;min-height:40px;display:flex;align-items:center;justify-content:center}
+@media (max-width:480px){.iw{--s:80px}.iw.back{--s:68px}.ord{right:-6px;top:0}#app.battle .turnbar .score{display:none}#app.battle .endbox .actions .btn{flex:1 1 100%}#app.battle .stage{margin-top:26px}}
 </style></head>
 <body><div id="app"></div>
 <script>"use strict";
@@ -255,7 +308,7 @@ function energyBar(have, spent) {
     const cells = [];
     for (let i = 0; i < data_ts_1.cfg.combat.energy.max; i++)
         cells.push(h("span", { class: "cell " + (i < have - spent ? "full" : i < have ? "spent" : "") }));
-    return h("div", { class: "energy" }, h("span", { class: "lbl" }, "Energía"), h("span", { class: "cells" }, ...cells), h("span", { class: "num" }, spent > 0 ? `${have - spent}/${have} (gastas ${spent})` : `${have}`));
+    return h("div", { class: "energy" }, h("span", { class: "lbl" }, "Energía"), h("span", { class: "cells" }, ...cells), h("span", { class: "num" }, spent > 0 ? `${have - spent}/${have}` : `${have}`));
 }
 /** Posiciones (% del escenario, centro del icono) por bando y posición. Rival arriba a la derecha, tuyo abajo a la izquierda; la trasera, más lejos y más pequeña. */
 const SPOT = {
@@ -274,10 +327,12 @@ function plat(cls) {
     el.innerHTML = `<svg viewBox="-100 -50 200 100" preserveAspectRatio="none" aria-hidden="true"><ellipse rx="92" ry="40" stroke-width="1.5"/><ellipse rx="58" ry="22" stroke-width="1" stroke-dasharray="3 5"/>${g}</svg>`;
     return el;
 }
-/** Escena de batalla: almas flotando sobre plataformas, sin cartas. Devuelve los elementos para animarlos. */
+/** Escena de batalla: almas flotando sobre plataformas, sin cartas. Devuelve los elementos para animarlos.
+ *  El nombre y la vida de cada alma van en una capa propia (`.iw`) por encima de todos los iconos: así una delantera no tapa la trasera. */
 function buildField(f, st, sel) {
     const units = new Map();
     const energy = { A: h("span", { class: "en" }), B: h("span", { class: "en" }) };
+    const layer = [];
     const unit = (side, pos) => {
         const i = SIDE[side];
         const soul = (i === 0 ? f.mine : f.rival)[pos - 1];
@@ -288,28 +343,35 @@ function buildField(f, st, sel) {
         const bar = h("i", null);
         const hp = h("div", { class: "hpn" });
         const chips = h("div", { class: "chips" });
-        const cls = ["unit", side === "A" ? "mine" : "foe", front ? "front" : "back"];
+        const o = side === "A" ? sel?.orders?.[pos] : undefined;
+        const base = [side === "A" ? "mine" : "foe", front ? "front" : "back"];
+        const vars = `--fam:${(0, data_ts_1.palette)(c.family).main};--x:${x}%;--y:${y}%`;
+        const iw = h("div", { class: "iw " + base.join(" "), style: vars }, h("div", { class: "info" }, h("div", { class: "uname" }, soul.name), h("div", { class: "bar" }, bar), chips, hp), o ? h("span", { class: "ord", title: o.title }, o.txt) : null);
+        const cls = ["unit", ...base];
         if (sel && side === "A" && sel.actor === pos)
             cls.push("sel-actor");
         if (sel && sel.tgts.some((t) => t.side === side && t.pos === pos))
             cls.push(side === "A" ? "sel-ally" : "sel-foe");
-        const el = h("div", { class: cls.join(" "), style: `--fam:${(0, data_ts_1.palette)(c.family).main};--x:${x}%;--y:${y}%;--d:${-(pos * 0.7 + i * 0.35).toFixed(2)}s;z-index:${Math.round(y / 5)}`, title: soul.name }, h("div", { class: "info" }, h("div", { class: "uname" }, soul.name), h("div", { class: "bar" }, bar), chips, hp), h("div", { class: "shadow" }), h("div", { class: "selring" }), ico);
+        const el = h("div", { class: cls.join(" "), style: `${vars};--d:${-(pos * 0.7 + i * 0.35).toFixed(2)}s;z-index:${Math.round(y / 5)}`, title: soul.name }, h("div", { class: "shadow" }), h("div", { class: "selring" }), ico);
+        el.addEventListener("mouseenter", () => iw.classList.add("hov"));
+        el.addEventListener("mouseleave", () => iw.classList.remove("hov"));
         el.addEventListener("click", () => {
-            el.classList.toggle("peek");
+            iw.classList.toggle("peek");
             sel?.onPick?.(side, pos);
         });
-        const u = { unit: el, ico, bar, hp, chips, maxHp: c.maxHp, family: c.family };
+        const u = { unit: el, ico, bar, hp, chips, maxHp: c.maxHp, family: c.family, iw };
         units.set((0, narrate_ts_1.key)(side, pos), u);
         (0, anim_ts_1.paintUnit)(u, (0, anim_ts_1.viewFrom)(st, side, pos), false);
+        layer.push(iw);
         return el;
     };
     (0, anim_ts_1.paintEnergy)(energy.A, st.energy[0]);
-    (0, anim_ts_1.paintEnergy)(energy.B, st.energy[1]);
+    (0, anim_ts_1.paintEnergy)(energy.B, st.energy[1]); // fuera de la escena: la energía del rival no se muestra
     const all = [];
     for (const side of ["B", "A"])
         for (let p = 1; p <= 4; p++)
             all.push(unit(side, p));
-    const el = h("div", { class: "stage" }, h("div", { class: "bg" }, h("div", { class: "stars" }), h("div", { class: "floor" })), plat("pf"), plat("pm"), h("div", { class: "tag t1" }, "Rival · ", energy.B), h("div", { class: "tag t2" }, "Tú · ", energy.A), ...all);
+    const el = h("div", { class: "stage" }, h("div", { class: "bg" }, h("div", { class: "stars" }), h("div", { class: "floor" })), plat("pf"), plat("pm"), h("div", { class: "tag t2" }, "Tú · ", energy.A), ...all, ...layer);
     return { el, units, energy };
 }
 const HELP = [
@@ -395,6 +457,9 @@ function startBattle() {
     const seed = pendingFightSeed ?? (0, game_ts_1.newSeed)();
     pendingFightSeed = null;
     fight = (0, game_ts_1.startFight)(mine, (0, game_ts_1.rollRival)(seed), seed, (0, game_ts_1.chooseOpponentAi)(difficulty));
+    report = null;
+    overlay = null;
+    focus = 1;
     beginPlanning();
 }
 function renderTeam() {
@@ -403,56 +468,152 @@ function renderTeam() {
     app.replaceChildren(topBar(), h("p", { class: "intro" }, "Elige 4 almas y su fila (2 delanteras y 2 traseras). Toca una carta para elegirla."), helpBox(), h("div", { class: "actions" }, h("button", { class: "btn", onclick: () => randomTeam() }, "Equipo aleatorio"), h("button", { class: "btn", onclick: () => newOffer() }, "Nuevas almas"), h("button", { class: "btn primary", disabled: !ready, onclick: () => ready && startBattle() }, "¡Combatir!")), h("div", { class: "diff" }, h("span", { class: "lbl" }, "Dificultad del rival"), h("button", { class: "btn" + (difficulty === "normal" ? " on" : ""), onclick: () => ((difficulty = "normal"), render()) }, "Normal"), h("button", { class: "btn" + (difficulty === "dificil" ? " on" : ""), onclick: () => ((difficulty = "dificil"), render()) }, "Difícil")), h("p", { class: "sel" }, `Delantera: ${front.map(name).join(", ") || "—"} · Trasera: ${back.map(name).join(", ") || "—"}`, hint ? h("span", { class: "warn" }, " " + hint) : null), h("div", { class: "grid" }, ...offer.map((_, i) => soulCard(i))), h("p", { class: "seed" }, `semilla de las almas: ${offerSeed}`));
     window.scrollTo(0, 0);
 }
-// ------------------------------------------------------------------ planificación del turno
+// ------------------------------------------------------------------ planificación del turno (bandeja de órdenes)
+let armed = false; // esperando que se toque el objetivo en el campo
+let inspect = null; // alma rival cuyos movimientos se consultan
+let note = "";
+let overlay = null;
+let chainTimer = 0;
+function defaultFoe(f) {
+    return (0, index_ts_1.validTargetPositions)(null, alive(f.state, "B"), data_ts_1.cfg.combat)[0] ?? 1;
+}
 function beginPlanning() {
     const f = fight;
-    picks = [1, 2, 3, 4].map(() => ({ move: 0, target: (0, index_ts_1.validTargetPositions)(null, alive(f.state, "B"), data_ts_1.cfg.combat)[0] ?? 1 }));
-    report = null;
+    // todas las almas empiezan el turno con el golpe básico contra la primera delantera enemiga viva
+    picks = [1, 2, 3, 4].map(() => ({ move: 0, target: defaultFoe(f) }));
+    armed = false;
+    inspect = null;
+    note = "";
+    const el = (0, index_ts_1.eligibleActors)(f.state, "A");
+    if (!el.includes(focus))
+        focus = el[0] ?? 1;
     phase = "plan";
     render();
-    window.scrollTo(0, 0);
+}
+function moveOf(f, pos, move) {
+    return move === 0 ? null : f.state.teams[0][pos - 1].moves[move - 1] ?? null;
 }
 function targetsFor(f, m) {
     const side = m && m.target === "aliado" ? "A" : "B";
     return { side, valid: (0, index_ts_1.validTargetPositions)(m, alive(f.state, side), data_ts_1.cfg.combat) };
 }
 function costOf(f, pos, move) {
-    const m = move === 0 ? null : f.state.teams[0][pos - 1].moves[move - 1];
+    const m = moveOf(f, pos, move);
     return m ? m.cost : data_ts_1.cfg.combat.damage.basicCost;
+}
+function spentBy(f, except) {
+    return (0, index_ts_1.eligibleActors)(f.state, "A")
+        .filter((q) => q !== except)
+        .reduce((a, q) => a + costOf(f, q, picks[q - 1].move), 0);
 }
 function selectMove(pos, move) {
     const f = fight;
     const p = picks[pos - 1];
+    const prev = targetsFor(f, moveOf(f, pos, p.move)).side;
     p.move = move;
     focus = pos;
-    const m = move === 0 ? null : f.state.teams[0][pos - 1].moves[move - 1] ?? null;
+    inspect = null;
+    note = "";
+    const m = moveOf(f, pos, move);
     const t = targetsFor(f, m);
-    if (!t.valid.includes(p.target))
-        p.target = t.valid[0] ?? 1;
+    if (t.side === "A") {
+        if (prev !== "A" || !t.valid.includes(p.target))
+            p.target = t.valid.includes(pos) ? pos : t.valid[0] ?? pos;
+    }
+    else if (prev !== "B" || !t.valid.includes(p.target))
+        p.target = t.valid.includes(defaultFoe(f)) ? defaultFoe(f) : t.valid[0] ?? 1;
+    // un movimiento de un solo objetivo con varios posibles pide tocarlo en el campo; los de área, no
+    armed = !(m && m.area) && t.valid.length > 1;
     render();
 }
-function orderBlock(f, pos, spentOthers) {
-    const soul = f.mine[pos - 1];
-    const fs = f.state.fighters[0][pos - 1];
-    const head = h("div", { class: "fhead", onclick: () => ((focus = pos), render()) }, soulShape(soul.combatant.family, 48), h("div", { class: "fname" }, h("b", null, soul.name), h("small", null, `${(0, data_ts_1.familyLabel)(soul.combatant.family)} · ${rowName(pos)}`)));
-    if (fs.ko)
-        return h("div", { class: "order off" }, head, h("div", { class: "mdesc" }, "KO"));
-    if (!(0, index_ts_1.eligibleActors)(f.state, "A").includes(pos))
-        return h("div", { class: "order off" }, head, h("div", { class: "mdesc" }, "Aturdida: pierde este turno."));
-    const p = picks[pos - 1];
-    const avail = f.state.energy[0] - spentOthers;
-    const opts = [0, 1, 2, 3, 4].map((mi) => {
-        const m = mi === 0 ? null : soul.combatant.moves[mi - 1];
-        const cost = m ? m.cost : data_ts_1.cfg.combat.damage.basicCost;
-        const label = m ? m.name : "Golpe básico";
-        const d = m ? (0, index_ts_1.describeMove)(m, data_ts_1.cfg.moves) : "";
-        return h("button", { class: "opt" + (p.move === mi ? " on" : ""), disabled: cost > avail, onclick: () => selectMove(pos, mi) }, h("span", { class: "oname" }, label, h("span", { class: "cost" }, cost === 0 ? " gratis" : ` ${cost}⚡`)), h("span", { class: "mdesc" }, m ? d.slice(d.indexOf("): ") + 3) : `${data_ts_1.cfg.combat.damage.basicPower} de daño (x ataque) a un enemigo`));
+// ---- descripción completa: al pasar el ratón o al mantener pulsado
+const tipEl = document.createElement("div");
+tipEl.className = "tip";
+tipEl.hidden = true;
+document.body.append(tipEl);
+function showTip(anchor, text) {
+    tipEl.textContent = text;
+    tipEl.hidden = false;
+    const r = anchor.getBoundingClientRect();
+    const w = Math.min(300, window.innerWidth - 16);
+    tipEl.style.width = `${w}px`;
+    tipEl.style.left = `${Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2))}px`;
+    tipEl.style.bottom = `${window.innerHeight - r.top + 6}px`;
+}
+function hideTip() {
+    tipEl.hidden = true;
+}
+function withTip(btn, text) {
+    let timer = 0;
+    let shown = false;
+    btn.title = text;
+    btn.addEventListener("mouseenter", () => showTip(btn, text));
+    btn.addEventListener("mouseleave", hideTip);
+    btn.addEventListener("contextmenu", (e) => e.preventDefault());
+    btn.addEventListener("pointerdown", (e) => {
+        if (e.pointerType === "mouse")
+            return;
+        shown = false;
+        timer = window.setTimeout(() => ((shown = true), showTip(btn, text)), 450);
     });
-    const mv = p.move === 0 ? null : soul.combatant.moves[p.move - 1] ?? null;
-    const t = targetsFor(f, mv);
-    const tnames = (t.side === "A" ? f.mine : f.rival).map((s) => s.name);
-    const chips = t.valid.map((tp) => h("button", { class: "tgt" + (p.target === tp ? " on" : ""), onclick: () => ((p.target = tp), (focus = pos), render()) }, tnames[tp - 1] ?? `#${tp}`, h("small", null, ` ${rowName(tp)[0]}`)));
-    return h("div", { class: "order" + (focus === pos ? " focus" : "") }, head, h("div", { class: "opts" }, ...opts), h("div", { class: "tgts" }, h("span", { class: "lbl" }, mv && mv.area ? "Fila de:" : t.side === "A" ? "Aliado:" : "Objetivo:"), ...chips));
+    const end = () => {
+        clearTimeout(timer);
+        if (shown)
+            setTimeout(hideTip, 1800);
+    };
+    btn.addEventListener("pointerup", end);
+    btn.addEventListener("pointercancel", end);
+    btn.addEventListener("click", (e) => {
+        if (shown) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            shown = false;
+        }
+    }, true);
+    return btn;
+}
+const REST_ICON = `<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.4 1.6"/></svg>`;
+function optButton(m, slot, cost, state, disabled, onclick) {
+    const full = m ? (0, index_ts_1.describeMove)(m, data_ts_1.cfg.moves) : `Golpe básico (gratis): ${data_ts_1.cfg.combat.damage.basicPower} de daño (x ataque) a un enemigo`;
+    const short = m ? full.slice(full.indexOf("): ") + 3) : `${data_ts_1.cfg.combat.damage.basicPower} de daño a un enemigo`;
+    const rest = state === "rest";
+    const b = h("button", { class: `opt ${state}`, "aria-disabled": rest || state === "ro" ? "true" : undefined, "data-slot": slot, disabled: disabled && !rest, onclick: (() => !rest && state !== "ro" && onclick?.()) }, h("span", { class: "oname" }, h("span", { class: "onum" }, slot === 0 ? "B" : String(slot)), h("span", { class: "nm" }, m ? m.name : "Golpe básico"), h("span", { class: "cost" }, cost === 0 ? "gratis" : `${cost}⚡`)), rest ? h("span", { class: "mdesc rest" }) : h("span", { class: "mdesc" }, short));
+    if (rest)
+        b.querySelector(".mdesc").innerHTML = `${REST_ICON} descansa`;
+    return withTip(b, full);
+}
+function trayPlan(f, cost) {
+    const confirm = h("button", { class: "btn primary big confirm", onclick: () => confirmTurn() }, "Confirmar turno");
+    let head;
+    let body;
+    if (inspect !== null) {
+        const soul = f.rival[inspect - 1];
+        const fs = f.state.fighters[1][inspect - 1];
+        head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "nb" }, `${soul.name} (rival)`), h("small", null, `${(0, data_ts_1.familyLabel)(soul.combatant.family)} · ${rowName(inspect)}${fs.ko ? " · KO" : ` · vida ${fs.hp}/${soul.combatant.maxHp}`}`), h("span", { class: "tnote" }, "Costes de sus movimientos"));
+        body = h("div", { class: "opts5" }, ...soul.combatant.moves.map((m, k) => optButton(m, k + 1, m.cost, "ro", false)), optButton(null, 0, data_ts_1.cfg.combat.damage.basicCost, "ro", false));
+    }
+    else {
+        const pos = focus;
+        const soul = f.mine[pos - 1];
+        const fs = f.state.fighters[0][pos - 1];
+        const p = picks[pos - 1];
+        const mv = moveOf(f, pos, p.move);
+        const t = targetsFor(f, mv);
+        const tn = (t.side === "A" ? f.mine : f.rival).map((s) => s.name);
+        const tgt = mv && mv.area ? `Área: fila ${rowName(p.target).toLowerCase()}` : t.valid.length === 0 ? "" : `Objetivo: ${tn[p.target - 1] ?? "?"}`;
+        head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "na" }, soul.name), h("small", null, `${(0, data_ts_1.familyLabel)(soul.combatant.family)} · ${rowName(pos)}`), h("span", { class: "tnote" + (armed || note ? " hot" : "") }, note || (armed ? "Toca el objetivo en el campo" : tgt)));
+        if (fs.ko)
+            body = h("div", { class: "opts5 msg" }, "Esta alma está KO.");
+        else if (!(0, index_ts_1.eligibleActors)(f.state, "A").includes(pos))
+            body = h("div", { class: "opts5 msg" }, "Aturdida: pierde este turno.");
+        else {
+            const avail = f.state.energy[0] - spentBy(f, pos);
+            const resting = (0, index_ts_1.restingMoves)(f.state, "A", pos);
+            body = h("div", { class: "opts5" }, ...soul.combatant.moves.map((m, k) => optButton(m, k + 1, m.cost, resting.includes(k + 1) ? "rest" : p.move === k + 1 ? "on" : "", m.cost > avail, () => selectMove(pos, k + 1))), optButton(null, 0, data_ts_1.cfg.combat.damage.basicCost, p.move === 0 ? "on" : "", false, () => selectMove(pos, 0)));
+        }
+    }
+    void cost;
+    return h("div", { class: "tray" }, head, body, confirm);
 }
 function currentPlan(f) {
     const plan = (0, index_ts_1.eligibleActors)(f.state, "A").map((pos) => {
@@ -461,18 +622,72 @@ function currentPlan(f) {
     });
     return { plan, cost: plan.reduce((a, x) => a + costOf(f, x.actor, x.move), 0) };
 }
+function onPickPlan(side, pos) {
+    const f = fight;
+    const fp = picks[focus - 1];
+    const ft = targetsFor(f, moveOf(f, focus, fp.move));
+    note = "";
+    if (armed && side === ft.side && ft.valid.includes(pos)) {
+        fp.target = pos;
+        armed = false;
+        inspect = null;
+        render();
+        return;
+    }
+    if (side === "A") {
+        focus = pos;
+        armed = false;
+        inspect = null;
+        render();
+        return;
+    }
+    if (armed) {
+        note = ft.side === "B" ? "Ese rival no es alcanzable: toca otro" : "Toca un aliado";
+        render();
+        return;
+    }
+    if (f.state.fighters[1][pos - 1].ko)
+        return;
+    inspect = pos;
+    render();
+}
+function overlayBox() {
+    if (overlay === null)
+        return "";
+    const f = fight;
+    const close = h("button", { class: "btn", onclick: () => toggleOverlay(null) }, "Cerrar");
+    if (overlay === "help")
+        return h("div", { class: "ov" }, h("div", { class: "ovp" }, h("div", { class: "ovh" }, h("b", null, "Ayuda"), close), ...HELP.map(([t, x]) => h("p", null, h("b", null, t + ". "), x)), h("p", { class: "seed" }, `semilla de las almas: ${offerSeed} · semilla del combate: ${f.seed}`)));
+    const r = report;
+    return h("div", { class: "ov" }, h("div", { class: "ovp" }, h("div", { class: "ovh" }, h("b", null, "Turno anterior"), close), h("div", { class: "log" }, ...(r ? r.lines.map(lineNode) : [h("div", { class: "ln info" }, "Aún no se ha jugado ningún turno.")]))));
+}
+function toggleOverlay(o) {
+    overlay = o;
+    const cur = document.querySelector(".ov");
+    if (cur)
+        cur.remove();
+    const box = overlayBox();
+    if (box)
+        app.append(box);
+}
+function turnBar(f, left, withBtns) {
+    return h("div", { class: "turnbar" }, h("b", null, left), h("span", { class: "score", id: "score" }, `Partidas: ${score.played} · Ganadas: ${score.won}`), withBtns ? h("span", { class: "tbr" }, report ? h("button", { class: "btn sm", onclick: () => toggleOverlay("prev") }, "Turno anterior") : null, h("button", { class: "btn sm", onclick: () => toggleOverlay("help") }, "Ayuda")) : h("span", { class: "tbr" }, h("button", { class: "btn sm", onclick: () => toggleOverlay("help") }, "Ayuda")));
+}
 function renderPlan() {
     const f = fight;
     const { cost } = currentPlan(f);
     const elig = (0, index_ts_1.eligibleActors)(f.state, "A");
-    if (!elig.includes(focus))
-        focus = elig[0] ?? 1;
+    if (!elig.includes(focus) && inspect === null)
+        focus = elig[0] ?? focus;
     const fp = picks[focus - 1];
-    const fm = fp.move === 0 ? null : f.state.teams[0][focus - 1].moves[fp.move - 1] ?? null;
+    const fm = moveOf(f, focus, fp.move);
     const ft = targetsFor(f, fm);
     const tgts = [];
-    if (elig.includes(focus)) {
-        if (fm && fm.area)
+    if (inspect === null && elig.includes(focus)) {
+        if (armed)
+            for (const p of ft.valid)
+                tgts.push({ side: ft.side, pos: p });
+        else if (fm && fm.area)
             for (const p of [1, 2, 3, 4]) {
                 if (data_ts_1.cfg.combat.frontRow.includes(p) === data_ts_1.cfg.combat.frontRow.includes(fp.target) && ft.valid.length > 0)
                     tgts.push({ side: ft.side, pos: p });
@@ -480,28 +695,13 @@ function renderPlan() {
         else
             tgts.push({ side: ft.side, pos: fp.target });
     }
-    const onPick = (side, pos) => {
-        if (side === "A" && ((0, index_ts_1.eligibleActors)(f.state, "A").includes(pos))) {
-            if (focus === pos && ft.side !== "A")
-                return;
-            if (focus !== pos && !(ft.side === "A" && ft.valid.includes(pos))) {
-                focus = pos;
-                render();
-                return;
-            }
-        }
-        if (side === ft.side && ft.valid.includes(pos)) {
-            fp.target = pos;
-            render();
-        }
-    };
-    const orders = [1, 2, 3, 4].map((pos) => {
-        const spentOthers = (0, index_ts_1.eligibleActors)(f.state, "A")
-            .filter((q) => q !== pos)
-            .reduce((a, q) => a + costOf(f, q, picks[q - 1].move), 0);
-        return orderBlock(f, pos, spentOthers);
-    });
-    app.replaceChildren(topBar(), h("div", { class: "turnbar" }, h("b", null, `Turno ${f.state.turn}/${data_ts_1.cfg.combat.maxTurns}`), h("span", { class: "foeE" }, `Energía rival: ${f.state.energy[1]}`)), energyBar(f.state.energy[0], cost), buildField(f, f.state, { actor: elig.includes(focus) ? focus : null, tgts, onPick }).el, h("h2", null, "Tus órdenes"), ...orders, h("div", { class: "actions sticky" }, h("button", { class: "btn primary big", onclick: () => confirmTurn() }, "Confirmar turno")), helpBox(), h("p", { class: "seed" }, `semilla de las almas: ${offerSeed} · semilla del combate: ${f.seed}`));
+    const orders = {};
+    for (const pos of elig) {
+        const p = picks[pos - 1];
+        const m = moveOf(f, pos, p.move);
+        orders[pos] = { txt: p.move === 0 ? "B" : String(p.move), title: m ? m.name : "Golpe básico" };
+    }
+    app.replaceChildren(turnBar(f, `Turno ${f.state.turn}/${data_ts_1.cfg.combat.maxTurns}`, true), energyBar(f.state.energy[0], cost), buildField(f, f.state, { actor: inspect === null && elig.includes(focus) ? focus : null, tgts, onPick: onPickPlan, orders }).el, trayPlan(f, cost), overlayBox());
 }
 function confirmTurn() {
     const f = fight;
@@ -511,7 +711,6 @@ function confirmTurn() {
     pendingResult = f.state.result;
     phase = "report";
     render();
-    window.scrollTo(0, 0);
 }
 // ------------------------------------------------------------------ informe del turno y fin de partida
 function lineNode(l) {
@@ -521,6 +720,9 @@ function sameTeamAgain() {
     const f = fight;
     const seed = (0, game_ts_1.newSeed)();
     fight = (0, game_ts_1.startFight)(f.mine, (0, game_ts_1.rollRival)(seed), seed, (0, game_ts_1.chooseOpponentAi)(difficulty));
+    report = null;
+    overlay = null;
+    focus = 1;
     beginPlanning();
 }
 function newTeam() {
@@ -534,7 +736,7 @@ function renderReport() {
     const res = f.state.result;
     const field = buildField(f, r.before);
     const sub = h("div", { class: "sub", "aria-live": "polite" }, "");
-    const speedBtn = (v) => h("button", { class: "btn sp" + (speed === v ? " on" : ""), "data-v": v, onclick: ((e) => {
+    const speedBtn = (v) => h("button", { class: "btn sm sp" + (speed === v ? " on" : ""), "data-v": v, onclick: ((e) => {
             speed = v;
             saveSpeed();
             player?.setSpeed(v);
@@ -542,19 +744,19 @@ function renderReport() {
                 b.classList.toggle("on", b.dataset["v"] === String(v));
             e.currentTarget.blur();
         }) }, `×${v}`);
-    const skipBtn = h("button", { class: "btn", onclick: () => player?.skip() }, "Saltar");
+    const skipBtn = h("button", { class: "btn sm", onclick: () => player?.skip() }, "Saltar");
     const ctrl = h("div", { class: "ctrl" }, h("span", { class: "lbl" }, "Velocidad"), speedBtn(1), speedBtn(2), skipBtn);
-    const end = res === null ? null : h("div", { class: "endbox " + (res === "A" ? "win" : res === "B" ? "lose" : "draw"), hidden: true }, h("h2", null, res === "A" ? "¡Victoria!" : res === "B" ? "Derrota" : "Empate"), h("p", { id: "endscore" }, `Turnos jugados: ${f.state.turn}.`), h("div", { class: "actions" }, h("button", { class: "btn primary", onclick: () => sameTeamAgain() }, "Otra partida (mismo equipo)"), h("button", { class: "btn", onclick: () => newTeam() }, "Otra partida (equipo nuevo)")));
-    const next = res === null ? h("button", { class: "btn primary big", disabled: true, onclick: () => beginPlanning() }, "Siguiente turno") : null;
-    app.replaceChildren(topBar(), h("div", { class: "turnbar" }, h("b", null, `Resultado del turno ${res === null ? f.state.turn - 1 : f.state.turn}`), ctrl), field.el, sub, h("details", { class: "help" }, h("summary", null, "Ver detalle del turno"), h("div", { class: "log" }, ...r.lines.map(lineNode))), end ?? "", next ? h("div", { class: "actions sticky" }, next) : "", h("p", { class: "seed" }, `semilla de las almas: ${offerSeed} · semilla del combate: ${f.seed}`));
+    const end = res === null ? null : h("div", { class: "endbox " + (res === "A" ? "win" : res === "B" ? "lose" : "draw"), hidden: true }, h("h2", null, res === "A" ? "¡Victoria!" : res === "B" ? "Derrota" : "Empate"), h("p", { id: "endscore" }, `Turnos jugados: ${f.state.turn}.`), h("div", { class: "actions" }, h("button", { class: "btn primary", onclick: () => sameTeamAgain() }, "Otra partida (mismo equipo)"), h("button", { class: "btn", onclick: () => newTeam() }, "Otra partida (equipo nuevo)"), h("button", { class: "btn", onclick: () => toggleOverlay("prev") }, "Detalle del turno")));
+    app.replaceChildren(turnBar(f, `Turno ${res === null ? f.state.turn - 1 : f.state.turn}`, false), energyBar(r.before.energy[0], 0), field.el, h("div", { class: "tray anim" }, sub, ctrl, end ?? ""), overlayBox());
     player = (0, anim_ts_1.playTurn)(field, r.before, f.state, r.events, f.names, sub, speed, () => {
         ctrl.classList.add("off");
         commitScore();
+        player = null;
         if (end)
             end.removeAttribute("hidden");
-        if (next)
-            next.removeAttribute("disabled");
-        player = null;
+        // encadena: empieza la planificación del turno siguiente sin pulsar nada
+        else
+            chainTimer = window.setTimeout(() => phase === "report" && fight === f && beginPlanning(), 650);
     });
 }
 /** Suma la partida al marcador (una sola vez) cuando termina la animación del turno final. */
@@ -574,6 +776,9 @@ function commitScore() {
         ep.textContent = `Turnos jugados: ${fight.state.turn}. Partidas: ${score.played} · ganadas: ${score.won}.`;
 }
 function render() {
+    clearTimeout(chainTimer);
+    hideTip();
+    app.className = phase === "team" ? "" : "battle";
     if (player) {
         player.cancel();
         commitScore();
@@ -2162,6 +2367,29 @@ function parseMovesConfig(raw, genetics) {
             (0, parse_ts_1.fail)(`nombres.raiz.${f}`, "deben ser 4 raíces");
         roots[f] = Object.freeze(list);
     }
+    // variantes v0.3 §2 V4 — pieza provocar (bloque opcional; ausente = desactivada)
+    const tauntWeights = {};
+    for (const f of genetics.baseFamilies)
+        tauntWeights[f] = 0;
+    let taunt = { active: false, cost: 0, archetypes: [], familyWeights: tauntWeights };
+    if (r["provocar"] !== undefined) {
+        const pv = (0, parse_ts_1.obj)(r["provocar"], "provocar");
+        const pw = (0, parse_ts_1.obj)(pv["pesos_familia"], "provocar.pesos_familia");
+        if ((0, parse_ts_1.dataKeys)(pw).length !== genetics.baseFamilies.length)
+            (0, parse_ts_1.fail)("provocar.pesos_familia", "debe tener exactamente las familias base");
+        for (const f of genetics.baseFamilies)
+            tauntWeights[f] = (0, parse_ts_1.num)(pw[f], `provocar.pesos_familia.${f}`, 0);
+        const list = (0, parse_ts_1.arr)(pv["arquetipos"], "provocar.arquetipos").map((x, i) => (0, parse_ts_1.str)(x, `provocar.arquetipos[${i}]`));
+        for (const a of list) {
+            const rule = archetypes[a];
+            // solo arquetipos de aliado que sortean su estado (no el táctico): el hueco que ocupa provocar
+            if (!rule || rule.target !== "aliado" || rule.energyIfMinCost)
+                (0, parse_ts_1.fail)("provocar.arquetipos", `'${a}' no es un arquetipo de aliado`);
+        }
+        if (new Set(list).size !== list.length)
+            (0, parse_ts_1.fail)("provocar.arquetipos", "arquetipos repetidos");
+        taunt = { active: (0, parse_ts_1.bool)(pv["activo"], "provocar.activo"), cost: (0, parse_ts_1.num)(pv["coste"], "provocar.coste", 0), archetypes: list, familyWeights: tauntWeights };
+    }
     // movimientos §5 — sales de revisión (solo genes del catálogo)
     const sa = (0, parse_ts_1.obj)((0, parse_ts_1.obj)(r["overrides_catalogo"], "overrides_catalogo")["sales"], "overrides_catalogo.sales");
     const salts = {};
@@ -2190,6 +2418,7 @@ function parseMovesConfig(raw, genetics) {
         locusWeights: Object.freeze(locusWeights),
         shapeWeights: Object.freeze(shapeWeights),
         names: Object.freeze({ core: Object.freeze(core), roots: Object.freeze(roots) }),
+        taunt: Object.freeze({ ...taunt, archetypes: Object.freeze(taunt.archetypes), familyWeights: Object.freeze(tauntWeights) }),
         salts: Object.freeze(salts),
         genetics,
     });
@@ -2389,6 +2618,7 @@ function generateMoveForKey(key, mcfg, id) {
     // §4 estado (u3)
     let status = null;
     let extraEnergy = 0;
+    let taunt = false;
     if (rule.energyIfMinCost) {
         // táctico: prisa; con c ≥ 3, energía extra en su lugar (u3 no se usa)
         if (c >= mcfg.extraEnergy.minCost)
@@ -2410,6 +2640,18 @@ function generateMoveForKey(key, mcfg, id) {
         const i = weightedPick(w, u3);
         const s = i < 0 ? "ninguno" : pool[i];
         status = s === "ninguno" ? null : s;
+        // variantes v0.3 §2 V4 — provocar ocupa el hueco del estado con la misma u3 (sin tiradas
+        // extra): si u3 ≥ T/(T + w) sustituye al estado sorteado; por debajo, nada cambia.
+        if (mcfg.taunt.active && mcfg.taunt.archetypes.includes(archetype)) {
+            const wp = tauntWeight(family, mcfg);
+            let total = 0;
+            for (const x of w)
+                total += x;
+            if (wp > 0 && u3 * (total + wp) >= total) {
+                status = null;
+                taunt = true;
+            }
+        }
     }
     // §4 modificador (u4, u5): pesos con 0 en los no permitidos
     const pr = mcfg.probabilities;
@@ -2442,7 +2684,7 @@ function generateMoveForKey(key, mcfg, id) {
         fac = area ? md.areaFactor : 1;
         fixed = modifier === "alcance" || modifier === "prioridad" || modifier === "perforar" ? md[modifier] : 0;
         fEsc = (condition ? 1 + mcfg.conditions.bonus * mcfg.conditions.factor[condition] : 1) * (modifier === "drenaje" ? md.drainFactor : 1);
-        extra = (status ? mcfg.statusCost[status] : 0) + (extraEnergy ? mcfg.extraEnergy.cost : 0);
+        extra = (status ? mcfg.statusCost[status] : 0) + (extraEnergy ? mcfg.extraEnergy.cost : 0) + (taunt ? mcfg.taunt.cost : 0);
         const L = budget - fixed - fac * extra;
         pts = L > 0 ? Math.floor(L / (fac * fEsc)) : 0;
         // §2.1 [v0.2]: pts ≥ mínimo y el escalable se lleva ≥ fraccion_minima del presupuesto
@@ -2456,9 +2698,10 @@ function generateMoveForKey(key, mcfg, id) {
             modifier = null; // 2.º se quita el modificador
             fallback = 2;
         }
-        else if (status || extraEnergy) {
-            status = null; // 3.º [v0.2] se quitan estado y energía (conserva el arquetipo)
+        else if (status || extraEnergy || taunt) {
+            status = null; // 3.º [v0.2] se quitan estado y energía (conserva el arquetipo); [v0.3] y provocar
             extraEnergy = 0;
+            taunt = false;
             fallback = 3;
         }
         else {
@@ -2492,7 +2735,16 @@ function generateMoveForKey(key, mcfg, id) {
         points,
         budget,
         fallback,
+        ...(taunt ? { taunt: true } : {}),
     });
+}
+/** variantes v0.3 §2 V4: peso de provocar de una familia (híbrida = suma de sus 2 componentes). */
+function tauntWeight(family, mcfg) {
+    const t = mcfg.taunt.familyWeights;
+    const h = mcfg.genetics.hybridById.get(family);
+    if (!h)
+        return t[family] ?? 0;
+    return (t[h.components[0]] ?? 0) + (t[h.components[1]] ?? 0);
 }
 function scalablePerPoint(s, mcfg) {
     return mcfg.scalables[s].perPoint;
@@ -2555,6 +2807,13 @@ function validateMove(m, mcfg) {
         if (m.status !== null)
             errs.push("energía extra y estado a la vez");
     }
+    // variantes v0.3 §2 V4: provocar solo con la variante activa, en sus arquetipos y en el hueco del estado
+    if (m.taunt !== undefined) {
+        if (m.taunt !== true || !mcfg.taunt.active || !mcfg.taunt.archetypes.includes(m.archetype))
+            errs.push("provocar no permitido");
+        if (m.status !== null)
+            errs.push("provocar y estado a la vez");
+    }
     if (m.modifier !== null && !rule.modifiers.includes(m.modifier))
         errs.push(`modificador '${m.modifier}' no permitido en ${m.archetype}`);
     if (m.condition !== null && !config_ts_1.CONDITION_IDS.includes(m.condition))
@@ -2566,7 +2825,7 @@ function validateMove(m, mcfg) {
     const fac = m.area ? md.areaFactor : 1;
     const fixed = m.modifier === "alcance" || m.modifier === "prioridad" || m.modifier === "perforar" ? md[m.modifier] : 0;
     const fEsc = (m.condition ? 1 + mcfg.conditions.bonus * mcfg.conditions.factor[m.condition] : 1) * (m.modifier === "drenaje" ? md.drainFactor : 1);
-    const extra = (m.status ? mcfg.statusCost[m.status] : 0) + (m.extraEnergy ? mcfg.extraEnergy.cost : 0);
+    const extra = (m.status ? mcfg.statusCost[m.status] : 0) + (m.extraEnergy ? mcfg.extraEnergy.cost : 0) + (m.taunt ? mcfg.taunt.cost : 0);
     const expected = fixed + fac * extra + fac * fEsc * m.scalablePoints;
     if (Math.abs(expected - m.points) > eps)
         errs.push(`puntos ${m.points} ≠ fórmula ${expected}`);
@@ -2602,6 +2861,8 @@ function describeMove(m, mcfg) {
         parts.push(`+ ${STATUS_TEXT[m.status]}`);
     if (m.extraEnergy)
         parts.push(`+ ${mcfg.extraEnergy.amount} de energía al bando`);
+    if (m.taunt)
+        parts.push("+ provocar (los ataques enemigos de un objetivo van al usuario)");
     let text = parts.join(" ");
     const notes = [];
     if (m.modifier === "prioridad")
@@ -2629,10 +2890,11 @@ function describeMove(m, mcfg) {
 defs["packages/core/src/combat/index.ts"]=function(module,exports,require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.searchStateKey = exports.evaluateState = exports.createSearchAi = exports.runBattle = exports.energyPrice = exports.createReferenceAi = exports.wearFactor = exports.validTargetPositions = exports.validatePlan = exports.SIDE_IDS = exports.rowOf = exports.resolveTurn = exports.planSynergy = exports.fallbackPlan = exports.eligibleActors = exports.damageAmount = exports.createBattle = exports.canAct = exports.battleHash = exports.actionPriority = exports.actionMove = exports.actionCost = exports.withMove = exports.synergyGroups = exports.deriveStats = exports.buildCombatant = exports.patchRawConfig = exports.buildBattleConfig = exports.STATUS_IDS = exports.parseCombatConfig = exports.AI_STATUS_IDS = void 0;
-/** API pública de combate v0.2. */
+exports.searchStateKey = exports.evaluateState = exports.createSearchAi = exports.suggestFormation = exports.runBattle = exports.energyPrice = exports.createReferenceAi = exports.wearFactor = exports.validTargetPositions = exports.validatePlan = exports.SIDE_IDS = exports.rowOf = exports.restingMoves = exports.resolveTurn = exports.planSynergy = exports.laneOrder = exports.laneOf = exports.fallbackPlan = exports.eligibleActors = exports.damageAmount = exports.createBattle = exports.canAct = exports.battleHash = exports.basicEffectOf = exports.autoTargetPosition = exports.autoTarget = exports.actionPriority = exports.actionMove = exports.actionCost = exports.withMove = exports.synergyGroups = exports.deriveStats = exports.buildCombatant = exports.patchRawConfig = exports.buildBattleConfig = exports.STATUS_IDS = exports.parseCombatConfig = exports.BASIC_EFFECT_STATUS_IDS = exports.AI_STATUS_IDS = void 0;
+/** API pública de combate v0.2 (+ variantes v0.3, desactivadas por defecto). */
 var config_ts_1 = require("./config.ts");
 Object.defineProperty(exports, "AI_STATUS_IDS", { enumerable: true, get: function () { return config_ts_1.AI_STATUS_IDS; } });
+Object.defineProperty(exports, "BASIC_EFFECT_STATUS_IDS", { enumerable: true, get: function () { return config_ts_1.BASIC_EFFECT_STATUS_IDS; } });
 Object.defineProperty(exports, "parseCombatConfig", { enumerable: true, get: function () { return config_ts_1.parseCombatConfig; } });
 Object.defineProperty(exports, "STATUS_IDS", { enumerable: true, get: function () { return config_ts_1.STATUS_IDS; } });
 var patch_ts_1 = require("./patch.ts");
@@ -2647,14 +2909,20 @@ var engine_ts_1 = require("./engine.ts");
 Object.defineProperty(exports, "actionCost", { enumerable: true, get: function () { return engine_ts_1.actionCost; } });
 Object.defineProperty(exports, "actionMove", { enumerable: true, get: function () { return engine_ts_1.actionMove; } });
 Object.defineProperty(exports, "actionPriority", { enumerable: true, get: function () { return engine_ts_1.actionPriority; } });
+Object.defineProperty(exports, "autoTarget", { enumerable: true, get: function () { return engine_ts_1.autoTarget; } });
+Object.defineProperty(exports, "autoTargetPosition", { enumerable: true, get: function () { return engine_ts_1.autoTargetPosition; } });
+Object.defineProperty(exports, "basicEffectOf", { enumerable: true, get: function () { return engine_ts_1.basicEffectOf; } });
 Object.defineProperty(exports, "battleHash", { enumerable: true, get: function () { return engine_ts_1.battleHash; } });
 Object.defineProperty(exports, "canAct", { enumerable: true, get: function () { return engine_ts_1.canAct; } });
 Object.defineProperty(exports, "createBattle", { enumerable: true, get: function () { return engine_ts_1.createBattle; } });
 Object.defineProperty(exports, "damageAmount", { enumerable: true, get: function () { return engine_ts_1.damageAmount; } });
 Object.defineProperty(exports, "eligibleActors", { enumerable: true, get: function () { return engine_ts_1.eligibleActors; } });
 Object.defineProperty(exports, "fallbackPlan", { enumerable: true, get: function () { return engine_ts_1.fallbackPlan; } });
+Object.defineProperty(exports, "laneOf", { enumerable: true, get: function () { return engine_ts_1.laneOf; } });
+Object.defineProperty(exports, "laneOrder", { enumerable: true, get: function () { return engine_ts_1.laneOrder; } });
 Object.defineProperty(exports, "planSynergy", { enumerable: true, get: function () { return engine_ts_1.planSynergy; } });
 Object.defineProperty(exports, "resolveTurn", { enumerable: true, get: function () { return engine_ts_1.resolveTurn; } });
+Object.defineProperty(exports, "restingMoves", { enumerable: true, get: function () { return engine_ts_1.restingMoves; } });
 Object.defineProperty(exports, "rowOf", { enumerable: true, get: function () { return engine_ts_1.rowOf; } });
 Object.defineProperty(exports, "SIDE_IDS", { enumerable: true, get: function () { return engine_ts_1.SIDE_IDS; } });
 Object.defineProperty(exports, "validatePlan", { enumerable: true, get: function () { return engine_ts_1.validatePlan; } });
@@ -2664,6 +2932,7 @@ var ai_ts_1 = require("./ai.ts");
 Object.defineProperty(exports, "createReferenceAi", { enumerable: true, get: function () { return ai_ts_1.createReferenceAi; } });
 Object.defineProperty(exports, "energyPrice", { enumerable: true, get: function () { return ai_ts_1.energyPrice; } });
 Object.defineProperty(exports, "runBattle", { enumerable: true, get: function () { return ai_ts_1.runBattle; } });
+Object.defineProperty(exports, "suggestFormation", { enumerable: true, get: function () { return ai_ts_1.suggestFormation; } });
 var search_ts_1 = require("./search.ts");
 Object.defineProperty(exports, "createSearchAi", { enumerable: true, get: function () { return search_ts_1.createSearchAi; } });
 Object.defineProperty(exports, "evaluateState", { enumerable: true, get: function () { return search_ts_1.evaluateState; } });
@@ -2673,7 +2942,7 @@ Object.defineProperty(exports, "searchStateKey", { enumerable: true, get: functi
 defs["packages/core/src/combat/config.ts"]=function(module,exports,require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AI_STATUS_IDS = exports.STATUS_IDS = void 0;
+exports.BASIC_EFFECT_STATUS_IDS = exports.AI_STATUS_IDS = exports.STATUS_IDS = void 0;
 exports.parseCombatConfig = parseCombatConfig;
 /**
  * Carga y validación de `config/combate.v0.2.json` (spec combate v0.2).
@@ -2703,6 +2972,62 @@ const STATUS_SHAPE = {
 };
 /** combate §10 [v0.2] — estados que valora la IA (ofensivos + prisa y regenerar). */
 exports.AI_STATUS_IDS = ["quemadura", "ralentizar", "aturdir", "marca", "debilitar", "prisa", "regenerar"];
+/** variantes v0.3 §2 V1 — estados que puede aplicar el golpe básico (ofensivos al objetivo; prisa y regenerar al usuario). */
+exports.BASIC_EFFECT_STATUS_IDS = ["quemadura", "ralentizar", "aturdir", "marca", "debilitar", "prisa", "regenerar"];
+/** variantes v0.3 — valores con el bloque `variantes` ausente: todo desactivado. */
+const NO_EFFECT = Object.freeze({ kind: "ninguno" });
+/** variantes v0.3 §2 — bloque `variantes` (opcional). Los efectos se definen para las familias del anillo base, exactamente. */
+function parseVariants(v, baseRing) {
+    const effects = {};
+    for (const f of baseRing)
+        effects[f] = NO_EFFECT;
+    if (v === undefined) {
+        return Object.freeze({
+            basicEffect: Object.freeze({ active: false, hybridComponent: 0, effects: Object.freeze(effects) }),
+            rest: Object.freeze({ active: false, turns: 1 }),
+            autoTarget: Object.freeze({ active: false, tauntShieldsSelf: true }),
+            taunt: Object.freeze({ duration: 1, aiValue: 0 }),
+        });
+    }
+    const r = (0, parse_ts_1.obj)(v, "variantes");
+    // V1
+    const gb = (0, parse_ts_1.obj)(r["golpe_basico_efecto"], "variantes.golpe_basico_efecto");
+    const ef = (0, parse_ts_1.obj)(gb["efectos"], "variantes.golpe_basico_efecto.efectos");
+    (0, parse_ts_1.sameList)((0, parse_ts_1.dataKeys)(ef).slice().sort(), baseRing.slice().sort(), "variantes.golpe_basico_efecto.efectos");
+    for (const f of baseRing) {
+        const p = `variantes.golpe_basico_efecto.efectos.${f}`;
+        const o = (0, parse_ts_1.obj)(ef[f], p);
+        const kind = (0, parse_ts_1.str)(o["tipo"], `${p}.tipo`);
+        if (kind === "ninguno")
+            effects[f] = NO_EFFECT;
+        else if (kind === "estado") {
+            const status = (0, parse_ts_1.str)(o["estado"], `${p}.estado`);
+            if (!exports.BASIC_EFFECT_STATUS_IDS.includes(status))
+                (0, parse_ts_1.fail)(`${p}.estado`, `debe ser uno de ${exports.BASIC_EFFECT_STATUS_IDS.join(", ")}`);
+            effects[f] = Object.freeze({ kind, status: status, chance: (0, parse_ts_1.num)(o["probabilidad"], `${p}.probabilidad`, 0, 1) });
+        }
+        else if (kind === "cura" || kind === "escudo") {
+            effects[f] = Object.freeze({ kind, amount: (0, parse_ts_1.int)(o["cantidad"], `${p}.cantidad`, 0) });
+        }
+        else
+            (0, parse_ts_1.fail)(`${p}.tipo`, "debe ser ninguno|estado|cura|escudo");
+    }
+    const hc = (0, parse_ts_1.int)(gb["componente_hibrida"], "variantes.golpe_basico_efecto.componente_hibrida", 0, 1);
+    // V2
+    const de = (0, parse_ts_1.obj)(r["descanso"], "variantes.descanso");
+    // V4
+    const oa = (0, parse_ts_1.obj)(r["objetivo_automatico"], "variantes.objetivo_automatico");
+    const pv = (0, parse_ts_1.obj)(r["provocar"], "variantes.provocar");
+    return Object.freeze({
+        basicEffect: Object.freeze({ active: (0, parse_ts_1.bool)(gb["activo"], "variantes.golpe_basico_efecto.activo"), hybridComponent: hc, effects: Object.freeze(effects) }),
+        rest: Object.freeze({ active: (0, parse_ts_1.bool)(de["activo"], "variantes.descanso.activo"), turns: (0, parse_ts_1.int)(de["turnos"], "variantes.descanso.turnos", 1) }),
+        autoTarget: Object.freeze({
+            active: (0, parse_ts_1.bool)(oa["activo"], "variantes.objetivo_automatico.activo"),
+            tauntShieldsSelf: (0, parse_ts_1.bool)(oa["escudo_provocar_al_usuario"], "variantes.objetivo_automatico.escudo_provocar_al_usuario"),
+        }),
+        taunt: Object.freeze({ duration: (0, parse_ts_1.int)(pv["duracion"], "variantes.provocar.duracion", 1), aiValue: (0, parse_ts_1.num)(pv["valor_ia"], "variantes.provocar.valor_ia", 0) }),
+    });
+}
 /** combate §6: tabla derivada de los anillos (siguiente = fuerte, anterior = débil). */
 function ringTable(baseRing, hybridRing, strong, weak, neutral) {
     const all = [...baseRing, ...hybridRing];
@@ -2925,6 +3250,7 @@ function parseCombatConfig(raw) {
         draws: Object.freeze(draws),
         seedPrefix,
         ai: Object.freeze(ai),
+        variants: parseVariants(r["variantes"], baseRing),
     });
 }
 
@@ -3059,6 +3385,12 @@ exports.rowOf = rowOf;
 exports.validTargetPositions = validTargetPositions;
 exports.canAct = canAct;
 exports.eligibleActors = eligibleActors;
+exports.restingMoves = restingMoves;
+exports.basicEffectOf = basicEffectOf;
+exports.laneOf = laneOf;
+exports.laneOrder = laneOrder;
+exports.autoTargetPosition = autoTargetPosition;
+exports.autoTarget = autoTarget;
 exports.planSynergy = planSynergy;
 exports.validatePlan = validatePlan;
 exports.fallbackPlan = fallbackPlan;
@@ -3123,6 +3455,95 @@ function eligibleActors(state, side) {
 function aliveMask(fs) {
     return fs.map((f) => !f.ko);
 }
+// ---------------------------------------------------------------- variantes v0.3
+/** variantes v0.3 V2 — movimientos (1–4) de la criatura `pos` que están en descanso este turno. */
+function restingMoves(state, side, pos) {
+    const rest = state.fighters[sideIndex(side)][pos - 1].rest;
+    const out = [];
+    if (rest)
+        rest.forEach((n, k) => { if (n > 0)
+            out.push(k + 1); });
+    return out;
+}
+/** variantes v0.3 V1 — efecto del golpe básico de un combatiente (híbridas: el de su componente configurada). */
+function basicEffectOf(c, cfg) {
+    const be = cfg.combat.variants.basicEffect;
+    if (!be.active)
+        return null;
+    const own = be.effects[c.family];
+    if (own)
+        return own;
+    const h = cfg.moves.genetics.hybridById.get(c.family);
+    return (h ? be.effects[h.components[be.hybridComponent]] : undefined) ?? null;
+}
+/** variantes v0.3 V4 — carril de una posición: 0 izquierda (1 y 3), 1 derecha (2 y 4). */
+function laneOf(pos) {
+    return ((pos - 1) % 2);
+}
+/**
+ * variantes v0.3 V4 — orden de preferencia de objetivos enemigos para el actor
+ * en `actorPos`: delantera de su carril, la otra delantera, trasera de su
+ * carril, la otra trasera. Con `backFirst` (`alcance`), primero las traseras.
+ */
+function laneOrder(actorPos, backFirst, cfg) {
+    const lane = laneOf(actorPos);
+    const front = [cfg.frontRow[lane], cfg.frontRow[1 - lane]];
+    const back = [cfg.backRow[lane], cfg.backRow[1 - lane]];
+    return backFirst ? [...back, ...front] : [...front, ...back];
+}
+/**
+ * variantes v0.3 V4 — objetivo automático (posición 1–4, o undefined si no hay
+ * ninguno) del movimiento `m` (null = golpe básico) usado por `actorPos`.
+ * `targetTeam`/`view` son del bando objetivo (el propio en movimientos de aliado).
+ * - Enemigo: `laneOrder`; si es de un solo objetivo y hay enemigos provocando, solo entre ellos.
+ * - Cura: aliado con menor vida/máx. Escudo: delantero con menos vida; sin delanteros,
+ *   el aliado con menos vida. Empates: menor posición. Con provocar y
+ *   `escudo_provocar_al_usuario`, el escudo va al usuario.
+ */
+function autoTargetPosition(m, actorPos, targetTeam, view, cfg) {
+    const alive = [1, 2, 3, 4].filter((p) => view.alive[p - 1]);
+    if (alive.length === 0)
+        return undefined;
+    if (m && m.target === "aliado") {
+        if (m.taunt && m.scalable === "escudo" && cfg.variants.autoTarget.tauntShieldsSelf && view.alive[actorPos - 1])
+            return actorPos;
+        if (m.scalable === "cura") {
+            let best = alive[0];
+            for (const p of alive) {
+                // vida/máx sin dividir: hp_p · máx_best < hp_best · máx_p
+                if (view.hp[p - 1] * targetTeam[best - 1].maxHp < view.hp[best - 1] * targetTeam[p - 1].maxHp)
+                    best = p;
+            }
+            return best;
+        }
+        const front = cfg.frontRow.filter((p) => view.alive[p - 1]);
+        const pool = front.length > 0 ? front : alive;
+        let best = pool[0];
+        for (const p of pool)
+            if (view.hp[p - 1] < view.hp[best - 1])
+                best = p;
+        return best;
+    }
+    const order = laneOrder(actorPos, m !== null && m.modifier === "alcance", cfg);
+    if (!(m && m.area)) {
+        const taunter = order.find((p) => view.alive[p - 1] && view.taunting[p - 1]);
+        if (taunter !== undefined)
+            return taunter;
+    }
+    return order.find((p) => view.alive[p - 1]);
+}
+/**
+ * variantes v0.3 V4 — objetivo que tendría AHORA la acción (para la interfaz y
+ * la IA). El motor lo decide al ejecutar, así que puede cambiar si alguien cae
+ * antes o un enemigo provoca. Devuelve null si no hay objetivo.
+ */
+function autoTarget(state, side, actor, move, cfg) {
+    const s = sideIndex(side);
+    const m = actionMove(state.teams[s][actor - 1], move);
+    const tSide = m && m.target === "aliado" ? s : (1 - s);
+    const fs = state.fighters[tSide];
+    return autoTargetPosition(m, actor, state.teams[tSide], { alive: aliveMask(fs), hp: fs.map((f) => f.hp), taunting: fs.map((f) => !f.ko && (f.taunt ?? 0) > 0) }, cfg.combat) ?? null;
+}
 /**
  * combate §7 — bonus de sinergia por posición (0 para quien usa golpe o no
  * actúa) y si cada criatura tiene compañero de grupo (condición combo_familia).
@@ -3148,6 +3569,8 @@ function planSynergy(team, plan, cfg) {
  * combate §3.2 — valida un plan. Devuelve null si es válido o el motivo.
  * Válido: una acción por criatura viva no aturdida (ni más ni menos),
  * movimiento existente, objetivo válido ahora y Σcoste ≤ energía.
+ * variantes v0.3: con objetivo automático (V4) no se mira `target`; con
+ * descanso (V2) un movimiento en descanso invalida el plan.
  */
 function validatePlan(state, side, plan, cfg) {
     const s = sideIndex(side);
@@ -3175,9 +3598,15 @@ function validatePlan(state, side, plan, cfg) {
             return `movimiento inválido ${move} (actor ${actor})`;
         const m = actionMove(c, move);
         const tSide = m && m.target === "aliado" ? s : (1 - s);
-        const valid = validTargetPositions(m, aliveMask(state.fighters[tSide]), cfg.combat);
-        if (!Number.isInteger(target) || !valid.includes(target))
-            return `objetivo inválido ${target} (actor ${actor})`;
+        if (!cfg.combat.variants.autoTarget.active) {
+            const valid = validTargetPositions(m, aliveMask(state.fighters[tSide]), cfg.combat);
+            if (!Number.isInteger(target) || !valid.includes(target))
+                return `objetivo inválido ${target} (actor ${actor})`;
+        }
+        // variantes v0.3 V2: el movimiento usado no se puede repetir mientras descansa
+        if (move !== 0 && cfg.combat.variants.rest.active && ((state.fighters[s][actor - 1].rest ?? [])[move - 1] ?? 0) > 0) {
+            return `movimiento ${move} en descanso (actor ${actor})`;
+        }
         cost += actionCost(c, move, cfg.combat);
     }
     if (seen.size !== eligible.length)
@@ -3189,6 +3618,9 @@ function validatePlan(state, side, plan, cfg) {
 /** combate §3.2 — plan de respaldo: golpe básico contra el primer objetivo válido. */
 function fallbackPlan(state, side, cfg) {
     const s = sideIndex(side);
+    // variantes v0.3 V4: sin objetivo (0)
+    if (cfg.variants.autoTarget.active)
+        return eligibleActors(state, side).map((actor) => ({ actor, move: 0, target: 0 }));
     const valid = validTargetPositions(null, aliveMask(state.fighters[1 - s]), cfg);
     return eligibleActors(state, side).map((actor) => ({ actor, move: 0, target: valid[0] ?? 1 }));
 }
@@ -3258,13 +3690,14 @@ function damageAmount(pot, attack, family, targetFamily, marked, weakened, varia
 function resolveTurn(state, planA, planB, rng, cfg) {
     const C = cfg.combat;
     const M = cfg.moves;
+    const V = C.variants;
     if (state.result !== null)
         throw new RangeError("resolveTurn: la partida ya ha terminado");
     const t = state.turn;
     const events = [];
     const energy = [state.energy[0], state.energy[1]];
     events.push({ type: "turn", turn: t, energy: [energy[0], energy[1]] });
-    const W = [0, 1].map((s) => state.fighters[s].map((f) => ({
+    const W = [0, 1].map((s) => state.fighters[s].map((f, i) => ({
         hp: f.hp,
         ko: f.ko,
         statuses: f.statuses.map((x) => ({ ...x })),
@@ -3273,6 +3706,9 @@ function resolveTurn(state, planA, planB, rng, cfg) {
         acted: false,
         stunnedNow: false,
         hasAction: false,
+        rest: state.teams[s][i].moves.map((_, k) => (f.rest ? (f.rest[k] ?? 0) : 0)),
+        taunt: f.taunt ?? 0,
+        usedSlot: 0,
     })));
     // 2–3. validación, pago y sinergia
     const plans = [planA, planB];
@@ -3281,7 +3717,8 @@ function resolveTurn(state, planA, planB, rng, cfg) {
     for (const s of [0, 1]) {
         const side = exports.SIDE_IDS[s];
         const reason = validatePlan(state, side, plans[s], cfg);
-        const plan = reason === null ? plans[s].map((a) => ({ actor: a.actor, move: a.move, target: a.target })) : fallbackPlan(state, side, C);
+        // variantes v0.3 V4: el objetivo del plan se ignora y se normaliza a 0
+        const plan = reason === null ? plans[s].map((a) => ({ actor: a.actor, move: a.move, target: V.autoTarget.active ? 0 : a.target })) : fallbackPlan(state, side, C);
         plans[s] = plan;
         let cost = 0;
         for (const a of plan)
@@ -3338,6 +3775,7 @@ function resolveTurn(state, planA, planB, rng, cfg) {
         w.hp = 0;
         w.ko = true;
         w.statuses = [];
+        w.taunt = 0;
         events.push({ type: "ko", side: exports.SIDE_IDS[s], pos: i + 1 });
     };
     const applyStatus = (s, i, id) => {
@@ -3403,10 +3841,26 @@ function resolveTurn(state, planA, planB, rng, cfg) {
         }
         me.acted = true;
         const m = e.move;
+        if (m)
+            me.usedSlot = e.action.move; // variantes v0.3 V2: ejecutado (aunque se pierda) ⇒ descansa
         const tSide = m && m.target === "aliado" ? e.side : (1 - e.side);
-        // combate §2: reobjetivo a la primera válida por posición ascendente
-        const valid = validTargetPositions(m, aliveMask(W[tSide]), C);
-        const tPos = valid.includes(e.action.target) ? e.action.target : valid[0];
+        const taunting = W[tSide].map((w) => !w.ko && w.taunt > 0);
+        let tPos;
+        if (V.autoTarget.active) {
+            // variantes v0.3 V4: objetivo automático, decidido al ejecutar
+            tPos = autoTargetPosition(m, e.idx + 1, state.teams[tSide], { alive: aliveMask(W[tSide]), hp: W[tSide].map((w) => w.hp), taunting }, C);
+        }
+        else {
+            // combate §2: reobjetivo a la primera válida por posición ascendente
+            const valid = validTargetPositions(m, aliveMask(W[tSide]), C);
+            tPos = valid.includes(e.action.target) ? e.action.target : valid[0];
+            // variantes v0.3 (provocar con objetivo manual): un ataque enemigo de un solo objetivo se desvía a quien provoca
+            if (tPos !== undefined && tSide !== e.side && !(m && m.area) && !taunting[tPos - 1]) {
+                const taunter = laneOrder(e.idx + 1, false, C).find((p) => taunting[p - 1]);
+                if (taunter !== undefined)
+                    tPos = taunter;
+            }
+        }
         if (tPos === undefined) {
             events.push({ type: "lost", side, actor: e.idx + 1 });
             continue;
@@ -3457,8 +3911,32 @@ function resolveTurn(state, planA, planB, rng, cfg) {
                 events.push({ type: "drain", side, pos: e.idx + 1, amount: heal, hp: me.hp });
             }
         }
-        if (!m)
+        if (!m) {
+            // variantes v0.3 V1: efecto menor del golpe básico según la familia base
+            const fx = basicEffectOf(c, cfg);
+            if (fx && fx.kind === "estado") {
+                // probabilidad con la 2.ª tirada de varianza de la posición (el golpe solo gasta la 1.ª)
+                const u = varU[(e.side * C.teamSize + e.idx) * C.draws.variancePerAction + 1];
+                if (u < fx.chance) {
+                    if (fx.status === "prisa" || fx.status === "regenerar")
+                        applyStatus(e.side, e.idx, fx.status);
+                    else if (!W[tSide][tPos - 1].ko)
+                        applyStatus(tSide, tPos - 1, fx.status);
+                }
+            }
+            else if (fx && fx.kind === "cura") {
+                const heal = Math.min(fx.amount, c.maxHp - me.hp);
+                me.hp += heal;
+                events.push({ type: "heal", side, pos: e.idx + 1, amount: heal, hp: me.hp, condition: false });
+            }
+            else if (fx && fx.kind === "escudo") {
+                const cur = getStatus(me, "escudo");
+                const total = Math.min(C.statuses.escudo.value, (cur ? cur.value : 0) + fx.amount);
+                putStatus(me, "escudo", C.statuses.escudo.duration, total);
+                events.push({ type: "shield", side, pos: e.idx + 1, amount: fx.amount, total, condition: false });
+            }
             continue;
+        }
         // estado
         if (m.status === "prisa") {
             if (!me.ko)
@@ -3490,6 +3968,11 @@ function resolveTurn(state, planA, planB, rng, cfg) {
                     events.push({ type: "shield", side: exports.SIDE_IDS[tSide], pos: p, amount, total, condition: met });
                 }
             }
+        }
+        // variantes v0.3 V4: provocar (al usuario)
+        if (m.taunt && !me.ko) {
+            me.taunt = V.taunt.duration;
+            events.push({ type: "taunt", side, pos: e.idx + 1, turns: me.taunt });
         }
         // energía extra (movimientos §2.3)
         if (m.extraEnergy) {
@@ -3527,6 +4010,20 @@ function resolveTurn(state, planA, planB, rng, cfg) {
             w.statuses = w.statuses.filter((st) => st.turns > 0);
         }
     }
+    // variantes v0.3: fin de turno de provocar (duración −1) y de los descansos (V2)
+    for (const s of [0, 1]) {
+        for (const w of W[s]) {
+            if (w.taunt > 0)
+                w.taunt -= 1;
+            if (!V.rest.active)
+                continue;
+            for (let k = 0; k < w.rest.length; k++)
+                if (w.rest[k] > 0)
+                    w.rest[k] = w.rest[k] - 1;
+            if (w.usedSlot > 0)
+                w.rest[w.usedSlot - 1] = V.rest.turns;
+        }
+    }
     // 7. victoria / empate (combate §9)
     const aliveA = W[0].some((w) => !w.ko);
     const aliveB = W[1].some((w) => !w.ko);
@@ -3541,7 +4038,16 @@ function resolveTurn(state, planA, planB, rng, cfg) {
         result = "empate";
     if (result !== null)
         events.push({ type: "end", result });
-    const freeze = (ws) => ws.map((w) => ({ hp: w.hp, ko: w.ko, statuses: w.statuses.map((x) => ({ id: x.id, turns: x.turns, value: x.value })), skipTurn: w.skipTurn, stunImmuneUntil: w.stunImmuneUntil }));
+    const freeze = (ws) => ws.map((w) => ({
+        hp: w.hp,
+        ko: w.ko,
+        statuses: w.statuses.map((x) => ({ id: x.id, turns: x.turns, value: x.value })),
+        skipTurn: w.skipTurn,
+        stunImmuneUntil: w.stunImmuneUntil,
+        // variantes v0.3: campos solo presentes con la variante en uso (sin ellas, el estado es idéntico al de v0.2)
+        ...(V.rest.active ? { rest: w.rest.slice() } : {}),
+        ...(w.taunt > 0 ? { taunt: w.taunt } : {}),
+    }));
     const next = {
         turn: result === null ? t + 1 : t,
         // combate §3.1: e = min(máx, e + por_turno) al empezar el turno siguiente
@@ -3566,6 +4072,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createReferenceAi = createReferenceAi;
 exports.energyPrice = energyPrice;
 exports.runBattle = runBattle;
+exports.suggestFormation = suggestFormation;
 /**
  * IA de referencia determinista v0.2 (combate §10) y partida completa.
  * La IA no consume tiradas: solo lee el estado.
@@ -3610,13 +4117,16 @@ function energyPrice(state, side, cfg, kappa = cfg.combat.ai.kappa) {
     state.teams[s].forEach((c, i) => {
         if (state.fighters[s][i].ko)
             return;
+        const fx = (0, engine_ts_1.basicEffectOf)(c, cfg);
+        const basicFx = !fx ? 0 : fx.kind === "estado" ? fx.chance * A.statusValue[fx.status] : fx.kind === "cura" ? fx.amount * A.healFactorEstimate : fx.kind === "escudo" ? Math.min(fx.amount, A.maxShieldValue) : 0;
         for (const m of c.moves) {
             const k = m.area ? A.areaTargetsEstimate : 1;
             let v = m.scalable === "dano" ? Math.min(m.power * c.attack, H) * k : m.scalable === "cura" ? m.power * A.healFactorEstimate * k : Math.min(m.power, A.maxShieldValue) * k;
             if (m.condition)
                 v *= 1 + M.conditions.bonus * A.conditionProbEstimate;
             // rendimiento neto por energía: descuenta el golpe básico al que sustituye
-            const r = (v - C.damage.basicPower * c.attack) / m.cost;
+            // (variantes v0.3 V1: también el valor estimado de su efecto; 0 con la variante desactivada)
+            const r = (v - C.damage.basicPower * c.attack - basicFx) / m.cost;
             if (r > bestRate) {
                 bestRate = r;
                 targetCost = m.cost;
@@ -3646,6 +4156,11 @@ function referencePlan(state, side, cfg, reserve, kappa) {
     // combate §10.1 — precio de la energía y tope de lo que vale guardar
     const price = energyPrice(state, side, cfg, kappa);
     const saveCap = Math.max(0, Math.min(price.targetCost, C.energy.max - C.energy.perTurn));
+    // variantes v0.3: V4 (no se elige objetivo; se predice con la regla de carriles sobre la simulación) y V2 (descanso)
+    const auto = C.variants.autoTarget.active;
+    const enemyTaunting = state.fighters[o].map((f) => !f.ko && (f.taunt ?? 0) > 0);
+    const noTaunt = [false, false, false, false];
+    const resting = (pos, slot) => C.variants.rest.active && ((state.fighters[s][pos - 1].rest ?? [])[slot - 1] ?? 0) > 0;
     // combate §10.3 — evalúa una combinación (índices de movimiento por actor). Devuelve valor y objetivos.
     const evaluate = (combo, withSynergy) => {
         const sim = {
@@ -3693,9 +4208,13 @@ function referencePlan(state, side, cfg, reserve, kappa) {
             const affectedOf = (tSide, tPos) => (m && m.area ? (0, engine_ts_1.rowOf)(tPos, C) : [tPos]).filter((p) => sim.hp[tSide][p - 1] > 0);
             if (m && m.extraEnergy)
                 value += price.lambda * M.extraEnergy.amount; // [v0.2] λ por energía extra
+            if (m && m.taunt)
+                value += C.variants.taunt.aiValue; // variantes v0.3 V4 [variantes.provocar.valor_ia]
             if (!m || m.scalable === "dano") {
                 // candidatos válidos AHORA (combate §3.2); la simulación solo puntúa
-                const cands = (0, engine_ts_1.validTargetPositions)(m, state.fighters[o].map((f) => !f.ko), C);
+                // variantes v0.3 V4: un único candidato, el que daría la regla de carriles tras las acciones anteriores del plan
+                const autoPos = auto ? (0, engine_ts_1.autoTargetPosition)(m, pos, enemyTeam, { alive: sim.hp[o].map((h) => h > 0), hp: sim.hp[o], taunting: enemyTaunting }, C) : undefined;
+                const cands = auto ? (autoPos === undefined ? [] : [autoPos]) : (0, engine_ts_1.validTargetPositions)(m, state.fighters[o].map((f) => !f.ko), C);
                 if (cands.length === 0) {
                     targets.push(1);
                     return;
@@ -3737,12 +4256,33 @@ function referencePlan(state, side, cfg, reserve, kappa) {
                 }
                 if (m && m.status === "prisa")
                     value += A.statusValue.prisa;
+                // variantes v0.3 V1: valor esperado del efecto del golpe básico
+                const fx = m ? null : (0, engine_ts_1.basicEffectOf)(c, cfg);
+                if (fx && fx.kind === "estado") {
+                    if (fx.status === "prisa" || fx.status === "regenerar")
+                        value += fx.chance * A.statusValue[fx.status];
+                    else if (sim.hp[o][best - 1] > 0 && !(fx.status === "aturdir" && immune[best - 1]))
+                        value += fx.chance * A.statusValue[fx.status];
+                }
+                else if (fx && fx.kind === "cura") {
+                    const heal = Math.min(fx.amount, c.maxHp - sim.hp[s][idx]);
+                    value += heal;
+                    sim.hp[s][idx] = sim.hp[s][idx] + heal;
+                }
+                else if (fx && fx.kind === "escudo") {
+                    const cur = sim.shield[idx];
+                    value += Math.max(0, Math.min(fx.amount, A.maxShieldValue - cur));
+                    sim.shield[idx] = Math.min(C.statuses.escudo.value, cur + fx.amount);
+                }
                 return;
             }
             // aliados: cura → menor vida/máx; escudo → delantero con menos vida (si no hay, trasero)
             const alive = sim.hp[s].map((h) => h > 0);
             let best = -1;
-            if (m.scalable === "cura") {
+            if (auto) {
+                best = (0, engine_ts_1.autoTargetPosition)(m, pos, team, { alive, hp: sim.hp[s], taunting: noTaunt }, C) ?? -1;
+            }
+            else if (m.scalable === "cura") {
                 let bestR = Infinity;
                 for (const p of (0, engine_ts_1.validTargetPositions)(m, alive, C)) {
                     const r = sim.hp[s][p - 1] / team[p - 1].maxHp;
@@ -3792,11 +4332,12 @@ function referencePlan(state, side, cfg, reserve, kappa) {
         });
         return { value, targets };
     };
-    const toPlan = (combo, targets) => actors.map((actor, i) => ({ actor, move: combo[i], target: targets[i] }));
+    const toPlan = (combo, targets) => actors.map((actor, i) => ({ actor, move: combo[i], target: auto ? 0 : targets[i] }));
     // combate §10.2 — ¿algún movimiento asequible, solo, deja KO a un enemigo? (estado actual, var = 1, sin sinergia)
     const moveCanKo = (c, pos, m) => {
         const me = state.fighters[s][pos - 1];
-        for (const p of (0, engine_ts_1.validTargetPositions)(m, state.fighters[o].map((f) => !f.ko), C)) {
+        const autoPos = auto ? (0, engine_ts_1.autoTargetPosition)(m, pos, enemyTeam, { alive: state.fighters[o].map((f) => !f.ko), hp: state.fighters[o].map((f) => f.hp), taunting: enemyTaunting }, C) : undefined;
+        for (const p of auto ? (autoPos === undefined ? [] : [autoPos]) : (0, engine_ts_1.validTargetPositions)(m, state.fighters[o].map((f) => !f.ko), C)) {
             const aff = m.area ? (0, engine_ts_1.rowOf)(p, C).filter((q) => !state.fighters[o][q - 1].ko) : [p];
             for (const q of aff) {
                 const f = state.fighters[o][q - 1];
@@ -3818,7 +4359,7 @@ function referencePlan(state, side, cfg, reserve, kappa) {
     if (e < reserve && e + C.energy.perTurn <= C.energy.max) {
         const canKo = actors.some((pos) => {
             const c = team[pos - 1];
-            return c.moves.some((m) => m.cost <= e && m.scalable === "dano" && moveCanKo(c, pos, m));
+            return c.moves.some((m, k) => m.cost <= e && !resting(pos, k + 1) && m.scalable === "dano" && moveCanKo(c, pos, m));
         });
         if (!canKo) {
             const zeros = actors.map(() => 0);
@@ -3830,7 +4371,7 @@ function referencePlan(state, side, cfg, reserve, kappa) {
         const c = team[pos - 1];
         const list = [0];
         c.moves.forEach((m, k) => {
-            if (m.cost <= e)
+            if (m.cost <= e && !resting(pos, k + 1))
                 list.push(k + 1);
         });
         return list;
@@ -3881,6 +4422,18 @@ function runBattle(teamA, teamB, seed, cfg, aiA = createReferenceAi(), aiB = cre
         state = r.state;
     }
     return { result: state.result, turns: log.length, log, hash: (0, engine_ts_1.battleHash)(log), final: state };
+}
+/**
+ * variantes v0.3 V4 — formación de referencia (determinista, sin tiradas): las
+ * almas que llevan "provocar" y, después, las de más vida máxima van delante
+ * (posiciones 1 y 2); el resto, detrás. Empates: orden de entrada. Con V4 la
+ * formación decide a quién ataca cada alma (carriles), así que es una decisión del jugador;
+ * esta función solo da un punto de partida razonable para la IA y el simulador.
+ */
+function suggestFormation(team) {
+    const rank = team.map((c, i) => ({ c, i, taunt: c.moves.some((m) => m.taunt === true) ? 1 : 0 }));
+    rank.sort((a, b) => b.taunt - a.taunt || b.c.maxHp - a.c.maxHp || a.i - b.i);
+    return rank.map((r) => r.c);
 }
 
 };
@@ -3975,16 +4528,23 @@ function actionOptions(state, s, pos, cfg, lambda) {
         const cost = m ? m.cost : C.damage.basicCost;
         if (cost > e)
             return;
+        // variantes v0.3 V2: un movimiento en descanso no es una opción
+        if (m && C.variants.rest.active && ((me.rest ?? [])[k - 1] ?? 0) > 0)
+            return;
         const ally = m !== null && m.target === "aliado";
         const tSide = ally ? s : o;
         const fs = state.fighters[tSide];
-        for (const p of (0, engine_ts_1.validTargetPositions)(m, fs.map((f) => !f.ko), C)) {
+        // variantes v0.3 V4: una sola opción por movimiento, con el objetivo que daría ahora la regla automática (solo para puntuar)
+        const autoPos = C.variants.autoTarget.active ? (0, engine_ts_1.autoTarget)(state, s === 0 ? "A" : "B", pos, k, cfg) : null;
+        for (const p of C.variants.autoTarget.active ? (autoPos === null ? [] : [autoPos]) : (0, engine_ts_1.validTargetPositions)(m, fs.map((f) => !f.ko), C)) {
             const affected = (m && m.area ? (0, engine_ts_1.rowOf)(p, C) : [p]).filter((q) => !fs[q - 1].ko);
             let v = -lambda * cost;
             if (m && m.extraEnergy)
                 v += lambda * M.extraEnergy.amount;
             if (m && m.status === "prisa")
                 v += A.statusValue.prisa;
+            if (m && m.taunt)
+                v += C.variants.taunt.aiValue; // variantes v0.3 V4
             for (const q of affected) {
                 const f = fs[q - 1];
                 const tc = state.teams[tSide][q - 1];
@@ -4070,6 +4630,7 @@ function createSearchAi(options = {}) {
         const actors = (0, engine_ts_1.eligibleActors)(state, side);
         if (actors.length === 0)
             return [];
+        const auto = cfg.combat.variants.autoTarget.active;
         // 1. candidatos (sin duplicados, en orden determinista)
         const cands = [];
         const seen = new Set();
@@ -4096,7 +4657,8 @@ function createSearchAi(options = {}) {
         const cur = [];
         const rec = (i, spent) => {
             if (i === actors.length) {
-                combos.push({ plan: cur.map((op, j) => ({ actor: actors[j], move: op.move, target: op.target })), score: comboScore(state, s, actors, cur, cfg), idx: combos.length });
+                // variantes v0.3 V4: el plan no lleva objetivo (0); `op.target` solo sirve para puntuar
+                combos.push({ plan: cur.map((op, j) => ({ actor: actors[j], move: op.move, target: auto ? 0 : op.target })), score: comboScore(state, s, actors, cur, cfg), idx: combos.length });
                 return;
             }
             for (const op of opts[i]) {
@@ -4203,10 +4765,10 @@ defs["config/genetica.v0.2.json"]=function(module,exports,require){
 module.exports = {"_doc":"Configuración de genética v0.2 de Proyecto Genoma. Fuente: docs/spec/genetica-v0.2.md. Todo número de la spec está aquí y viceversa. Probabilidades en [0,1]; valores de genes en puntos.","version":"0.2","orden_loci":["cabeza","cuerpo","extremidades","cola"],"orden_valores":["potencia","velocidad","resistencia"],"orden_slots_padres":{"_doc":"Orden fijo de los 6 slots de un locus al heredar. A = padre con id menor (comparación de strings).","slots":["A.D","A.R1","A.R2","B.D","B.R1","B.R2"]},"familias":{"_doc":"Base: capturables. Híbridas: solo por mutación en breeding (sec. 5). El orden de 'base' es el usado por los sorteos uniformes.","base":["llama","marea","brote","roca","voltio","sombra"],"hibridas":[{"id":"vapor","nombre":"Vapor","componentes":["llama","marea"]},{"id":"magma","nombre":"Magma","componentes":["llama","roca"]},{"id":"tormenta","nombre":"Tormenta","componentes":["voltio","marea"]},{"id":"plasma","nombre":"Plasma","componentes":["llama","voltio"]},{"id":"espora","nombre":"Espora","componentes":["brote","sombra"]},{"id":"abismo","nombre":"Abismo","componentes":["marea","sombra"]},{"id":"liquen","nombre":"Liquen","componentes":["brote","roca"]}]},"normal":{"_doc":"Normal aproximada Irwin-Hall: N = (u1+u2+u3+u4 - 2) * factor. 4 tiradas. Rango [-3.4641, +3.4641]. No usar rng.normal (Box-Muller usa Math.log/Math.cos, no garantizados idénticos entre motores).","n_uniformes":4,"centro":2,"factor":1.7320508075688772},"redondeo_decimales":2,"validacion_config":{"_doc":"[v0.2] Reglas que parseGeneticsConfig debe comprobar (QA-04..07). Además de las de v0.1.","regex_ids":"^[a-z0-9_]+$","_doc_regex_ids":"Ids de familia y de locus. Prohíbe '|' y '.' (separadores de clave e id).","max_crias_minimo":1,"tolerancia_normal_factor":1e-9,"_doc_normal":"centro == n_uniformes/2 exacto; |factor^2 * n_uniformes - 12| < tolerancia_normal_factor.","formula_tiradas_salvaje":"1 + 12*(5 + 3*n_uniformes)","formula_tiradas_locus":"6 + 16*n_uniformes"},"calidad":{"_doc":"[v0.2] D-008. Total de estadísticas de un gen (Σancla = Σvalores = calidad). Se fija al nacer el gen y se copia intacta. Margen irreversible a la baja.","base":90,"margen":0.05,"min":85.5,"max":94.5,"distribucion_salvaje":"triangular","_doc_distribucion_salvaje":"calidad = r2(base + base*margen*(uq1 + uq2 - 1)). 2 tiradas. P(calidad >= 93.6) = 2 %.","mutacion":"media_padres_sin_ruido"},"valores":{"_doc":"[v0.2] 'ancla' y 'valores' suman ambos la calidad del gen. Límites por estadística.","ancla_min":12,"ancla_max":50,"absoluto_min":5,"absoluto_max":60,"desviacion_max":10,"_doc_desviacion_max":"|valor - ancla| <= desviacion_max en cada valor, siempre."},"forma":{"_doc":"4 parámetros en [0,1] sobre rejilla de paso 0.25 (5 niveles). Firma = 4 dígitos round(s*4).","parametros":["tamano","alargamiento","angulosidad","ornamento"],"paso_rejilla":0.25,"niveles":5},"salvaje":{"_doc":"Generación de criatura salvaje (sec. 2). [v0.2] 205 tiradas (+2 por gen para la calidad).","prob_D_familia_principal":0.7,"prob_R_familia_principal":0.4,"sigma_valores":2,"variantes_por_familia_y_locus":3,"tiradas_por_criatura":205},"herencia":{"_doc":"[v0.2] pesos_D = variante C. Pesos por slot de CADA padre (suman 0.5 por padre).","pesos_D":{"D":0.47,"R1":0.025,"R2":0.005},"pesos_R":{"D":0.2,"R1":0.17,"R2":0.13},"tiradas_por_locus":70,"tiradas_por_cria":280},"mutacion":{"prob_por_locus":0.02,"prob_hibrida_nueva":0.5,"_doc_prob_hibrida_nueva":"Padres base de un par de la tabla -> híbrida con esta prob.","prob_hibrida_afinidad":0.5,"_doc_prob_hibrida_afinidad":"[v0.2] 0.75 -> 0.5: contrapartida a la regla de familia (problema B). Híbrida H + base componente de H -> H con esta prob.","prob_eleccion_padre_A":0.5,"sigma_ancla":3,"sigma_forma":0.25,"reintentos_reparto_suma":3,"epsilon_suma":1e-9,"_doc_bloqueo":"[v0.2] D-007: la clave mutada no puede ser ninguna de las 6 claves de los padres en ese locus. Respaldo determinista sin tiradas (sec. 4.4).","paso_respaldo_max":2,"_doc_paso_respaldo_max":"Niveles 1-2 del respaldo: vecinos a 1 paso (dirección del ruido, luego contraria); nivel 3: enumeración completa de la rejilla."},"deriva":{"_doc":"[v0.2] d' = (1-kappa)*d + sigma*(n - media(n)), d = valor - ancla; después reparto a la calidad con límites (sec. 6). Suma cero: no añade puntos.","kappa":0.075,"sigma":1},"familia_criatura":{"_doc":"[v0.2] Problema A. Recuento ponderado de los 4 D; empate: gana una híbrida; si siguen empatadas, el primer locus en orden_loci.","peso_gen_base":1,"peso_gen_hibrido":2},"limites_sim":{"max_crias_por_criatura":5,"edad_minima_generaciones":1},"catalogo_base":{"_doc":"72 genes base. La lista 'genes' es la autoridad. 'ancla' es la de calidad 90; en salvajes se escala a la calidad del gen (sec. 2.2).","generador":{"perfil_familia":{"llama":[40,28,22],"marea":[27,27,36],"brote":[30,30,30],"roca":[32,18,40],"voltio":[28,42,20],"sombra":[35,35,20]},"mod_locus":{"cabeza":[3,0,-3],"cuerpo":[-2,-2,4],"extremidades":[-1,3,-2],"cola":[0,-1,1]},"mod_variante":{"1":[0,0,0],"2":[4,-2,-2],"3":[-2,4,-2]},"forma_familia":{"llama":[0.5,0.75,0.75,0.5],"marea":[0.5,0.5,0.25,0.25],"brote":[0.25,0.5,0.25,0.75],"roca":[0.75,0.25,0.75,0.25],"voltio":[0.25,0.75,1,0.5],"sombra":[0.5,0.75,0.5,0.75]},"forma_locus":{"cabeza":[0,0,0,0],"cuerpo":[0.25,-0.25,0,0],"extremidades":[0,0.25,0,-0.25],"cola":[-0.25,0.25,0,0]},"forma_variante":{"1":[0,0,0,0],"2":[0.25,0,-0.25,0.25],"3":[-0.25,0,0.25,-0.25]}},"genes":[{"id":"llama.cabeza.1","familia":"llama","locus":"cabeza","forma":[0.5,0.75,0.75,0.5],"firma":"2332","ancla":{"potencia":43,"velocidad":28,"resistencia":19},"movimiento":"mov:llama.cabeza.1"},{"id":"llama.cabeza.2","familia":"llama","locus":"cabeza","forma":[0.75,0.75,0.5,0.75],"firma":"3323","ancla":{"potencia":47,"velocidad":26,"resistencia":17},"movimiento":"mov:llama.cabeza.2"},{"id":"llama.cabeza.3","familia":"llama","locus":"cabeza","forma":[0.25,0.75,1,0.25],"firma":"1341","ancla":{"potencia":41,"velocidad":32,"resistencia":17},"movimiento":"mov:llama.cabeza.3"},{"id":"llama.cuerpo.1","familia":"llama","locus":"cuerpo","forma":[0.75,0.5,0.75,0.5],"firma":"3232","ancla":{"potencia":38,"velocidad":26,"resistencia":26},"movimiento":"mov:llama.cuerpo.1"},{"id":"llama.cuerpo.2","familia":"llama","locus":"cuerpo","forma":[1,0.5,0.5,0.75],"firma":"4223","ancla":{"potencia":42,"velocidad":24,"resistencia":24},"movimiento":"mov:llama.cuerpo.2"},{"id":"llama.cuerpo.3","familia":"llama","locus":"cuerpo","forma":[0.5,0.5,1,0.25],"firma":"2241","ancla":{"potencia":36,"velocidad":30,"resistencia":24},"movimiento":"mov:llama.cuerpo.3"},{"id":"llama.extremidades.1","familia":"llama","locus":"extremidades","forma":[0.5,1,0.75,0.25],"firma":"2431","ancla":{"potencia":39,"velocidad":31,"resistencia":20},"movimiento":"mov:llama.extremidades.1"},{"id":"llama.extremidades.2","familia":"llama","locus":"extremidades","forma":[0.75,1,0.5,0.5],"firma":"3422","ancla":{"potencia":43,"velocidad":29,"resistencia":18},"movimiento":"mov:llama.extremidades.2"},{"id":"llama.extremidades.3","familia":"llama","locus":"extremidades","forma":[0.25,1,1,0],"firma":"1440","ancla":{"potencia":37,"velocidad":35,"resistencia":18},"movimiento":"mov:llama.extremidades.3"},{"id":"llama.cola.1","familia":"llama","locus":"cola","forma":[0.25,1,0.75,0.5],"firma":"1432","ancla":{"potencia":40,"velocidad":27,"resistencia":23},"movimiento":"mov:llama.cola.1"},{"id":"llama.cola.2","familia":"llama","locus":"cola","forma":[0.5,1,0.5,0.75],"firma":"2423","ancla":{"potencia":44,"velocidad":25,"resistencia":21},"movimiento":"mov:llama.cola.2"},{"id":"llama.cola.3","familia":"llama","locus":"cola","forma":[0,1,1,0.25],"firma":"0441","ancla":{"potencia":38,"velocidad":31,"resistencia":21},"movimiento":"mov:llama.cola.3"},{"id":"marea.cabeza.1","familia":"marea","locus":"cabeza","forma":[0.5,0.5,0.25,0.25],"firma":"2211","ancla":{"potencia":30,"velocidad":27,"resistencia":33},"movimiento":"mov:marea.cabeza.1"},{"id":"marea.cabeza.2","familia":"marea","locus":"cabeza","forma":[0.75,0.5,0,0.5],"firma":"3202","ancla":{"potencia":34,"velocidad":25,"resistencia":31},"movimiento":"mov:marea.cabeza.2"},{"id":"marea.cabeza.3","familia":"marea","locus":"cabeza","forma":[0.25,0.5,0.5,0],"firma":"1220","ancla":{"potencia":28,"velocidad":31,"resistencia":31},"movimiento":"mov:marea.cabeza.3"},{"id":"marea.cuerpo.1","familia":"marea","locus":"cuerpo","forma":[0.75,0.25,0.25,0.25],"firma":"3111","ancla":{"potencia":25,"velocidad":25,"resistencia":40},"movimiento":"mov:marea.cuerpo.1"},{"id":"marea.cuerpo.2","familia":"marea","locus":"cuerpo","forma":[1,0.25,0,0.5],"firma":"4102","ancla":{"potencia":29,"velocidad":23,"resistencia":38},"movimiento":"mov:marea.cuerpo.2"},{"id":"marea.cuerpo.3","familia":"marea","locus":"cuerpo","forma":[0.5,0.25,0.5,0],"firma":"2120","ancla":{"potencia":23,"velocidad":29,"resistencia":38},"movimiento":"mov:marea.cuerpo.3"},{"id":"marea.extremidades.1","familia":"marea","locus":"extremidades","forma":[0.5,0.75,0.25,0],"firma":"2310","ancla":{"potencia":26,"velocidad":30,"resistencia":34},"movimiento":"mov:marea.extremidades.1"},{"id":"marea.extremidades.2","familia":"marea","locus":"extremidades","forma":[0.75,0.75,0,0.25],"firma":"3301","ancla":{"potencia":30,"velocidad":28,"resistencia":32},"movimiento":"mov:marea.extremidades.2"},{"id":"marea.extremidades.3","familia":"marea","locus":"extremidades","forma":[0.25,0.75,0.5,0],"firma":"1320","ancla":{"potencia":24,"velocidad":34,"resistencia":32},"movimiento":"mov:marea.extremidades.3"},{"id":"marea.cola.1","familia":"marea","locus":"cola","forma":[0.25,0.75,0.25,0.25],"firma":"1311","ancla":{"potencia":27,"velocidad":26,"resistencia":37},"movimiento":"mov:marea.cola.1"},{"id":"marea.cola.2","familia":"marea","locus":"cola","forma":[0.5,0.75,0,0.5],"firma":"2302","ancla":{"potencia":31,"velocidad":24,"resistencia":35},"movimiento":"mov:marea.cola.2"},{"id":"marea.cola.3","familia":"marea","locus":"cola","forma":[0,0.75,0.5,0],"firma":"0320","ancla":{"potencia":25,"velocidad":30,"resistencia":35},"movimiento":"mov:marea.cola.3"},{"id":"brote.cabeza.1","familia":"brote","locus":"cabeza","forma":[0.25,0.5,0.25,0.75],"firma":"1213","ancla":{"potencia":33,"velocidad":30,"resistencia":27},"movimiento":"mov:brote.cabeza.1"},{"id":"brote.cabeza.2","familia":"brote","locus":"cabeza","forma":[0.5,0.5,0,1],"firma":"2204","ancla":{"potencia":37,"velocidad":28,"resistencia":25},"movimiento":"mov:brote.cabeza.2"},{"id":"brote.cabeza.3","familia":"brote","locus":"cabeza","forma":[0,0.5,0.5,0.5],"firma":"0222","ancla":{"potencia":31,"velocidad":34,"resistencia":25},"movimiento":"mov:brote.cabeza.3"},{"id":"brote.cuerpo.1","familia":"brote","locus":"cuerpo","forma":[0.5,0.25,0.25,0.75],"firma":"2113","ancla":{"potencia":28,"velocidad":28,"resistencia":34},"movimiento":"mov:brote.cuerpo.1"},{"id":"brote.cuerpo.2","familia":"brote","locus":"cuerpo","forma":[0.75,0.25,0,1],"firma":"3104","ancla":{"potencia":32,"velocidad":26,"resistencia":32},"movimiento":"mov:brote.cuerpo.2"},{"id":"brote.cuerpo.3","familia":"brote","locus":"cuerpo","forma":[0.25,0.25,0.5,0.5],"firma":"1122","ancla":{"potencia":26,"velocidad":32,"resistencia":32},"movimiento":"mov:brote.cuerpo.3"},{"id":"brote.extremidades.1","familia":"brote","locus":"extremidades","forma":[0.25,0.75,0.25,0.5],"firma":"1312","ancla":{"potencia":29,"velocidad":33,"resistencia":28},"movimiento":"mov:brote.extremidades.1"},{"id":"brote.extremidades.2","familia":"brote","locus":"extremidades","forma":[0.5,0.75,0,0.75],"firma":"2303","ancla":{"potencia":33,"velocidad":31,"resistencia":26},"movimiento":"mov:brote.extremidades.2"},{"id":"brote.extremidades.3","familia":"brote","locus":"extremidades","forma":[0,0.75,0.5,0.25],"firma":"0321","ancla":{"potencia":27,"velocidad":37,"resistencia":26},"movimiento":"mov:brote.extremidades.3"},{"id":"brote.cola.1","familia":"brote","locus":"cola","forma":[0,0.75,0.25,0.75],"firma":"0313","ancla":{"potencia":30,"velocidad":29,"resistencia":31},"movimiento":"mov:brote.cola.1"},{"id":"brote.cola.2","familia":"brote","locus":"cola","forma":[0.25,0.75,0,1],"firma":"1304","ancla":{"potencia":34,"velocidad":27,"resistencia":29},"movimiento":"mov:brote.cola.2"},{"id":"brote.cola.3","familia":"brote","locus":"cola","forma":[0,0.75,0.5,0.5],"firma":"0322","ancla":{"potencia":28,"velocidad":33,"resistencia":29},"movimiento":"mov:brote.cola.3"},{"id":"roca.cabeza.1","familia":"roca","locus":"cabeza","forma":[0.75,0.25,0.75,0.25],"firma":"3131","ancla":{"potencia":35,"velocidad":18,"resistencia":37},"movimiento":"mov:roca.cabeza.1"},{"id":"roca.cabeza.2","familia":"roca","locus":"cabeza","forma":[1,0.25,0.5,0.5],"firma":"4122","ancla":{"potencia":39,"velocidad":16,"resistencia":35},"movimiento":"mov:roca.cabeza.2"},{"id":"roca.cabeza.3","familia":"roca","locus":"cabeza","forma":[0.5,0.25,1,0],"firma":"2140","ancla":{"potencia":33,"velocidad":22,"resistencia":35},"movimiento":"mov:roca.cabeza.3"},{"id":"roca.cuerpo.1","familia":"roca","locus":"cuerpo","forma":[1,0,0.75,0.25],"firma":"4031","ancla":{"potencia":30,"velocidad":16,"resistencia":44},"movimiento":"mov:roca.cuerpo.1"},{"id":"roca.cuerpo.2","familia":"roca","locus":"cuerpo","forma":[1,0,0.5,0.5],"firma":"4022","ancla":{"potencia":34,"velocidad":14,"resistencia":42},"movimiento":"mov:roca.cuerpo.2"},{"id":"roca.cuerpo.3","familia":"roca","locus":"cuerpo","forma":[0.75,0,1,0],"firma":"3040","ancla":{"potencia":28,"velocidad":20,"resistencia":42},"movimiento":"mov:roca.cuerpo.3"},{"id":"roca.extremidades.1","familia":"roca","locus":"extremidades","forma":[0.75,0.5,0.75,0],"firma":"3230","ancla":{"potencia":31,"velocidad":21,"resistencia":38},"movimiento":"mov:roca.extremidades.1"},{"id":"roca.extremidades.2","familia":"roca","locus":"extremidades","forma":[1,0.5,0.5,0.25],"firma":"4221","ancla":{"potencia":35,"velocidad":19,"resistencia":36},"movimiento":"mov:roca.extremidades.2"},{"id":"roca.extremidades.3","familia":"roca","locus":"extremidades","forma":[0.5,0.5,1,0],"firma":"2240","ancla":{"potencia":29,"velocidad":25,"resistencia":36},"movimiento":"mov:roca.extremidades.3"},{"id":"roca.cola.1","familia":"roca","locus":"cola","forma":[0.5,0.5,0.75,0.25],"firma":"2231","ancla":{"potencia":32,"velocidad":17,"resistencia":41},"movimiento":"mov:roca.cola.1"},{"id":"roca.cola.2","familia":"roca","locus":"cola","forma":[0.75,0.5,0.5,0.5],"firma":"3222","ancla":{"potencia":36,"velocidad":15,"resistencia":39},"movimiento":"mov:roca.cola.2"},{"id":"roca.cola.3","familia":"roca","locus":"cola","forma":[0.25,0.5,1,0],"firma":"1240","ancla":{"potencia":30,"velocidad":21,"resistencia":39},"movimiento":"mov:roca.cola.3"},{"id":"voltio.cabeza.1","familia":"voltio","locus":"cabeza","forma":[0.25,0.75,1,0.5],"firma":"1342","ancla":{"potencia":31,"velocidad":42,"resistencia":17},"movimiento":"mov:voltio.cabeza.1"},{"id":"voltio.cabeza.2","familia":"voltio","locus":"cabeza","forma":[0.5,0.75,0.75,0.75],"firma":"2333","ancla":{"potencia":35,"velocidad":40,"resistencia":15},"movimiento":"mov:voltio.cabeza.2"},{"id":"voltio.cabeza.3","familia":"voltio","locus":"cabeza","forma":[0,0.75,1,0.25],"firma":"0341","ancla":{"potencia":29,"velocidad":46,"resistencia":15},"movimiento":"mov:voltio.cabeza.3"},{"id":"voltio.cuerpo.1","familia":"voltio","locus":"cuerpo","forma":[0.5,0.5,1,0.5],"firma":"2242","ancla":{"potencia":26,"velocidad":40,"resistencia":24},"movimiento":"mov:voltio.cuerpo.1"},{"id":"voltio.cuerpo.2","familia":"voltio","locus":"cuerpo","forma":[0.75,0.5,0.75,0.75],"firma":"3233","ancla":{"potencia":30,"velocidad":38,"resistencia":22},"movimiento":"mov:voltio.cuerpo.2"},{"id":"voltio.cuerpo.3","familia":"voltio","locus":"cuerpo","forma":[0.25,0.5,1,0.25],"firma":"1241","ancla":{"potencia":24,"velocidad":44,"resistencia":22},"movimiento":"mov:voltio.cuerpo.3"},{"id":"voltio.extremidades.1","familia":"voltio","locus":"extremidades","forma":[0.25,1,1,0.25],"firma":"1441","ancla":{"potencia":27,"velocidad":45,"resistencia":18},"movimiento":"mov:voltio.extremidades.1"},{"id":"voltio.extremidades.2","familia":"voltio","locus":"extremidades","forma":[0.5,1,0.75,0.5],"firma":"2432","ancla":{"potencia":31,"velocidad":43,"resistencia":16},"movimiento":"mov:voltio.extremidades.2"},{"id":"voltio.extremidades.3","familia":"voltio","locus":"extremidades","forma":[0,1,1,0],"firma":"0440","ancla":{"potencia":25,"velocidad":49,"resistencia":16},"movimiento":"mov:voltio.extremidades.3"},{"id":"voltio.cola.1","familia":"voltio","locus":"cola","forma":[0,1,1,0.5],"firma":"0442","ancla":{"potencia":28,"velocidad":41,"resistencia":21},"movimiento":"mov:voltio.cola.1"},{"id":"voltio.cola.2","familia":"voltio","locus":"cola","forma":[0.25,1,0.75,0.75],"firma":"1433","ancla":{"potencia":32,"velocidad":39,"resistencia":19},"movimiento":"mov:voltio.cola.2"},{"id":"voltio.cola.3","familia":"voltio","locus":"cola","forma":[0,1,1,0.25],"firma":"0441","ancla":{"potencia":26,"velocidad":45,"resistencia":19},"movimiento":"mov:voltio.cola.3"},{"id":"sombra.cabeza.1","familia":"sombra","locus":"cabeza","forma":[0.5,0.75,0.5,0.75],"firma":"2323","ancla":{"potencia":38,"velocidad":35,"resistencia":17},"movimiento":"mov:sombra.cabeza.1"},{"id":"sombra.cabeza.2","familia":"sombra","locus":"cabeza","forma":[0.75,0.75,0.25,1],"firma":"3314","ancla":{"potencia":42,"velocidad":33,"resistencia":15},"movimiento":"mov:sombra.cabeza.2"},{"id":"sombra.cabeza.3","familia":"sombra","locus":"cabeza","forma":[0.25,0.75,0.75,0.5],"firma":"1332","ancla":{"potencia":36,"velocidad":39,"resistencia":15},"movimiento":"mov:sombra.cabeza.3"},{"id":"sombra.cuerpo.1","familia":"sombra","locus":"cuerpo","forma":[0.75,0.5,0.5,0.75],"firma":"3223","ancla":{"potencia":33,"velocidad":33,"resistencia":24},"movimiento":"mov:sombra.cuerpo.1"},{"id":"sombra.cuerpo.2","familia":"sombra","locus":"cuerpo","forma":[1,0.5,0.25,1],"firma":"4214","ancla":{"potencia":37,"velocidad":31,"resistencia":22},"movimiento":"mov:sombra.cuerpo.2"},{"id":"sombra.cuerpo.3","familia":"sombra","locus":"cuerpo","forma":[0.5,0.5,0.75,0.5],"firma":"2232","ancla":{"potencia":31,"velocidad":37,"resistencia":22},"movimiento":"mov:sombra.cuerpo.3"},{"id":"sombra.extremidades.1","familia":"sombra","locus":"extremidades","forma":[0.5,1,0.5,0.5],"firma":"2422","ancla":{"potencia":34,"velocidad":38,"resistencia":18},"movimiento":"mov:sombra.extremidades.1"},{"id":"sombra.extremidades.2","familia":"sombra","locus":"extremidades","forma":[0.75,1,0.25,0.75],"firma":"3413","ancla":{"potencia":38,"velocidad":36,"resistencia":16},"movimiento":"mov:sombra.extremidades.2"},{"id":"sombra.extremidades.3","familia":"sombra","locus":"extremidades","forma":[0.25,1,0.75,0.25],"firma":"1431","ancla":{"potencia":32,"velocidad":42,"resistencia":16},"movimiento":"mov:sombra.extremidades.3"},{"id":"sombra.cola.1","familia":"sombra","locus":"cola","forma":[0.25,1,0.5,0.75],"firma":"1423","ancla":{"potencia":35,"velocidad":34,"resistencia":21},"movimiento":"mov:sombra.cola.1"},{"id":"sombra.cola.2","familia":"sombra","locus":"cola","forma":[0.5,1,0.25,1],"firma":"2414","ancla":{"potencia":39,"velocidad":32,"resistencia":19},"movimiento":"mov:sombra.cola.2"},{"id":"sombra.cola.3","familia":"sombra","locus":"cola","forma":[0,1,0.75,0.5],"firma":"0432","ancla":{"potencia":33,"velocidad":38,"resistencia":19},"movimiento":"mov:sombra.cola.3"}]},"escenarios_sim":{"_doc":"Escenarios de validación (sec. 10). semillas = nº de ejecuciones independientes.","E1_cerrada":{"poblacion":500,"generaciones":300,"crias_por_pareja":2,"semillas":20},"E2_con_capturas":{"poblacion":500,"generaciones":300,"crias_por_pareja":2,"fraccion_salvajes_por_generacion":0.1,"semillas":20},"E3b_seleccion_completa":{"poblacion":100,"parejas":50,"crias_por_pareja":5,"generaciones":100,"semillas":20},"E4_primera_hibrida":{"familia_A":"llama","familia_B":"marea","hibrida_objetivo":"vapor","crias_por_pareja":5,"ensayos":10000,"_doc":"Primera generación (F1) de padres puros; pareja nueva cada 5 crías. Mide primer gen y primera criatura de la híbrida objetivo.","tope_crias":5000},"E3a_deriva_homocigoto":{"_doc":"[v0.2] 100 clones idénticos: en cada locus D=R1=R2=gen base de genoma_clon, calidad 90, valores = ancla. Mutación 0. Elite por velocidad total.","genoma_clon":{"cabeza":"brote.cabeza.1","cuerpo":"brote.cuerpo.1","extremidades":"brote.extremidades.1","cola":"brote.cola.1"},"poblacion":100,"parejas":50,"crias_por_pareja":5,"generaciones":100,"prob_mutacion_override":0,"semillas":20},"E3c_deriva_heterocigoto":{"_doc":"[v0.2] Antigua E3a de v0.1 (clones de un salvaje). Solo informativa.","poblacion":100,"parejas":50,"crias_por_pareja":5,"generaciones":100,"prob_mutacion_override":0,"semillas":20},"E5_estrategia_velocidad":{"_doc":"[v0.2] Como E1 (N=500, 300 gen, 2 crías/pareja) pero los padres son la élite del 40 % más rápido, emparejada al azar dentro de la élite.","poblacion":500,"generaciones":300,"fraccion_elite":0.4,"crias_por_pareja":2,"semillas":20}},"criterios_sim":{"sorpresa":{"_doc":"E1, media de generaciones 1-20. % de crías con algún D cuya identidad no es ninguno de los 2 D de sus padres en ese locus.","min":0.15,"max":0.3,"generaciones":[1,20]},"diversidad":{"_doc":"E1 (cría al azar) en generación 300, cada locus. max_frecuencia_identidad_D mide colapso del sistema, no de estrategias dirigidas.","min_identidades_distintas_todos":12,"min_entropia_bits_todos":2.5,"min_entropia_bits_D":2,"min_fraccion_entropia_gen0":0.5,"max_frecuencia_identidad_D":0.4},"mutacion":{"_doc":"Mutaciones por 1000 crías = 4000*p con tolerancia relativa; % crías con >=1 mutación en rango.","tolerancia_relativa":0.1,"min_frac_crias_mutadas":0.05,"max_frac_crias_mutadas":0.12},"genedex":{"_doc":"E2.","min_nuevas_por_1000_crias_gen_1_10":40,"min_nuevas_por_1000_crias_gen_291_300":5,"min_frac_mutaciones_repetidas_gen_291_300":0.1,"max_frac_mutaciones_repetidas_gen_291_300":0.8,"min_hibridas_distintas_vistas":7},"primera_hibrida":{"_doc":"E4. [v0.2] Añade primera criatura de familia híbrida.","gen_mediana_min":10,"gen_mediana_max":40,"gen_p90_max":100,"criatura_mediana_max":40,"criatura_p90_max":120},"deriva":{"_doc":"[v0.2] E3a homocigoto. Δ = media por gen D de (velocidad - velocidad inicial), en puntos. Control = supervivientes al azar.","gen20_min_puntos":1.5,"gen20_max_puntos":7.5,"gen100_max_puntos":8.5,"control_gen100_max_abs_puntos":1},"invariantes":{"_doc":"[v0.2] Todas las escenas, cada gen: calidad en [min,max]; |Σancla - calidad| y |Σvalores - calidad| <= tolerancia; valores y anclas dentro de sus límites. El núcleo lee la tolerancia de aquí (QA-05).","max_violaciones":0,"tolerancia_suma":0.01},"monocultivo_estrategia":{"_doc":"[v0.2] E5, generación 300, peor locus. La convergencia bajo cría dirigida es intencionada; se vigila que no colapse del todo.","min_identidades_distintas_todos":10,"min_entropia_bits_D":2,"max_frecuencia_identidad_D":0.6},"hibridas_vigilancia":{"_doc":"[v0.2] E2 (con capturas), generación 300.","max_frac_D_hibridos":0.1,"min_frac_criaturas_hibridas":0.03,"max_frac_criaturas_hibridas":0.25}},"criterios_combate":{"_doc":"[v0.2] D-008. Para el simulador de combate (semana 2). Equipos espejo de 4 (mismos tipos de gen), uno con todos los genes a calidad max y otro a calidad min; se alterna quién empieza.","combates_min":10000,"objetivo_max_victorias":0.55,"limite_max_victorias":0.6},"barridos_sim":{"mutacion.prob_por_locus":[0.01,0.02,0.03,0.04],"herencia.pesos_D":{"C":{"D":0.47,"R1":0.025,"R2":0.005}},"mutacion.prob_hibrida_nueva":[0.25,0.5,1],"deriva.kappa":[0.05,0.1,0.15],"deriva.sigma":[0.5,1,1.5],"mutacion.sigma_forma":[0.15,0.25],"mutacion.prob_hibrida_afinidad":[0.5,0.75],"familia_criatura.peso_gen_hibrido":[1,2,3],"calidad.distribucion_salvaje":["triangular","uniforme"],"_doc":"[v0.2] Barridos reducidos: lo ya decidido no se vuelve a barrer salvo como control."}};
 };
 defs["config/combate.v0.2.json"]=function(module,exports,require){
-module.exports = {"_doc":"Configuración de combate v0.2. Fuente: docs/spec/combate-v0.2.md. Todo número de la spec está aquí y viceversa. Movimientos: config/movimientos.v0.2.json. [v0.2] marca los cambios en la spec.","version":"0.2","equipo":{"tamano":4,"_doc_filas":"Posiciones 1-2 delantera, 3-4 trasera. Si la delantera cae entera, la trasera pasa a ser objetivo por defecto.","delantera":[1,2],"trasera":[3,4]},"estadisticas":{"_doc":"[v0.2] Derivadas por cuotas σ = stat/T con una matriz de coeficientes: derivada = base·(1 + Σ_s coef[s]·(3σs − 1))·q (vida, ataque) o base + Σ_s coef[s]·(3σs − 1) (iniciativa). La velocidad aporta además un poco de vida y ataque para que los tres perfiles valgan lo mismo.","total_ref":360,"vida":{"base":220,"coef":{"potencia":0,"velocidad":0.1,"resistencia":0.45}},"ataque":{"base":1,"coef":{"potencia":0.5,"velocidad":0.1,"resistencia":0}},"iniciativa":{"base":100,"coef":{"potencia":0,"velocidad":50,"resistencia":0}},"beta_calidad":0.04,"nivel":false},"energia":{"inicial":3,"por_turno":3,"maximo":10},"orden":{"_doc":"iniciativa = base + Σ coef·(3σ−1) + estados + jitter*(2u-1). Desempate: prioridad, iniciativa, lado favorecido (A en turnos impares, B en pares), posición. [v0.2] Los movimientos de aliado (curación y protección) actúan con prioridad 1.","jitter":30,"niveles_prioridad":[0,1],"prioridad_movimientos_aliado":1},"dano":{"_doc":"daño = round(pot*(1+sinergia)*fA*familia*marca*debilitar*var*desgaste); var = 1-varianza + 2*varianza*u.","varianza":0.2,"minimo":1,"golpe_basico":{"coste":0,"potencia":10,"_doc":"Acción universal de 0 energía, familia = familia de la criatura, objetivo delantera."}},"familias":{"_doc":"Dos anillos: cada familia es fuerte contra la siguiente de su anillo y débil contra la anterior. Entre anillos, neutral. Atacante = familia del movimiento; defensor = familia de la criatura.","anillo_base":["marea","llama","brote","roca","voltio","sombra"],"anillo_hibridas":["vapor","magma","espora","liquen","plasma","tormenta","abismo"],"fuerte":1.25,"debil":0.8,"neutral":1,"tabla":{"marea":{"marea":1,"llama":1.25,"brote":1,"roca":1,"voltio":1,"sombra":0.8,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"llama":{"marea":0.8,"llama":1,"brote":1.25,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"brote":{"marea":1,"llama":0.8,"brote":1,"roca":1.25,"voltio":1,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"roca":{"marea":1,"llama":1,"brote":0.8,"roca":1,"voltio":1.25,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"voltio":{"marea":1,"llama":1,"brote":1,"roca":0.8,"voltio":1,"sombra":1.25,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"sombra":{"marea":1.25,"llama":1,"brote":1,"roca":1,"voltio":0.8,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"vapor":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":1.25,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":0.8},"magma":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":0.8,"magma":1,"espora":1.25,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"espora":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":0.8,"espora":1,"liquen":1.25,"plasma":1,"tormenta":1,"abismo":1},"liquen":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":1,"espora":0.8,"liquen":1,"plasma":1.25,"tormenta":1,"abismo":1},"plasma":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":0.8,"plasma":1,"tormenta":1.25,"abismo":1},"tormenta":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":0.8,"tormenta":1,"abismo":1.25},"abismo":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1.25,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":0.8,"abismo":1}}},"sinergia":{"_doc":"Bonus a la potencia de los movimientos (no golpe básico) de criaturas de un mismo grupo de familia que usan movimiento en el turno. Una híbrida pertenece a su familia y a sus 2 componentes; se toma el mayor grupo.","bonus_por_n":{"2":0.1,"3":0.2,"4":0.3},"hibridas_cuentan_componentes":true},"estados":{"_doc":"Lista cerrada. duracion = nº de finales de turno que dura (incluido el de aplicación). apilado: refresca | pilas | suma.","quemadura":{"tipo":"negativo","duracion":3,"apilado":"pilas","max_pilas":3,"dano_por_pila":12},"ralentizar":{"tipo":"negativo","duracion":2,"apilado":"refresca","iniciativa":-30},"aturdir":{"tipo":"negativo","duracion":1,"apilado":"refresca","inmunidad_turnos":2},"marca":{"tipo":"negativo","duracion":2,"apilado":"refresca","dano_recibido":1.2},"debilitar":{"tipo":"negativo","duracion":2,"apilado":"refresca","dano_infligido":0.8},"escudo":{"tipo":"positivo","duracion":2,"apilado":"suma","maximo":300},"prisa":{"tipo":"positivo","duracion":2,"apilado":"refresca","iniciativa":30},"regenerar":{"tipo":"positivo","duracion":3,"apilado":"refresca","cura_por_turno":15}},"desgaste":{"_doc":"Desde el turno desde_turno+1, el daño de movimientos y golpes se multiplica por 1 + por_turno*(t - desde_turno).","desde_turno":10,"por_turno":0.25},"fin":{"turnos_max":20,"_doc":"Al acabar el turno turnos_max sin vencedor: empate. Si ambos equipos caen en el mismo turno: empate."},"tiradas":{"_doc":"Por turno, fijas: 8 de jitter (A1..A4, B1..B4) + 2 de varianza por posición en el mismo orden.","jitter_por_turno":8,"varianza_por_accion":2,"por_turno":24},"semilla":{"prefijo":"combate|"},"ia":{"_doc":"[v0.2] IA de referencia determinista (sin tiradas): enumera planes y maximiza valor del turno + precio sombra de la energía guardada. Unidades: puntos de vida equivalentes.","reserva_por_defecto":0,"bonus_ko":50,"kappa":0.9,"_doc_kappa":"precio sombra λ = kappa · máx (valor estimado − golpe básico)/coste sobre los movimientos de las criaturas vivas.","valor_estado":{"quemadura":36,"ralentizar":5,"aturdir":40,"marca":15,"debilitar":15,"prisa":5,"regenerar":45},"holgura_regenerar":15,"valor_max_escudo":90,"objetivos_area_estimados":1.5,"factor_cura_estimada":0.6,"prob_condicion_estimada":0.5,"penalizacion_coste":0.001},"escenarios_sim":{"C1_aleatorio":{"_doc":"Equipos de 4 salvajes (genética v0.2), formación por orden de generación; IA reserva 0 en ambos.","combates":20000,"semillas":5},"C2_familias":{"_doc":"Equipos monofamilia de cada una de las 13 familias contra cada otra (todas las parejas, lados alternos). Base: salvajes 'puro' de F. Híbridas: cada criatura con 2 D híbridos (claves con forma aleatoria) y 2 D de sus componentes.","combates_por_pareja":1000},"C3_calidad":{"_doc":"D-008. Equipos espejo; X con todos los genes a calidad max (94,5) e Y a min (85,5), ancla y valores = catálogo escalado con repartir.","combates":10000},"C4_energia":{"_doc":"Equipos C1; IA con reserva u contra IA reserva 0, lados alternos.","reservas":[0,3,5,7],"combates_por_pareja":5000}},"criterios_sim":{"duracion":{"_doc":"C1, turnos.","media_min":7,"media_max":12,"mediana_min":7,"mediana_max":11,"p90_max":15,"max_empates":0.03,"segundos_por_turno_estimados":25},"familias":{"_doc":"C2: tasa de victoria de cada familia contra el conjunto de las otras 12.","min":0.45,"max":0.55},"lado":{"_doc":"C1: victorias del lado A.","min":0.485,"max":0.515},"calidad_D008":{"_doc":"C3: victorias de X.","objetivo_max":0.55,"limite_max":0.6},"energia":{"_doc":"[v0.2] C4 redefinido (la IA ya ahorra sola). Ninguna reserva externa domina y los movimientos caros se usan.","min_reserva0_vs_cualquiera":0.45,"max_mejor_reserva_vs_0":0.55,"min_uso_coste_4_5_si_pagable":0.05},"iniciativa":{"_doc":"Informativo C1: % de veces que actúa primero la criatura con más iniciativa base, para parejas con diferencia ≤ 5.","rango_informativo":[0.5,0.65]}},"barridos_sim":{"estadisticas.beta_calidad":[0,0.04,0.06],"estadisticas.vida.coef.velocidad":[0.05,0.1,0.15],"ia.kappa":[0,0.6,0.8,0.9],"orden.jitter":[20,30,45],"dano.golpe_basico.potencia":[0,10,15],"estadisticas.vida.base":[200,220,240]}};
+module.exports = {"_doc":"Configuración de combate v0.2. Fuente: docs/spec/combate-v0.2.md. Todo número de la spec está aquí y viceversa. Movimientos: config/movimientos.v0.2.json. [v0.2] marca los cambios en la spec.","version":"0.2","equipo":{"tamano":4,"_doc_filas":"Posiciones 1-2 delantera, 3-4 trasera. Si la delantera cae entera, la trasera pasa a ser objetivo por defecto.","delantera":[1,2],"trasera":[3,4]},"estadisticas":{"_doc":"[v0.2] Derivadas por cuotas σ = stat/T con una matriz de coeficientes: derivada = base·(1 + Σ_s coef[s]·(3σs − 1))·q (vida, ataque) o base + Σ_s coef[s]·(3σs − 1) (iniciativa). La velocidad aporta además un poco de vida y ataque para que los tres perfiles valgan lo mismo.","total_ref":360,"vida":{"base":220,"coef":{"potencia":0,"velocidad":0.1,"resistencia":0.45}},"ataque":{"base":1,"coef":{"potencia":0.5,"velocidad":0.1,"resistencia":0}},"iniciativa":{"base":100,"coef":{"potencia":0,"velocidad":50,"resistencia":0}},"beta_calidad":0.04,"nivel":false},"energia":{"inicial":3,"por_turno":3,"maximo":10},"orden":{"_doc":"iniciativa = base + Σ coef·(3σ−1) + estados + jitter*(2u-1). Desempate: prioridad, iniciativa, lado favorecido (A en turnos impares, B en pares), posición. [v0.2] Los movimientos de aliado (curación y protección) actúan con prioridad 1.","jitter":30,"niveles_prioridad":[0,1],"prioridad_movimientos_aliado":1},"dano":{"_doc":"daño = round(pot*(1+sinergia)*fA*familia*marca*debilitar*var*desgaste); var = 1-varianza + 2*varianza*u.","varianza":0.2,"minimo":1,"golpe_basico":{"coste":0,"potencia":10,"_doc":"Acción universal de 0 energía, familia = familia de la criatura, objetivo delantera."}},"familias":{"_doc":"Dos anillos: cada familia es fuerte contra la siguiente de su anillo y débil contra la anterior. Entre anillos, neutral. Atacante = familia del movimiento; defensor = familia de la criatura.","anillo_base":["marea","llama","brote","roca","voltio","sombra"],"anillo_hibridas":["vapor","magma","espora","liquen","plasma","tormenta","abismo"],"fuerte":1.25,"debil":0.8,"neutral":1,"tabla":{"marea":{"marea":1,"llama":1.25,"brote":1,"roca":1,"voltio":1,"sombra":0.8,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"llama":{"marea":0.8,"llama":1,"brote":1.25,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"brote":{"marea":1,"llama":0.8,"brote":1,"roca":1.25,"voltio":1,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"roca":{"marea":1,"llama":1,"brote":0.8,"roca":1,"voltio":1.25,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"voltio":{"marea":1,"llama":1,"brote":1,"roca":0.8,"voltio":1,"sombra":1.25,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"sombra":{"marea":1.25,"llama":1,"brote":1,"roca":1,"voltio":0.8,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"vapor":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":1.25,"espora":1,"liquen":1,"plasma":1,"tormenta":1,"abismo":0.8},"magma":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":0.8,"magma":1,"espora":1.25,"liquen":1,"plasma":1,"tormenta":1,"abismo":1},"espora":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":0.8,"espora":1,"liquen":1.25,"plasma":1,"tormenta":1,"abismo":1},"liquen":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":1,"espora":0.8,"liquen":1,"plasma":1.25,"tormenta":1,"abismo":1},"plasma":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":0.8,"plasma":1,"tormenta":1.25,"abismo":1},"tormenta":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1,"magma":1,"espora":1,"liquen":1,"plasma":0.8,"tormenta":1,"abismo":1.25},"abismo":{"marea":1,"llama":1,"brote":1,"roca":1,"voltio":1,"sombra":1,"vapor":1.25,"magma":1,"espora":1,"liquen":1,"plasma":1,"tormenta":0.8,"abismo":1}}},"sinergia":{"_doc":"Bonus a la potencia de los movimientos (no golpe básico) de criaturas de un mismo grupo de familia que usan movimiento en el turno. Una híbrida pertenece a su familia y a sus 2 componentes; se toma el mayor grupo.","bonus_por_n":{"2":0.1,"3":0.2,"4":0.3},"hibridas_cuentan_componentes":true},"estados":{"_doc":"Lista cerrada. duracion = nº de finales de turno que dura (incluido el de aplicación). apilado: refresca | pilas | suma.","quemadura":{"tipo":"negativo","duracion":3,"apilado":"pilas","max_pilas":3,"dano_por_pila":12},"ralentizar":{"tipo":"negativo","duracion":2,"apilado":"refresca","iniciativa":-30},"aturdir":{"tipo":"negativo","duracion":1,"apilado":"refresca","inmunidad_turnos":2},"marca":{"tipo":"negativo","duracion":2,"apilado":"refresca","dano_recibido":1.2},"debilitar":{"tipo":"negativo","duracion":2,"apilado":"refresca","dano_infligido":0.8},"escudo":{"tipo":"positivo","duracion":2,"apilado":"suma","maximo":300},"prisa":{"tipo":"positivo","duracion":2,"apilado":"refresca","iniciativa":30},"regenerar":{"tipo":"positivo","duracion":3,"apilado":"refresca","cura_por_turno":15}},"desgaste":{"_doc":"Desde el turno desde_turno+1, el daño de movimientos y golpes se multiplica por 1 + por_turno*(t - desde_turno).","desde_turno":10,"por_turno":0.25},"fin":{"turnos_max":20,"_doc":"Al acabar el turno turnos_max sin vencedor: empate. Si ambos equipos caen en el mismo turno: empate."},"tiradas":{"_doc":"Por turno, fijas: 8 de jitter (A1..A4, B1..B4) + 2 de varianza por posición en el mismo orden.","jitter_por_turno":8,"varianza_por_accion":2,"por_turno":24},"semilla":{"prefijo":"combate|"},"ia":{"_doc":"[v0.2] IA de referencia determinista (sin tiradas): enumera planes y maximiza valor del turno + precio sombra de la energía guardada. Unidades: puntos de vida equivalentes.","reserva_por_defecto":0,"bonus_ko":50,"kappa":0.9,"_doc_kappa":"precio sombra λ = kappa · máx (valor estimado − golpe básico)/coste sobre los movimientos de las criaturas vivas.","valor_estado":{"quemadura":36,"ralentizar":5,"aturdir":40,"marca":15,"debilitar":15,"prisa":5,"regenerar":45},"holgura_regenerar":15,"valor_max_escudo":90,"objetivos_area_estimados":1.5,"factor_cura_estimada":0.6,"prob_condicion_estimada":0.5,"penalizacion_coste":0.001},"variantes":{"_doc":"[v0.3] Variantes en estudio (docs/spec/combate-variantes-v0.3.md §2). TODAS desactivadas por defecto: con 'activo' = false el combate es idéntico a v0.2.1. Se activan con patchRawConfig/buildBattleConfig. V3 (más energía) no tiene bloque: es 'energia.por_turno' (3 → 4). Ninguna cambia las 24 tiradas por turno.","golpe_basico_efecto":{"_doc":"V1. Efecto menor del golpe básico según la familia BASE del alma (híbridas: el de su componente nº 'componente_hibrida', 0 o 1). tipo 'estado': aplica el estado con esa probabilidad (ofensivos al objetivo si sobrevive; prisa/regenerar al usuario) usando la 2.ª tirada de varianza de la posición, que el golpe no gasta. tipo 'cura'/'escudo': cantidad fija al usuario. tipo 'ninguno': sin efecto. Calibrados a ≈ 4–5 de vida equivalente (un movimiento de coste 1 rinde ≈ 20 sobre el básico).","activo":false,"componente_hibrida":0,"efectos":{"llama":{"tipo":"estado","estado":"quemadura","probabilidad":0.15},"marea":{"tipo":"estado","estado":"ralentizar","probabilidad":0.75},"brote":{"tipo":"cura","cantidad":5},"roca":{"tipo":"escudo","cantidad":6},"voltio":{"tipo":"estado","estado":"prisa","probabilidad":0.5},"sombra":{"tipo":"estado","estado":"marca","probabilidad":1}}},"descanso":{"_doc":"V2. El movimiento ejecutado en el turno t no se puede elegir en los 'turnos' turnos siguientes (el golpe básico no descansa). Una acción cancelada (KO o aturdida, con devolución) no descansa.","activo":true,"turnos":1},"objetivo_automatico":{"_doc":"V4. El plan no lleva objetivo (se ignora; se normaliza a 0). Carril = (posición − 1) mod 2: 1 y 3 izquierda, 2 y 4 derecha. Ataque de un objetivo: delantera de su carril, la otra delantera, trasera de su carril, la otra trasera ('alcance': primero las traseras). Cura: aliado con menor vida/máx. Escudo: delantero con menos vida (si no hay, el aliado con menos vida); con 'escudo_provocar_al_usuario', el escudo de un movimiento con provocar va al usuario. Se decide al ejecutar.","activo":false,"escudo_provocar_al_usuario":true},"provocar":{"_doc":"Pieza 'provocar' (movimientos.v0.2.json → provocar): durante 'duracion' finales de turno (contando el del turno en que se usa) los ataques enemigos de un solo objetivo van a esa alma. 'valor_ia': valor que le da la IA de referencia, en vida equivalente.","duracion":1,"valor_ia":20}},"escenarios_sim":{"C1_aleatorio":{"_doc":"Equipos de 4 salvajes (genética v0.2), formación por orden de generación; IA reserva 0 en ambos.","combates":20000,"semillas":5},"C2_familias":{"_doc":"Equipos monofamilia de cada una de las 13 familias contra cada otra (todas las parejas, lados alternos). Base: salvajes 'puro' de F. Híbridas: cada criatura con 2 D híbridos (claves con forma aleatoria) y 2 D de sus componentes.","combates_por_pareja":1000},"C3_calidad":{"_doc":"D-008. Equipos espejo; X con todos los genes a calidad max (94,5) e Y a min (85,5), ancla y valores = catálogo escalado con repartir.","combates":10000},"C4_energia":{"_doc":"Equipos C1; IA con reserva u contra IA reserva 0, lados alternos.","reservas":[0,3,5,7],"combates_por_pareja":5000}},"criterios_sim":{"duracion":{"_doc":"C1, turnos.","media_min":7,"media_max":12,"mediana_min":7,"mediana_max":11,"p90_max":15,"max_empates":0.03,"segundos_por_turno_estimados":25},"familias":{"_doc":"C2: tasa de victoria de cada familia contra el conjunto de las otras 12.","min":0.45,"max":0.55},"lado":{"_doc":"C1: victorias del lado A.","min":0.485,"max":0.515},"calidad_D008":{"_doc":"C3: victorias de X.","objetivo_max":0.55,"limite_max":0.6},"energia":{"_doc":"[v0.2] C4 redefinido (la IA ya ahorra sola). Ninguna reserva externa domina y los movimientos caros se usan.","min_reserva0_vs_cualquiera":0.45,"max_mejor_reserva_vs_0":0.55,"min_uso_coste_4_5_si_pagable":0.05},"iniciativa":{"_doc":"Informativo C1: % de veces que actúa primero la criatura con más iniciativa base, para parejas con diferencia ≤ 5.","rango_informativo":[0.5,0.65]}},"barridos_sim":{"estadisticas.beta_calidad":[0,0.04,0.06],"estadisticas.vida.coef.velocidad":[0.05,0.1,0.15],"ia.kappa":[0,0.6,0.8,0.9],"orden.jitter":[20,30,45],"dano.golpe_basico.potencia":[0,10,15],"estadisticas.vida.base":[200,220,240]}};
 };
 defs["config/movimientos.v0.2.json"]=function(module,exports,require){
-module.exports = {"_doc":"Configuración de movimientos v0.2. Fuente: docs/spec/movimientos-v0.2.md. Todo número de la spec está aquí y viceversa.","version":"0.2","semilla":{"prefijo":"mov|v0.1|","_doc":"rng = createRng(prefijo + clave_gen [+ '|' + sal si hay override]). [v0.2] El prefijo NO cambia con la versión: identifica el flujo de tiradas, no las reglas."},"tiradas_por_movimiento":8,"presupuesto_por_coste":{"1":6,"2":15,"3":27,"4":42,"5":60},"coste_energia":{"min":1,"max":5,"_doc":"[v0.2] c = clamp(1 + floor(desplazamiento + forma[0]*escala_tamano + u*escala_azar), min, max).","desplazamiento":0.25,"escala_tamano":2,"escala_azar":2.5},"escalables":{"_doc":"Potencia por punto. La potencia se redondea hacia abajo a múltiplo de 'paso'. [v0.2] fraccion_minima: fac·fEsc·pts ≥ fraccion_minima·presupuesto.","dano":{"potencia_por_punto":5,"max_individual":350,"max_area_por_objetivo":175},"cura":{"potencia_por_punto":5.5,"max":330},"escudo":{"potencia_por_punto":7.5,"max":300},"paso":5,"minimo_puntos":2,"fraccion_minima":0.4},"estados":{"_doc":"Coste fijo en puntos. Los parámetros de cada estado están en combate.v0.1.json.","ofensivos":{"quemadura":6,"ralentizar":1,"aturdir":2,"marca":1,"debilitar":1},"positivos":{"prisa":2,"regenerar":5,"ninguno":0},"aturdir_coste_min":3},"energia_extra":{"coste":8,"cantidad":1,"coste_min":3,"_doc":"+1 energía al bando al ejecutarse el movimiento (máx. 10); solo sirve para turnos siguientes."},"modificadores":{"alcance":{"coste":0,"_doc":"Puede elegir objetivo en cualquier fila."},"prioridad":{"coste":8,"_doc":"Nivel de prioridad 1."},"perforar":{"coste":1.5,"_doc":"Ignora el escudo del objetivo."},"area":{"factor":1.75,"_doc":"Afecta a toda una fila (enemiga o aliada según el objetivo). Multiplica el coste de estado, energía y escalable."},"drenaje":{"factor":1.1,"fraccion":0.3,"_doc":"Cura al usuario 30 % del daño infligido. Multiplica el coste del escalable de daño."}},"condiciones":{"_doc":"Si se cumple al ejecutar: potencia escalable * (1 + bonus). Coste del escalable * (1 + bonus*factor).","bonus":0.5,"objetivo_con_estado":{"factor":0.35,"_doc":"El objetivo tiene algún estado negativo."},"vida_baja":{"factor":0.3,"umbral":0.5,"_doc":"Vida del usuario < 50 % de su máximo."},"combo_familia":{"factor":0.3,"_doc":"Otra criatura del mismo grupo de familia usa un movimiento este turno."},"reserva":{"factor":0.15,"umbral":3,"_doc":"Energía del equipo tras pagar el plan del turno ≥ 3."},"antes_que_objetivo":{"factor":0.4,"_doc":"El objetivo no ha actuado aún este turno."}},"probabilidades":{"_doc":"p_mod = base + escala*forma[1]; p_cond = base + escala*forma[3].","mod_base":0.15,"mod_escala":0.4,"cond_base":0.1,"cond_escala":0.4},"arquetipos":{"_doc":"Piezas permitidas por arquetipo. 'estado' = lista de la que se sortea; 'objetivo' del escalable.","golpe":{"escalable":"dano","objetivo":"enemigo","estados":[],"modificadores":["alcance","prioridad","perforar","area","drenaje"],"area_forzada":false},"golpe_estado":{"escalable":"dano","objetivo":"enemigo","estados":"ofensivos","modificadores":["alcance","prioridad","area"],"area_forzada":false},"maldicion":{"escalable":"dano","objetivo":"enemigo","estados":"ofensivos","modificadores":["alcance","prioridad"],"area_forzada":true,"coste_min":2,"_doc_coste_min":"[v0.2] Si c < coste_min, el arquetipo pasa a golpe_estado antes de sortear el estado (sin tiradas extra)."},"proteccion":{"escalable":"escudo","objetivo":"aliado","estados":"positivos","modificadores":["area"],"area_forzada":false},"curacion":{"escalable":"cura","objetivo":"aliado","estados":["regenerar","ninguno"],"modificadores":["area"],"area_forzada":false},"tactico":{"escalable":"dano","objetivo":"enemigo","estados":["prisa"],"energia_si_coste_min":true,"modificadores":["alcance","prioridad"],"area_forzada":false,"_doc_tactico":"Con c >= energia_extra.coste_min lleva +1 energía en vez de prisa (sobre el usuario)."}},"orden_arquetipos":["golpe","golpe_estado","maldicion","proteccion","curacion","tactico"],"orden_estados_ofensivos":["quemadura","ralentizar","aturdir","marca","debilitar"],"orden_estados_positivos":["prisa","regenerar","ninguno"],"orden_modificadores":["alcance","prioridad","perforar","area","drenaje"],"orden_condiciones":["objetivo_con_estado","vida_baja","combo_familia","reserva","antes_que_objetivo"],"pesos_familia":{"_doc":"Pesos por familia base. Híbridas: suma de los pesos de sus dos componentes. Orden de cada lista = orden_* correspondiente. [v0.2] arquetipo: 9 de daño y 3 de apoyo por familia.","arquetipo":{"llama":[4,3,1,2,1,1],"marea":[3,2,2,1,2,2],"brote":[3,3,1,1,2,2],"roca":[3,3,1,2,1,2],"voltio":[3,2,1,2,1,3],"sombra":[2,3,3,2,1,1]},"estado_ofensivo":{"llama":[5,1,1,1,1],"marea":[0,4,1,1,2],"brote":[0,2,1,1,3],"roca":[0,3,2,1,2],"voltio":[1,1,5,1,0],"sombra":[1,1,1,5,3]},"estado_positivo":{"llama":[2,0,2],"marea":[1,3,2],"brote":[0,5,1],"roca":[0,1,3],"voltio":[4,0,2],"sombra":[2,1,2]},"modificador":{"llama":[1,1,1,3,1],"marea":[2,1,1,2,2],"brote":[1,0,1,2,4],"roca":[1,0,3,2,1],"voltio":[2,4,1,1,0],"sombra":[4,1,2,0,3]},"condicion":{"llama":[3,2,2,1,1],"marea":[2,1,3,2,1],"brote":[1,3,2,3,0],"roca":[1,3,2,3,0],"voltio":[1,0,2,1,5],"sombra":[4,2,1,1,2]}},"pesos_locus_arquetipo":{"cabeza":[2,1,0,0,0,0],"cuerpo":[0,0,0,2,1,0],"extremidades":[1,0,0,0,0,2],"cola":[0,1,2,0,0,0]},"pesos_forma_arquetipo":{"_doc":"Se suma forma[2]*ofensivo a golpe y golpe_estado, y (1-forma[2])*defensivo a proteccion y curacion.","ofensivo":1,"defensivo":1},"nombres":{"_doc":"nombre = nucleo[arquetipo] + ' de ' + raiz[familia][floor(u*4)]. 100 % originales.","nucleo":{"golpe":"Embate","golpe_estado":"Mordida","maldicion":"Maleficio","proteccion":"Égida","curacion":"Bálsamo","tactico":"Ardid"},"raiz":{"llama":["Ascua","Brasa","Chispa","Pira"],"marea":["Oleaje","Resaca","Rocío","Corriente"],"brote":["Raíz","Savia","Zarcillo","Polen"],"roca":["Peña","Lasca","Grava","Risco"],"voltio":["Arco","Destello","Chasquido","Pulso"],"sombra":["Penumbra","Velo","Umbría","Eco"],"vapor":["Bruma","Hervor","Niebla","Vaho"],"magma":["Lava","Escoria","Fundición","Ceniza"],"tormenta":["Trueno","Ráfaga","Aguacero","Centella"],"plasma":["Fulgor","Nova","Incandescencia","Radiante"],"espora":["Moho","Micelio","Esporada","Hifa"],"abismo":["Fosa","Sima","Hondura","Negrura"],"liquen":["Costra","Talo","Pátina","Musgo"]}},"overrides_catalogo":{"_doc":"[v0.2] id de gen -> sal. 'r*' = cuotas de arquetipo del catálogo (§5.1); 'c*' = búsqueda dirigida por C2 (§5.2).","sales":{"llama.cabeza.1":"r6","marea.cabeza.3":"r3","marea.cuerpo.3":"c2","brote.cabeza.1":"r4","roca.cabeza.3":"r1","voltio.cuerpo.2":"r2","sombra.cabeza.1":"c1","sombra.cabeza.2":"r1","sombra.cuerpo.1":"r2","brote.cola.1":"c4","llama.extremidades.1":"c4","voltio.cabeza.2":"c2","sombra.cuerpo.3":"c3","roca.cuerpo.3":"c2","voltio.cola.3":"c3","brote.cabeza.2":"c1","sombra.cola.3":"c1","brote.extremidades.2":"c4","brote.cabeza.3":"c1","roca.cola.1":"c2","brote.cola.3":"c4","sombra.cabeza.3":"c2"}},"criterios_sim":{"_doc":"Prueba de sustitución (sec. 7). WR = victorias del equipo con el movimiento m frente al de referencia.","combates_por_movimiento":2000,"muestra_mutados":500,"roto_wr":0.58,"inutil_wr":0.42,"roto_grave_wr":0.65,"max_frac_rotos_catalogo":0.02,"max_rotos_graves":0,"uso_sospechoso":0.85,"min_arquetipos_por_familia_catalogo":3,"cuotas_catalogo":{"_doc":"[v0.2] Por familia base, sobre sus 12 genes de catálogo.","apoyo_min":2,"apoyo_max":4,"max_por_arquetipo":4,"golpe_min":2,"golpe_estado_min":2}}};
+module.exports = {"_doc":"Configuración de movimientos v0.2. Fuente: docs/spec/movimientos-v0.2.md. Todo número de la spec está aquí y viceversa.","version":"0.2","semilla":{"prefijo":"mov|v0.1|","_doc":"rng = createRng(prefijo + clave_gen [+ '|' + sal si hay override]). [v0.2] El prefijo NO cambia con la versión: identifica el flujo de tiradas, no las reglas."},"tiradas_por_movimiento":8,"presupuesto_por_coste":{"1":6,"2":15,"3":27,"4":42,"5":60},"coste_energia":{"min":1,"max":5,"_doc":"[v0.2] c = clamp(1 + floor(desplazamiento + forma[0]*escala_tamano + u*escala_azar), min, max).","desplazamiento":0.25,"escala_tamano":2,"escala_azar":2.5},"escalables":{"_doc":"Potencia por punto. La potencia se redondea hacia abajo a múltiplo de 'paso'. [v0.2] fraccion_minima: fac·fEsc·pts ≥ fraccion_minima·presupuesto.","dano":{"potencia_por_punto":5,"max_individual":350,"max_area_por_objetivo":175},"cura":{"potencia_por_punto":5.5,"max":330},"escudo":{"potencia_por_punto":7.5,"max":300},"paso":5,"minimo_puntos":2,"fraccion_minima":0.4},"estados":{"_doc":"Coste fijo en puntos. Los parámetros de cada estado están en combate.v0.1.json.","ofensivos":{"quemadura":6,"ralentizar":1,"aturdir":2,"marca":1,"debilitar":1},"positivos":{"prisa":2,"regenerar":5,"ninguno":0},"aturdir_coste_min":3},"energia_extra":{"coste":8,"cantidad":1,"coste_min":3,"_doc":"+1 energía al bando al ejecutarse el movimiento (máx. 10); solo sirve para turnos siguientes."},"modificadores":{"alcance":{"coste":0,"_doc":"Puede elegir objetivo en cualquier fila."},"prioridad":{"coste":8,"_doc":"Nivel de prioridad 1."},"perforar":{"coste":1.5,"_doc":"Ignora el escudo del objetivo."},"area":{"factor":1.75,"_doc":"Afecta a toda una fila (enemiga o aliada según el objetivo). Multiplica el coste de estado, energía y escalable."},"drenaje":{"factor":1.1,"fraccion":0.3,"_doc":"Cura al usuario 30 % del daño infligido. Multiplica el coste del escalable de daño."}},"condiciones":{"_doc":"Si se cumple al ejecutar: potencia escalable * (1 + bonus). Coste del escalable * (1 + bonus*factor).","bonus":0.5,"objetivo_con_estado":{"factor":0.35,"_doc":"El objetivo tiene algún estado negativo."},"vida_baja":{"factor":0.3,"umbral":0.5,"_doc":"Vida del usuario < 50 % de su máximo."},"combo_familia":{"factor":0.3,"_doc":"Otra criatura del mismo grupo de familia usa un movimiento este turno."},"reserva":{"factor":0.15,"umbral":3,"_doc":"Energía del equipo tras pagar el plan del turno ≥ 3."},"antes_que_objetivo":{"factor":0.4,"_doc":"El objetivo no ha actuado aún este turno."}},"provocar":{"_doc":"[v0.3, variante V4] Pieza 'provocar' de la gramática, desactivada por defecto (con 'activo' = false el catálogo no cambia). Ocupa el hueco del estado en los arquetipos de 'arquetipos' (de aliado) y se aplica al usuario. Sorteo sin tiradas extra, con la misma u3 del estado: si u3 ≥ T/(T + w), con T = suma de los pesos de estado positivo del arquetipo y w = peso de provocar de la familia (híbridas: suma de sus 2 componentes), el estado sorteado se sustituye por provocar; por debajo, el movimiento queda igual que sin la variante. 'coste' en puntos de presupuesto (×factor de área, como un estado).","activo":false,"coste":3,"arquetipos":["proteccion"],"pesos_familia":{"llama":0,"marea":1,"brote":1,"roca":3,"voltio":0,"sombra":0}},"probabilidades":{"_doc":"p_mod = base + escala*forma[1]; p_cond = base + escala*forma[3].","mod_base":0.15,"mod_escala":0.4,"cond_base":0.1,"cond_escala":0.4},"arquetipos":{"_doc":"Piezas permitidas por arquetipo. 'estado' = lista de la que se sortea; 'objetivo' del escalable.","golpe":{"escalable":"dano","objetivo":"enemigo","estados":[],"modificadores":["alcance","prioridad","perforar","area","drenaje"],"area_forzada":false},"golpe_estado":{"escalable":"dano","objetivo":"enemigo","estados":"ofensivos","modificadores":["alcance","prioridad","area"],"area_forzada":false},"maldicion":{"escalable":"dano","objetivo":"enemigo","estados":"ofensivos","modificadores":["alcance","prioridad"],"area_forzada":true,"coste_min":2,"_doc_coste_min":"[v0.2] Si c < coste_min, el arquetipo pasa a golpe_estado antes de sortear el estado (sin tiradas extra)."},"proteccion":{"escalable":"escudo","objetivo":"aliado","estados":"positivos","modificadores":["area"],"area_forzada":false},"curacion":{"escalable":"cura","objetivo":"aliado","estados":["regenerar","ninguno"],"modificadores":["area"],"area_forzada":false},"tactico":{"escalable":"dano","objetivo":"enemigo","estados":["prisa"],"energia_si_coste_min":true,"modificadores":["alcance","prioridad"],"area_forzada":false,"_doc_tactico":"Con c >= energia_extra.coste_min lleva +1 energía en vez de prisa (sobre el usuario)."}},"orden_arquetipos":["golpe","golpe_estado","maldicion","proteccion","curacion","tactico"],"orden_estados_ofensivos":["quemadura","ralentizar","aturdir","marca","debilitar"],"orden_estados_positivos":["prisa","regenerar","ninguno"],"orden_modificadores":["alcance","prioridad","perforar","area","drenaje"],"orden_condiciones":["objetivo_con_estado","vida_baja","combo_familia","reserva","antes_que_objetivo"],"pesos_familia":{"_doc":"Pesos por familia base. Híbridas: suma de los pesos de sus dos componentes. Orden de cada lista = orden_* correspondiente. [v0.2] arquetipo: 9 de daño y 3 de apoyo por familia.","arquetipo":{"llama":[4,3,1,2,1,1],"marea":[3,2,2,1,2,2],"brote":[3,3,1,1,2,2],"roca":[3,3,1,2,1,2],"voltio":[3,2,1,2,1,3],"sombra":[2,3,3,2,1,1]},"estado_ofensivo":{"llama":[5,1,1,1,1],"marea":[0,4,1,1,2],"brote":[0,2,1,1,3],"roca":[0,3,2,1,2],"voltio":[1,1,5,1,0],"sombra":[1,1,1,5,3]},"estado_positivo":{"llama":[2,0,2],"marea":[1,3,2],"brote":[0,5,1],"roca":[0,1,3],"voltio":[4,0,2],"sombra":[2,1,2]},"modificador":{"llama":[1,1,1,3,1],"marea":[2,1,1,2,2],"brote":[1,0,1,2,4],"roca":[1,0,3,2,1],"voltio":[2,4,1,1,0],"sombra":[4,1,2,0,3]},"condicion":{"llama":[3,2,2,1,1],"marea":[2,1,3,2,1],"brote":[1,3,2,3,0],"roca":[1,3,2,3,0],"voltio":[1,0,2,1,5],"sombra":[4,2,1,1,2]}},"pesos_locus_arquetipo":{"cabeza":[2,1,0,0,0,0],"cuerpo":[0,0,0,2,1,0],"extremidades":[1,0,0,0,0,2],"cola":[0,1,2,0,0,0]},"pesos_forma_arquetipo":{"_doc":"Se suma forma[2]*ofensivo a golpe y golpe_estado, y (1-forma[2])*defensivo a proteccion y curacion.","ofensivo":1,"defensivo":1},"nombres":{"_doc":"nombre = nucleo[arquetipo] + ' de ' + raiz[familia][floor(u*4)]. 100 % originales.","nucleo":{"golpe":"Embate","golpe_estado":"Mordida","maldicion":"Maleficio","proteccion":"Égida","curacion":"Bálsamo","tactico":"Ardid"},"raiz":{"llama":["Ascua","Brasa","Chispa","Pira"],"marea":["Oleaje","Resaca","Rocío","Corriente"],"brote":["Raíz","Savia","Zarcillo","Polen"],"roca":["Peña","Lasca","Grava","Risco"],"voltio":["Arco","Destello","Chasquido","Pulso"],"sombra":["Penumbra","Velo","Umbría","Eco"],"vapor":["Bruma","Hervor","Niebla","Vaho"],"magma":["Lava","Escoria","Fundición","Ceniza"],"tormenta":["Trueno","Ráfaga","Aguacero","Centella"],"plasma":["Fulgor","Nova","Incandescencia","Radiante"],"espora":["Moho","Micelio","Esporada","Hifa"],"abismo":["Fosa","Sima","Hondura","Negrura"],"liquen":["Costra","Talo","Pátina","Musgo"]}},"overrides_catalogo":{"_doc":"[v0.2] id de gen -> sal. 'r*' = cuotas de arquetipo del catálogo (§5.1); 'c*' = búsqueda dirigida por C2 (§5.2).","sales":{"llama.cabeza.1":"r6","marea.cabeza.3":"r3","marea.cuerpo.3":"c2","brote.cabeza.1":"r4","roca.cabeza.3":"r1","voltio.cuerpo.2":"r2","sombra.cabeza.1":"c1","sombra.cabeza.2":"r1","sombra.cuerpo.1":"r2","brote.cola.1":"c4","llama.extremidades.1":"c4","voltio.cabeza.2":"c2","sombra.cuerpo.3":"c3","roca.cuerpo.3":"c2","voltio.cola.3":"c3","brote.cabeza.2":"c1","sombra.cola.3":"c1","brote.extremidades.2":"c4","brote.cabeza.3":"c1","roca.cola.1":"c2","brote.cola.3":"c4","sombra.cabeza.3":"c2"}},"criterios_sim":{"_doc":"Prueba de sustitución (sec. 7). WR = victorias del equipo con el movimiento m frente al de referencia.","combates_por_movimiento":2000,"muestra_mutados":500,"roto_wr":0.58,"inutil_wr":0.42,"roto_grave_wr":0.65,"max_frac_rotos_catalogo":0.02,"max_rotos_graves":0,"uso_sospechoso":0.85,"min_arquetipos_por_familia_catalogo":3,"cuotas_catalogo":{"_doc":"[v0.2] Por familia base, sobre sus 12 genes de catálogo.","apoyo_min":2,"apoyo_max":4,"max_por_arquetipo":4,"golpe_min":2,"golpe_estado_min":2}}};
 };
 defs["client/art/palette.ts"]=function(module,exports,require){
 "use strict";
@@ -4440,7 +5002,7 @@ function narrate(before, events, names) {
                 break;
             }
             case "cancel":
-                lines.push({ kind: "info", parts: [nm(e.side, e.actor), e.reason === "aturdido" ? " está aturdido y pierde su acción" : " ya está KO y no actúa", e.refund > 0 ? ` (se le devuelven ${e.refund} de energía)` : ""] });
+                lines.push({ kind: "info", parts: [nm(e.side, e.actor), e.reason === "aturdido" ? " está aturdido y pierde su acción" : " ya está KO y no actúa", e.refund > 0 && e.side === "A" ? ` (se le devuelven ${e.refund} de energía)` : ""] });
                 break;
             case "lost":
                 lines.push({ kind: "info", parts: ["La acción de ", nm(e.side, e.actor), " se pierde: no queda objetivo válido."] });
@@ -4486,7 +5048,8 @@ function narrate(before, events, names) {
                 lines.push({ kind: "heal", parts: [nm(e.side, e.pos), ` gana ${e.amount} de escudo (total ${e.total}).`] });
                 break;
             case "energy":
-                lines.push({ kind: "info", parts: [`${e.side === "A" ? "Tu bando" : "El rival"} gana ${e.amount} de energía.`] });
+                if (e.side === "A")
+                    lines.push({ kind: "info", parts: [`Tu bando gana ${e.amount} de energía.`] }); // la energía del rival no se muestra
                 break;
             case "ko":
                 marks.ko.add((0, exports.key)(e.side, e.pos));
@@ -4567,6 +5130,7 @@ function paintUnit(u, v, pop) {
     }
     u.hp.textContent = v.ko ? "KO" : `${Math.max(0, v.hp)}/${u.maxHp}${v.statuses.length ? " · " + v.statuses.map(chipText).join(", ") : ""}`;
     u.unit.classList.toggle("ko", v.ko);
+    u.iw?.classList.toggle("ko", v.ko);
     const old = new Set(Array.from(u.chips.children).map((c) => c.dataset["s"]));
     u.chips.replaceChildren();
     for (const s of v.statuses) {

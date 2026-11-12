@@ -17,15 +17,21 @@ import { CFG as GCFG } from "./genetics-helpers.ts";
 export { GCFG };
 
 /** Configs reales; los `patch` modifican una copia del JSON crudo antes de validar. */
-export function loadBattleConfig(patchCombat?: (raw: any) => void, patchMoves?: (raw: any) => void): BattleConfig {
+/** Copia del JSON de combate con el descanso (V2) fijado en desactivado: los tests de reglas lo asumen; el JSON del juego lo activa (nov 2026). */
+function baseCombatClone(): any {
   const c = structuredClone(rawCombat) as any;
+  c.variantes.descanso.activo = false;
+  return c;
+}
+export function loadBattleConfig(patchCombat?: (raw: any) => void, patchMoves?: (raw: any) => void): BattleConfig {
+  const c = baseCombatClone();
   const m = structuredClone(rawMoves) as any;
   if (patchCombat) patchCombat(c);
   if (patchMoves) patchMoves(m);
   return { combat: parseCombatConfig(c), moves: parseMovesConfig(m, GCFG) };
 }
 export const BCFG = loadBattleConfig();
-export const rawCombatClone = (): any => structuredClone(rawCombat);
+export const rawCombatClone = (): any => baseCombatClone();
 export const rawMovesClone = (): any => structuredClone(rawMoves);
 
 /** Movimiento hecho a mano (el motor no lo valida; solo lo usa). */

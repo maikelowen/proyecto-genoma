@@ -1,5 +1,5 @@
 /** Interfaz del combate jugable (DOM sin dependencias). Estados: team → plan ⇄ report. */
-import { describeMove, validTargetPositions, eligibleActors, type Action, type BattleEvent, type BattleState, type Move, type SideId } from "../../packages/core/src/index.ts";
+import { describeMove, validTargetPositions, eligibleActors, restingMoves, type Action, type BattleEvent, type BattleState, type Move, type SideId } from "../../packages/core/src/index.ts";
 import { cfg, familyLabel, gcfg, palette } from "./data.ts";
 import { SOUL_ART } from "./souls.ts";
 import { chooseOpponentAi, newSeed, playTurn, rollOffer, rollRival, startFight, type Dificultad, type Fight, type Soul } from "./game.ts";
@@ -107,7 +107,7 @@ function partNode(p: Part): Node {
 function energyBar(have: number, spent: number): HTMLElement {
   const cells: HTMLElement[] = [];
   for (let i = 0; i < cfg.combat.energy.max; i++) cells.push(h("span", { class: "cell " + (i < have - spent ? "full" : i < have ? "spent" : "") }));
-  return h("div", { class: "energy" }, h("span", { class: "lbl" }, "Energía"), h("span", { class: "cells" }, ...cells), h("span", { class: "num" }, spent > 0 ? `${have - spent}/${have} (gastas ${spent})` : `${have}`));
+  return h("div", { class: "energy" }, h("span", { class: "lbl" }, "Energía"), h("span", { class: "cells" }, ...cells), h("span", { class: "num" }, spent > 0 ? `${have - spent}/${have}` : `${have}`));
 }
 
 /** Posiciones (% del escenario, centro del icono) por bando y posición. Rival arriba a la derecha, tuyo abajo a la izquierda; la trasera, más lejos y más pequeña. */
@@ -128,16 +128,21 @@ function plat(cls: string): HTMLElement {
   return el;
 }
 
+
 interface Sel {
   actor: number | null;
   tgts: { side: SideId; pos: number }[];
   onPick?: (side: SideId, pos: number) => void;
+  /** Orden actual de cada alma propia (posición → texto del indicador y título). */
+  orders?: Record<number, { txt: string; title: string }>;
 }
 
-/** Escena de batalla: almas flotando sobre plataformas, sin cartas. Devuelve los elementos para animarlos. */
+/** Escena de batalla: almas flotando sobre plataformas, sin cartas. Devuelve los elementos para animarlos.
+ *  El nombre y la vida de cada alma van en una capa propia (`.iw`) por encima de todos los iconos: así una delantera no tapa la trasera. */
 function buildField(f: Fight, st: BattleState, sel?: Sel): Field {
   const units = new Map<string, UnitEls>();
   const energy = { A: h("span", { class: "en" }), B: h("span", { class: "en" }) } as Record<SideId, HTMLElement>;
+  const layer: HTMLElement[] = [];
   const unit = (side: SideId, pos: number): HTMLElement => {
     const i = SIDE[side];
     const soul = (i === 0 ? f.mine : f.rival)[pos - 1] as Soul;
@@ -148,33 +153,31 @@ function buildField(f: Fight, st: BattleState, sel?: Sel): Field {
     const bar = h("i", null);
     const hp = h("div", { class: "hpn" });
     const chips = h("div", { class: "chips" });
-    const cls = ["unit", side === "A" ? "mine" : "foe", front ? "front" : "back"];
+    const o = side === "A" ? sel?.orders?.[pos] : undefined;
+    const base = [side === "A" ? "mine" : "foe", front ? "front" : "back"];
+    const vars = `--fam:${palette(c.family).main};--x:${x}%;--y:${y}%`;
+    const iw = h("div", { class: "iw " + base.join(" "), style: vars }, h("div", { class: "info" }, h("div", { class: "uname" }, soul.name), h("div", { class: "bar" }, bar), chips, hp), o ? h("span", { class: "ord", title: o.title }, o.txt) : null);
+    const cls = ["unit", ...base];
     if (sel && side === "A" && sel.actor === pos) cls.push("sel-actor");
     if (sel && sel.tgts.some((t) => t.side === side && t.pos === pos)) cls.push(side === "A" ? "sel-ally" : "sel-foe");
-    const el = h("div", { class: cls.join(" "), style: `--fam:${palette(c.family).main};--x:${x}%;--y:${y}%;--d:${-(pos * 0.7 + i * 0.35).toFixed(2)}s;z-index:${Math.round(y / 5)}`, title: soul.name }, h("div", { class: "info" }, h("div", { class: "uname" }, soul.name), h("div", { class: "bar" }, bar), chips, hp), h("div", { class: "shadow" }), h("div", { class: "selring" }), ico);
+    const el = h("div", { class: cls.join(" "), style: `${vars};--d:${-(pos * 0.7 + i * 0.35).toFixed(2)}s;z-index:${Math.round(y / 5)}`, title: soul.name }, h("div", { class: "shadow" }), h("div", { class: "selring" }), ico);
+    el.addEventListener("mouseenter", () => iw.classList.add("hov"));
+    el.addEventListener("mouseleave", () => iw.classList.remove("hov"));
     el.addEventListener("click", () => {
-      el.classList.toggle("peek");
+      iw.classList.toggle("peek");
       sel?.onPick?.(side, pos);
     });
-    const u: UnitEls = { unit: el, ico, bar, hp, chips, maxHp: c.maxHp, family: c.family };
+    const u: UnitEls = { unit: el, ico, bar, hp, chips, maxHp: c.maxHp, family: c.family, iw };
     units.set(key(side, pos), u);
     paintUnit(u, viewFrom(st, side, pos), false);
+    layer.push(iw);
     return el;
   };
   paintEnergy(energy.A, st.energy[0]);
-  paintEnergy(energy.B, st.energy[1]);
+  paintEnergy(energy.B, st.energy[1]); // fuera de la escena: la energía del rival no se muestra
   const all: HTMLElement[] = [];
   for (const side of ["B", "A"] as SideId[]) for (let p = 1; p <= 4; p++) all.push(unit(side, p));
-  const el = h(
-    "div",
-    { class: "stage" },
-    h("div", { class: "bg" }, h("div", { class: "stars" }), h("div", { class: "floor" })),
-    plat("pf"),
-    plat("pm"),
-    h("div", { class: "tag t1" }, "Rival · ", energy.B),
-    h("div", { class: "tag t2" }, "Tú · ", energy.A),
-    ...all,
-  );
+  const el = h("div", { class: "stage" }, h("div", { class: "bg" }, h("div", { class: "stars" }), h("div", { class: "floor" })), plat("pf"), plat("pm"), h("div", { class: "tag t2" }, "Tú · ", energy.A), ...all, ...layer);
   return { el, units, energy };
 }
 
@@ -271,6 +274,9 @@ function startBattle(): void {
   const seed = pendingFightSeed ?? newSeed();
   pendingFightSeed = null;
   fight = startFight(mine, rollRival(seed), seed, chooseOpponentAi(difficulty));
+  report = null;
+  overlay = null;
+  focus = 1;
   beginPlanning();
 }
 
@@ -296,14 +302,32 @@ function renderTeam(): void {
   window.scrollTo(0, 0);
 }
 
-// ------------------------------------------------------------------ planificación del turno
+// ------------------------------------------------------------------ planificación del turno (bandeja de órdenes)
+let armed = false; // esperando que se toque el objetivo en el campo
+let inspect: number | null = null; // alma rival cuyos movimientos se consultan
+let note = "";
+let overlay: "prev" | "help" | null = null;
+let chainTimer = 0;
+
+function defaultFoe(f: Fight): number {
+  return validTargetPositions(null, alive(f.state, "B"), cfg.combat)[0] ?? 1;
+}
+
 function beginPlanning(): void {
   const f = fight as Fight;
-  picks = [1, 2, 3, 4].map(() => ({ move: 0, target: validTargetPositions(null, alive(f.state, "B"), cfg.combat)[0] ?? 1 }));
-  report = null;
+  // todas las almas empiezan el turno con el golpe básico contra la primera delantera enemiga viva
+  picks = [1, 2, 3, 4].map(() => ({ move: 0, target: defaultFoe(f) }));
+  armed = false;
+  inspect = null;
+  note = "";
+  const el = eligibleActors(f.state, "A");
+  if (!el.includes(focus)) focus = el[0] ?? 1;
   phase = "plan";
   render();
-  window.scrollTo(0, 0);
+}
+
+function moveOf(f: Fight, pos: number, move: number): Move | null {
+  return move === 0 ? null : (f.state.teams[0][pos - 1] as BattleState["teams"][0][0]).moves[move - 1] ?? null;
 }
 
 function targetsFor(f: Fight, m: Move | null): { side: SideId; valid: number[] } {
@@ -312,48 +336,129 @@ function targetsFor(f: Fight, m: Move | null): { side: SideId; valid: number[] }
 }
 
 function costOf(f: Fight, pos: number, move: number): number {
-  const m = move === 0 ? null : (f.state.teams[0][pos - 1] as BattleState["teams"][0][0]).moves[move - 1];
+  const m = moveOf(f, pos, move);
   return m ? m.cost : cfg.combat.damage.basicCost;
+}
+
+function spentBy(f: Fight, except: number | null): number {
+  return eligibleActors(f.state, "A")
+    .filter((q) => q !== except)
+    .reduce((a, q) => a + costOf(f, q, (picks[q - 1] as Pick).move), 0);
 }
 
 function selectMove(pos: number, move: number): void {
   const f = fight as Fight;
   const p = picks[pos - 1] as Pick;
+  const prev = targetsFor(f, moveOf(f, pos, p.move)).side;
   p.move = move;
   focus = pos;
-  const m = move === 0 ? null : (f.state.teams[0][pos - 1] as BattleState["teams"][0][0]).moves[move - 1] ?? null;
+  inspect = null;
+  note = "";
+  const m = moveOf(f, pos, move);
   const t = targetsFor(f, m);
-  if (!t.valid.includes(p.target)) p.target = t.valid[0] ?? 1;
+  if (t.side === "A") {
+    if (prev !== "A" || !t.valid.includes(p.target)) p.target = t.valid.includes(pos) ? pos : t.valid[0] ?? pos;
+  } else if (prev !== "B" || !t.valid.includes(p.target)) p.target = t.valid.includes(defaultFoe(f)) ? defaultFoe(f) : t.valid[0] ?? 1;
+  // un movimiento de un solo objetivo con varios posibles pide tocarlo en el campo; los de área, no
+  armed = !(m && m.area) && t.valid.length > 1;
   render();
 }
 
-function orderBlock(f: Fight, pos: number, spentOthers: number): HTMLElement {
-  const soul = f.mine[pos - 1] as Soul;
-  const fs = f.state.fighters[0][pos - 1] as BattleState["fighters"][0][0];
-  const head = h("div", { class: "fhead", onclick: () => ((focus = pos), render()) }, soulShape(soul.combatant.family, 48), h("div", { class: "fname" }, h("b", null, soul.name), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(pos)}`)));
-  if (fs.ko) return h("div", { class: "order off" }, head, h("div", { class: "mdesc" }, "KO"));
-  if (!eligibleActors(f.state, "A").includes(pos)) return h("div", { class: "order off" }, head, h("div", { class: "mdesc" }, "Aturdida: pierde este turno."));
-  const p = picks[pos - 1] as Pick;
-  const avail = f.state.energy[0] - spentOthers;
-  const opts: HTMLElement[] = [0, 1, 2, 3, 4].map((mi) => {
-    const m = mi === 0 ? null : soul.combatant.moves[mi - 1];
-    const cost = m ? m.cost : cfg.combat.damage.basicCost;
-    const label = m ? m.name : "Golpe básico";
-    const d = m ? describeMove(m, cfg.moves) : "";
-    return h(
-      "button",
-      { class: "opt" + (p.move === mi ? " on" : ""), disabled: cost > avail, onclick: () => selectMove(pos, mi) },
-      h("span", { class: "oname" }, label, h("span", { class: "cost" }, cost === 0 ? " gratis" : ` ${cost}⚡`)),
-      h("span", { class: "mdesc" }, m ? d.slice(d.indexOf("): ") + 3) : `${cfg.combat.damage.basicPower} de daño (x ataque) a un enemigo`),
-    );
+// ---- descripción completa: al pasar el ratón o al mantener pulsado
+const tipEl = document.createElement("div");
+tipEl.className = "tip";
+tipEl.hidden = true;
+document.body.append(tipEl);
+function showTip(anchor: HTMLElement, text: string): void {
+  tipEl.textContent = text;
+  tipEl.hidden = false;
+  const r = anchor.getBoundingClientRect();
+  const w = Math.min(300, window.innerWidth - 16);
+  tipEl.style.width = `${w}px`;
+  tipEl.style.left = `${Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2))}px`;
+  tipEl.style.bottom = `${window.innerHeight - r.top + 6}px`;
+}
+function hideTip(): void {
+  tipEl.hidden = true;
+}
+function withTip(btn: HTMLElement, text: string): HTMLElement {
+  let timer = 0;
+  let shown = false;
+  btn.title = text;
+  btn.addEventListener("mouseenter", () => showTip(btn, text));
+  btn.addEventListener("mouseleave", hideTip);
+  btn.addEventListener("contextmenu", (e) => e.preventDefault());
+  btn.addEventListener("pointerdown", (e) => {
+    if ((e as PointerEvent).pointerType === "mouse") return;
+    shown = false;
+    timer = window.setTimeout(() => ((shown = true), showTip(btn, text)), 450);
   });
-  const mv = p.move === 0 ? null : soul.combatant.moves[p.move - 1] ?? null;
-  const t = targetsFor(f, mv);
-  const tnames = (t.side === "A" ? f.mine : f.rival).map((s) => s.name);
-  const chips = t.valid.map((tp) =>
-    h("button", { class: "tgt" + (p.target === tp ? " on" : ""), onclick: () => ((p.target = tp), (focus = pos), render()) }, tnames[tp - 1] ?? `#${tp}`, h("small", null, ` ${rowName(tp)[0]}`)),
+  const end = (): void => {
+    clearTimeout(timer);
+    if (shown) setTimeout(hideTip, 1800);
+  };
+  btn.addEventListener("pointerup", end);
+  btn.addEventListener("pointercancel", end);
+  btn.addEventListener("click", (e) => {
+    if (shown) {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      shown = false;
+    }
+  }, true);
+  return btn;
+}
+
+const REST_ICON = `<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.4 1.6"/></svg>`;
+
+function optButton(m: Move | null, slot: number, cost: number, state: "on" | "rest" | "ro" | "", disabled: boolean, onclick?: () => void): HTMLElement {
+  const full = m ? describeMove(m, cfg.moves) : `Golpe básico (gratis): ${cfg.combat.damage.basicPower} de daño (x ataque) a un enemigo`;
+  const short = m ? full.slice(full.indexOf("): ") + 3) : `${cfg.combat.damage.basicPower} de daño a un enemigo`;
+  const rest = state === "rest";
+  const b = h(
+    "button",
+    { class: `opt ${state}`, "aria-disabled": rest || state === "ro" ? "true" : undefined, "data-slot": slot, disabled: disabled && !rest, onclick: (() => !rest && state !== "ro" && onclick?.()) as EventListener },
+    h("span", { class: "oname" }, h("span", { class: "onum" }, slot === 0 ? "B" : String(slot)), h("span", { class: "nm" }, m ? m.name : "Golpe básico"), h("span", { class: "cost" }, cost === 0 ? "gratis" : `${cost}⚡`)),
+    rest ? h("span", { class: "mdesc rest" }) : h("span", { class: "mdesc" }, short),
   );
-  return h("div", { class: "order" + (focus === pos ? " focus" : "") }, head, h("div", { class: "opts" }, ...opts), h("div", { class: "tgts" }, h("span", { class: "lbl" }, mv && mv.area ? "Fila de:" : t.side === "A" ? "Aliado:" : "Objetivo:"), ...chips));
+  if (rest) (b.querySelector(".mdesc") as HTMLElement).innerHTML = `${REST_ICON} descansa`;
+  return withTip(b, full);
+}
+
+function trayPlan(f: Fight, cost: number): HTMLElement {
+  const confirm = h("button", { class: "btn primary big confirm", onclick: () => confirmTurn() }, "Confirmar turno");
+  let head: HTMLElement;
+  let body: HTMLElement;
+  if (inspect !== null) {
+    const soul = f.rival[inspect - 1] as Soul;
+    const fs = f.state.fighters[1][inspect - 1] as BattleState["fighters"][0][0];
+    head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "nb" }, `${soul.name} (rival)`), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(inspect)}${fs.ko ? " · KO" : ` · vida ${fs.hp}/${soul.combatant.maxHp}`}`), h("span", { class: "tnote" }, "Costes de sus movimientos"));
+    body = h("div", { class: "opts5" }, ...soul.combatant.moves.map((m, k) => optButton(m, k + 1, m.cost, "ro", false)), optButton(null, 0, cfg.combat.damage.basicCost, "ro", false));
+  } else {
+    const pos = focus;
+    const soul = f.mine[pos - 1] as Soul;
+    const fs = f.state.fighters[0][pos - 1] as BattleState["fighters"][0][0];
+    const p = picks[pos - 1] as Pick;
+    const mv = moveOf(f, pos, p.move);
+    const t = targetsFor(f, mv);
+    const tn = (t.side === "A" ? f.mine : f.rival).map((s) => s.name);
+    const tgt = mv && mv.area ? `Área: fila ${rowName(p.target).toLowerCase()}` : t.valid.length === 0 ? "" : `Objetivo: ${tn[p.target - 1] ?? "?"}`;
+    head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "na" }, soul.name), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(pos)}`), h("span", { class: "tnote" + (armed || note ? " hot" : "") }, note || (armed ? "Toca el objetivo en el campo" : tgt)));
+    if (fs.ko) body = h("div", { class: "opts5 msg" }, "Esta alma está KO.");
+    else if (!eligibleActors(f.state, "A").includes(pos)) body = h("div", { class: "opts5 msg" }, "Aturdida: pierde este turno.");
+    else {
+      const avail = f.state.energy[0] - spentBy(f, pos);
+      const resting = restingMoves(f.state, "A", pos);
+      body = h(
+        "div",
+        { class: "opts5" },
+        ...soul.combatant.moves.map((m, k) => optButton(m, k + 1, m.cost, resting.includes(k + 1) ? "rest" : p.move === k + 1 ? "on" : "", m.cost > avail, () => selectMove(pos, k + 1))),
+        optButton(null, 0, cfg.combat.damage.basicCost, p.move === 0 ? "on" : "", false, () => selectMove(pos, 0)),
+      );
+    }
+  }
+  void cost;
+  return h("div", { class: "tray" }, head, body, confirm);
 }
 
 function currentPlan(f: Fight): { plan: Action[]; cost: number } {
@@ -364,49 +469,87 @@ function currentPlan(f: Fight): { plan: Action[]; cost: number } {
   return { plan, cost: plan.reduce((a, x) => a + costOf(f, x.actor, x.move), 0) };
 }
 
+function onPickPlan(side: SideId, pos: number): void {
+  const f = fight as Fight;
+  const fp = picks[focus - 1] as Pick;
+  const ft = targetsFor(f, moveOf(f, focus, fp.move));
+  note = "";
+  if (armed && side === ft.side && ft.valid.includes(pos)) {
+    fp.target = pos;
+    armed = false;
+    inspect = null;
+    render();
+    return;
+  }
+  if (side === "A") {
+    focus = pos;
+    armed = false;
+    inspect = null;
+    render();
+    return;
+  }
+  if (armed) {
+    note = ft.side === "B" ? "Ese rival no es alcanzable: toca otro" : "Toca un aliado";
+    render();
+    return;
+  }
+  if ((f.state.fighters[1][pos - 1] as BattleState["fighters"][0][0]).ko) return;
+  inspect = pos;
+  render();
+}
+
+function overlayBox(): HTMLElement | "" {
+  if (overlay === null) return "";
+  const f = fight as Fight;
+  const close = h("button", { class: "btn", onclick: () => toggleOverlay(null) }, "Cerrar");
+  if (overlay === "help") return h("div", { class: "ov" }, h("div", { class: "ovp" }, h("div", { class: "ovh" }, h("b", null, "Ayuda"), close), ...HELP.map(([t, x]) => h("p", null, h("b", null, t + ". "), x)), h("p", { class: "seed" }, `semilla de las almas: ${offerSeed} · semilla del combate: ${f.seed}`)));
+  const r = report;
+  return h("div", { class: "ov" }, h("div", { class: "ovp" }, h("div", { class: "ovh" }, h("b", null, "Turno anterior"), close), h("div", { class: "log" }, ...(r ? r.lines.map(lineNode) : [h("div", { class: "ln info" }, "Aún no se ha jugado ningún turno.")]))));
+}
+function toggleOverlay(o: "prev" | "help" | null): void {
+  overlay = o;
+  const cur = document.querySelector(".ov");
+  if (cur) cur.remove();
+  const box = overlayBox();
+  if (box) app.append(box);
+}
+
+function turnBar(f: Fight, left: string, withBtns: boolean): HTMLElement {
+  return h(
+    "div",
+    { class: "turnbar" },
+    h("b", null, left),
+    h("span", { class: "score", id: "score" }, `Partidas: ${score.played} · Ganadas: ${score.won}`),
+    withBtns ? h("span", { class: "tbr" }, report ? h("button", { class: "btn sm", onclick: () => toggleOverlay("prev") }, "Turno anterior") : null, h("button", { class: "btn sm", onclick: () => toggleOverlay("help") }, "Ayuda")) : h("span", { class: "tbr" }, h("button", { class: "btn sm", onclick: () => toggleOverlay("help") }, "Ayuda")),
+  );
+}
+
 function renderPlan(): void {
   const f = fight as Fight;
   const { cost } = currentPlan(f);
   const elig = eligibleActors(f.state, "A");
-  if (!elig.includes(focus)) focus = elig[0] ?? 1;
+  if (!elig.includes(focus) && inspect === null) focus = elig[0] ?? focus;
   const fp = picks[focus - 1] as Pick;
-  const fm = fp.move === 0 ? null : (f.state.teams[0][focus - 1] as BattleState["teams"][0][0]).moves[fp.move - 1] ?? null;
+  const fm = moveOf(f, focus, fp.move);
   const ft = targetsFor(f, fm);
   const tgts: { side: SideId; pos: number }[] = [];
-  if (elig.includes(focus)) {
-    if (fm && fm.area) for (const p of [1, 2, 3, 4]) { if (cfg.combat.frontRow.includes(p) === cfg.combat.frontRow.includes(fp.target) && ft.valid.length > 0) tgts.push({ side: ft.side, pos: p }); }
+  if (inspect === null && elig.includes(focus)) {
+    if (armed) for (const p of ft.valid) tgts.push({ side: ft.side, pos: p });
+    else if (fm && fm.area) for (const p of [1, 2, 3, 4]) { if (cfg.combat.frontRow.includes(p) === cfg.combat.frontRow.includes(fp.target) && ft.valid.length > 0) tgts.push({ side: ft.side, pos: p }); }
     else tgts.push({ side: ft.side, pos: fp.target });
   }
-  const onPick = (side: SideId, pos: number): void => {
-    if (side === "A" && (eligibleActors(f.state, "A").includes(pos))) {
-      if (focus === pos && ft.side !== "A") return;
-      if (focus !== pos && !(ft.side === "A" && ft.valid.includes(pos))) {
-        focus = pos;
-        render();
-        return;
-      }
-    }
-    if (side === ft.side && ft.valid.includes(pos)) {
-      fp.target = pos;
-      render();
-    }
-  };
-  const orders = [1, 2, 3, 4].map((pos) => {
-    const spentOthers = eligibleActors(f.state, "A")
-      .filter((q) => q !== pos)
-      .reduce((a, q) => a + costOf(f, q, (picks[q - 1] as Pick).move), 0);
-    return orderBlock(f, pos, spentOthers);
-  });
+  const orders: Record<number, { txt: string; title: string }> = {};
+  for (const pos of elig) {
+    const p = picks[pos - 1] as Pick;
+    const m = moveOf(f, pos, p.move);
+    orders[pos] = { txt: p.move === 0 ? "B" : String(p.move), title: m ? m.name : "Golpe básico" };
+  }
   app.replaceChildren(
-    topBar(),
-    h("div", { class: "turnbar" }, h("b", null, `Turno ${f.state.turn}/${cfg.combat.maxTurns}`), h("span", { class: "foeE" }, `Energía rival: ${f.state.energy[1]}`)),
+    turnBar(f, `Turno ${f.state.turn}/${cfg.combat.maxTurns}`, true),
     energyBar(f.state.energy[0], cost),
-    buildField(f, f.state, { actor: elig.includes(focus) ? focus : null, tgts, onPick }).el,
-    h("h2", null, "Tus órdenes"),
-    ...orders,
-    h("div", { class: "actions sticky" }, h("button", { class: "btn primary big", onclick: () => confirmTurn() }, "Confirmar turno")),
-    helpBox(),
-    h("p", { class: "seed" }, `semilla de las almas: ${offerSeed} · semilla del combate: ${f.seed}`),
+    buildField(f, f.state, { actor: inspect === null && elig.includes(focus) ? focus : null, tgts, onPick: onPickPlan, orders }).el,
+    trayPlan(f, cost),
+    overlayBox(),
   );
 }
 
@@ -418,7 +561,6 @@ function confirmTurn(): void {
   pendingResult = f.state.result;
   phase = "report";
   render();
-  window.scrollTo(0, 0);
 }
 
 // ------------------------------------------------------------------ informe del turno y fin de partida
@@ -430,6 +572,9 @@ function sameTeamAgain(): void {
   const f = fight as Fight;
   const seed = newSeed();
   fight = startFight(f.mine, rollRival(seed), seed, chooseOpponentAi(difficulty));
+  report = null;
+  overlay = null;
+  focus = 1;
   beginPlanning();
 }
 function newTeam(): void {
@@ -445,39 +590,36 @@ function renderReport(): void {
   const field = buildField(f, r.before);
   const sub = h("div", { class: "sub", "aria-live": "polite" }, "");
   const speedBtn = (v: 1 | 2): HTMLElement =>
-    h("button", { class: "btn sp" + (speed === v ? " on" : ""), "data-v": v, onclick: ((e: Event) => {
+    h("button", { class: "btn sm sp" + (speed === v ? " on" : ""), "data-v": v, onclick: ((e: Event) => {
       speed = v;
       saveSpeed();
       player?.setSpeed(v);
       for (const b of Array.from(document.querySelectorAll(".sp"))) b.classList.toggle("on", (b as HTMLElement).dataset["v"] === String(v));
       (e.currentTarget as HTMLElement).blur();
     }) as EventListener }, `×${v}`);
-  const skipBtn = h("button", { class: "btn", onclick: () => player?.skip() }, "Saltar");
+  const skipBtn = h("button", { class: "btn sm", onclick: () => player?.skip() }, "Saltar");
   const ctrl = h("div", { class: "ctrl" }, h("span", { class: "lbl" }, "Velocidad"), speedBtn(1), speedBtn(2), skipBtn);
   const end = res === null ? null : h(
     "div",
     { class: "endbox " + (res === "A" ? "win" : res === "B" ? "lose" : "draw"), hidden: true },
     h("h2", null, res === "A" ? "¡Victoria!" : res === "B" ? "Derrota" : "Empate"),
     h("p", { id: "endscore" }, `Turnos jugados: ${f.state.turn}.`),
-    h("div", { class: "actions" }, h("button", { class: "btn primary", onclick: () => sameTeamAgain() }, "Otra partida (mismo equipo)"), h("button", { class: "btn", onclick: () => newTeam() }, "Otra partida (equipo nuevo)")),
+    h("div", { class: "actions" }, h("button", { class: "btn primary", onclick: () => sameTeamAgain() }, "Otra partida (mismo equipo)"), h("button", { class: "btn", onclick: () => newTeam() }, "Otra partida (equipo nuevo)"), h("button", { class: "btn", onclick: () => toggleOverlay("prev") }, "Detalle del turno")),
   );
-  const next = res === null ? h("button", { class: "btn primary big", disabled: true, onclick: () => beginPlanning() }, "Siguiente turno") : null;
   app.replaceChildren(
-    topBar(),
-    h("div", { class: "turnbar" }, h("b", null, `Resultado del turno ${res === null ? f.state.turn - 1 : f.state.turn}`), ctrl),
+    turnBar(f, `Turno ${res === null ? f.state.turn - 1 : f.state.turn}`, false),
+    energyBar(r.before.energy[0], 0),
     field.el,
-    sub,
-    h("details", { class: "help" }, h("summary", null, "Ver detalle del turno"), h("div", { class: "log" }, ...r.lines.map(lineNode))),
-    end ?? "",
-    next ? h("div", { class: "actions sticky" }, next) : "",
-    h("p", { class: "seed" }, `semilla de las almas: ${offerSeed} · semilla del combate: ${f.seed}`),
+    h("div", { class: "tray anim" }, sub, ctrl, end ?? ""),
+    overlayBox(),
   );
   player = playAnim(field, r.before, f.state, r.events, f.names, sub, speed, () => {
     ctrl.classList.add("off");
     commitScore();
-    if (end) end.removeAttribute("hidden");
-    if (next) next.removeAttribute("disabled");
     player = null;
+    if (end) end.removeAttribute("hidden");
+    // encadena: empieza la planificación del turno siguiente sin pulsar nada
+    else chainTimer = window.setTimeout(() => phase === "report" && fight === f && beginPlanning(), 650);
   });
 }
 
@@ -495,6 +637,9 @@ function commitScore(): void {
 }
 
 function render(): void {
+  clearTimeout(chainTimer);
+  hideTip();
+  app.className = phase === "team" ? "" : "battle";
   if (player) {
     player.cancel();
     commitScore();

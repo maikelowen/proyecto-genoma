@@ -11,6 +11,8 @@ export interface UnitEls {
   readonly chips: HTMLElement;
   readonly maxHp: number;
   readonly family: string;
+  /** Capa con nombre, vida y estados, por encima de todos los iconos. */
+  readonly iw?: HTMLElement;
 }
 export interface Field {
   readonly el: HTMLElement;
@@ -73,6 +75,7 @@ export function paintUnit(u: UnitEls, v: View, pop: boolean): void {
   }
   u.hp.textContent = v.ko ? "KO" : `${Math.max(0, v.hp)}/${u.maxHp}${v.statuses.length ? " · " + v.statuses.map(chipText).join(", ") : ""}`;
   u.unit.classList.toggle("ko", v.ko);
+  u.iw?.classList.toggle("ko", v.ko);
   const old = new Set(Array.from(u.chips.children).map((c) => (c as HTMLElement).dataset["s"]));
   u.chips.replaceChildren();
   for (const s of v.statuses) {

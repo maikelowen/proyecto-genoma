@@ -405,7 +405,7 @@
     },
     "descanso": {
       "_doc": "V2. El movimiento ejecutado en el turno t no se puede elegir en los 'turnos' turnos siguientes (el golpe básico no descansa). Una acción cancelada (KO o aturdida, con devolución) no descansa.",
-      "activo": false,
+      "activo": true,
       "turnos": 1
     },
     "objetivo_automatico": {

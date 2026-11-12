@@ -80,7 +80,7 @@ export function narrate(before: BattleState, events: readonly BattleEvent[], nam
         break;
       }
       case "cancel":
-        lines.push({ kind: "info", parts: [nm(e.side, e.actor), e.reason === "aturdido" ? " está aturdido y pierde su acción" : " ya está KO y no actúa", e.refund > 0 ? ` (se le devuelven ${e.refund} de energía)` : ""] });
+        lines.push({ kind: "info", parts: [nm(e.side, e.actor), e.reason === "aturdido" ? " está aturdido y pierde su acción" : " ya está KO y no actúa", e.refund > 0 && e.side === "A" ? ` (se le devuelven ${e.refund} de energía)` : ""] });
         break;
       case "lost":
         lines.push({ kind: "info", parts: ["La acción de ", nm(e.side, e.actor), " se pierde: no queda objetivo válido."] });
@@ -121,7 +121,7 @@ export function narrate(before: BattleState, events: readonly BattleEvent[], nam
         lines.push({ kind: "heal", parts: [nm(e.side, e.pos), ` gana ${e.amount} de escudo (total ${e.total}).`] });
         break;
       case "energy":
-        lines.push({ kind: "info", parts: [`${e.side === "A" ? "Tu bando" : "El rival"} gana ${e.amount} de energía.`] });
+        if (e.side === "A") lines.push({ kind: "info", parts: [`Tu bando gana ${e.amount} de energía.`] }); // la energía del rival no se muestra
         break;
       case "ko":
         marks.ko.add(key(e.side, e.pos));

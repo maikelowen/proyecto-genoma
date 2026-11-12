@@ -32,7 +32,12 @@ import {
 } from "../../packages/core/src/index.ts";
 
 export type RawConfig = Record<string, any>;
-export const RAW_COMBAT: RawConfig = rawCombat as RawConfig;
+/** Base de los estudios: el descanso (V2) se fija desactivado aquí, aunque el JSON del juego lo active (decisión del dueño, nov 2026). */
+export const RAW_COMBAT: RawConfig = (() => {
+  const c = structuredClone(rawCombat) as RawConfig;
+  c["variantes"].descanso.activo = false;
+  return c;
+})();
 export const RAW_MOVES: RawConfig = rawMoves as RawConfig;
 export const RAW_GENETICS: RawConfig = rawGenetics as RawConfig;
 export const GCFG: GeneticsConfig = parseGeneticsConfig(RAW_GENETICS);
