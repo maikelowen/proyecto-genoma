@@ -47,3 +47,10 @@ Híbridas: mezcla de forma y paleta de sus dos familias, con más detalle.
 - Arte vectorial generado por código a partir de los genes; determinista.
 - Validación: avance pequeño (2 almas por familia + mutada + híbrida + fila a 48 px) revisado por Miguel antes del visor completo.
 - **Referencia visual aprobada: `docs/arte/referencia-almas.svg`** (boceto a mano del 2026-11-11; marca el tono, no el acabado). El avance anterior de criaturas (`docs/arte/avance-estilo.html`, `client/art/`) queda descartado como estilo; se puede reutilizar su estructura técnica.
+
+## v3 — dirección para las dos iteraciones de arte previstas (Miguel + consultor, 2026-11-12; NO aplicar antes)
+A Miguel le gusta más un boceto del consultor que el arte actual, pero aún ve las almas faltas de personalidad.
+- **Base:** cuerpo en 2–3 capas de la misma silueta, de oscuro a claro, **sin contorno** y sin degradados. Ojos como **recortes de luz**. **Sin boca por defecto.** Núcleo visible en el pecho con forma según el gen de cuerpo. Flotan con cola o restos debajo (gotas, esquirlas, chispas) y vaivén lento. Fondo oscuro y halo suave del color de la familia.
+- **Personalidad:** 6–8 **temperamentos** por gen de cabeza (altivo, aburrido, travieso, feroz, tímido, desquiciado…) que definen forma de ojos, párpado e inclinación del cuerpo. **Asimetría** (un ojo distinto del otro, cuerpo ladeado). El temperamento también se mueve (vaivén nervioso, perezoso o quieto). **Reacciones en combate:** los ojos cambian al atacar, al recibir, con poca vida y al caer. **Rasgo propio por gen de extremidades** (cuernos, halo roto, bracitos, orejas de llama), discreto en comunes y llamativo en raras. Boca solo en algunos temperamentos, como línea de luz.
+- **Límites:** pocas piezas bien dibujadas por locus (6–8) con variación de tamaño y proporción, no formas totalmente paramétricas. Diseños originales; no reproducir almas de ningún anime.
+- **Prueba:** a 48 px Miguel distingue familia y temperamento, y dos almas de la misma familia no parecen la misma.
