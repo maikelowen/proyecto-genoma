@@ -20,3 +20,6 @@
 - El log no trae tipo de ataque: ataque a distancia = `modifier === "alcance"` o `area` del movimiento (estado previo); aliado/propio = `targetSide === side`. Los eventos no dicen la familia de quien causa quemadura/regeneración (se asume llama / verde).
 - Duración: factor global para que un turno no pase de ~7 s a ×1; `Saltar` aplica todo sin esperas. Playwright: la UI se re-renderiza, localizar con `locator().nth()` y no con handles.
 - Dificultad: `chooseOpponentAi` en `game.ts` es el enganche; "Difícil" usa `createSearchAi` (~0,3 s/decisión en node) y cae a la IA normal si una decisión pasa de 800 ms.
+- Escena (`style.css`, `SPOT` en `main.ts`): las unidades son `position:absolute` con `left/top` en % y `translate:-50% -50%` (la propiedad `translate` no choca con las animaciones WAAPI de `transform`); la caja de la unidad es solo el icono, la info flota fuera con `bottom:100%`, así `getBoundingClientRect` da el centro real para embestidas y proyectiles.
+- Flotación por CSS en el `svg` y sombra aparte; el temblor/brillo siguen en `.ico`. El marcador se suma en `commitScore()` al acabar la animación del turno final (o al cancelarla).
+- Selección: anillos en el suelo (`sel-actor/foe/ally`); clic en la escena cambia de alma o de objetivo (`focus`, `onPick`).

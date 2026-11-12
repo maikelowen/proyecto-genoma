@@ -75,6 +75,8 @@ function saveSpeed(): void {
   }
 }
 let hint = "";
+let pendingResult: BattleState["result"] = null;
+let focus = 1;
 const app = document.getElementById("app") as HTMLElement;
 
 const SIDE: Record<SideId, 0 | 1> = { A: 0, B: 1 };
@@ -108,28 +110,58 @@ function energyBar(have: number, spent: number): HTMLElement {
   return h("div", { class: "energy" }, h("span", { class: "lbl" }, "Energía"), h("span", { class: "cells" }, ...cells), h("span", { class: "num" }, spent > 0 ? `${have - spent}/${have} (gastas ${spent})` : `${have}`));
 }
 
-/** Campo de batalla: rival arriba, tu equipo abajo; fila trasera más lejos del centro. Devuelve los elementos para animarlos. */
-function buildField(f: Fight, st: BattleState): Field {
+/** Posiciones (% del escenario, centro del icono) por bando y posición. Rival arriba a la derecha, tuyo abajo a la izquierda; la trasera, más lejos y más pequeña. */
+const SPOT: Record<SideId, [number, number][]> = {
+  B: [[46, 36], [70, 46], [64, 15], [86, 23]],
+  A: [[54, 64], [30, 54], [36, 85], [14, 77]],
+};
+interface Sel {
+  actor: number | null;
+  tgts: { side: SideId; pos: number }[];
+  onPick?: (side: SideId, pos: number) => void;
+}
+
+/** Escena de batalla: almas flotando sobre plataformas, sin cartas. Devuelve los elementos para animarlos. */
+function buildField(f: Fight, st: BattleState, sel?: Sel): Field {
   const units = new Map<string, UnitEls>();
   const energy = { A: h("span", { class: "en" }), B: h("span", { class: "en" }) } as Record<SideId, HTMLElement>;
   const unit = (side: SideId, pos: number): HTMLElement => {
     const i = SIDE[side];
     const soul = (i === 0 ? f.mine : f.rival)[pos - 1] as Soul;
     const c = soul.combatant;
-    const ico = h("div", { class: "ico" }, soulShape(c.family, 88));
+    const [x, y] = SPOT[side][pos - 1] as [number, number];
+    const front = cfg.combat.frontRow.includes(pos);
+    const ico = h("div", { class: "ico" }, soulShape(c.family, 100));
     const bar = h("i", null);
     const hp = h("div", { class: "hpn" });
     const chips = h("div", { class: "chips" });
-    const el = h("div", { class: `unit ${side === "A" ? "mine" : "foe"}`, style: `--fam:${palette(c.family).main}` }, ico, h("div", { class: "uname" }, soul.name), h("div", { class: "bar" }, bar), hp, chips);
+    const cls = ["unit", side === "A" ? "mine" : "foe", front ? "front" : "back"];
+    if (sel && side === "A" && sel.actor === pos) cls.push("sel-actor");
+    if (sel && sel.tgts.some((t) => t.side === side && t.pos === pos)) cls.push(side === "A" ? "sel-ally" : "sel-foe");
+    const el = h("div", { class: cls.join(" "), style: `--fam:${palette(c.family).main};--x:${x}%;--y:${y}%;--d:${-(pos * 0.7 + i * 0.35).toFixed(2)}s;z-index:${Math.round(y / 5)}`, title: soul.name }, h("div", { class: "info" }, h("div", { class: "uname" }, soul.name), h("div", { class: "bar" }, bar), chips, hp), h("div", { class: "shadow" }), h("div", { class: "selring" }), ico);
+    el.addEventListener("click", () => {
+      el.classList.toggle("peek");
+      sel?.onPick?.(side, pos);
+    });
     const u: UnitEls = { unit: el, ico, bar, hp, chips, maxHp: c.maxHp, family: c.family };
     units.set(key(side, pos), u);
     paintUnit(u, viewFrom(st, side, pos), false);
     return el;
   };
-  const row = (side: SideId, a: number, b: number): HTMLElement[] => [h("div", { class: "rl" }, rowName(a) + (side === "B" ? " rival" : " tuya")), h("div", { class: "frow" }, unit(side, a), unit(side, b))];
   paintEnergy(energy.A, st.energy[0]);
   paintEnergy(energy.B, st.energy[1]);
-  const el = h("div", { class: "field" }, h("div", { class: "side" }, "Rival", energy.B), ...row("B", 3, 4), ...row("B", 1, 2), h("div", { class: "vs" }, "— frente —"), ...row("A", 1, 2), ...row("A", 3, 4), h("div", { class: "side" }, "Tu equipo", energy.A));
+  const all: HTMLElement[] = [];
+  for (const side of ["B", "A"] as SideId[]) for (let p = 1; p <= 4; p++) all.push(unit(side, p));
+  const el = h(
+    "div",
+    { class: "stage" },
+    h("div", { class: "bg" }, h("div", { class: "stars" }), h("div", { class: "floor" })),
+    h("div", { class: "plat pf" }),
+    h("div", { class: "plat pm" }),
+    h("div", { class: "tag t1" }, "Rival · ", energy.B),
+    h("div", { class: "tag t2" }, "Tú · ", energy.A),
+    ...all,
+  );
   return { el, units, energy };
 }
 
@@ -148,7 +180,7 @@ function helpBox(): HTMLElement {
 }
 
 function topBar(): HTMLElement {
-  return h("div", { class: "top" }, h("h1", null, "Proyecto Genoma · Combate"), h("div", { class: "score" }, `Partidas: ${score.played} · Ganadas: ${score.won}`));
+  return h("div", { class: "top" }, h("h1", null, "Proyecto Genoma · Combate"), h("div", { class: "score", id: "score" }, `Partidas: ${score.played} · Ganadas: ${score.won}`));
 }
 
 // ------------------------------------------------------------------ pantalla de equipo
@@ -275,6 +307,7 @@ function selectMove(pos: number, move: number): void {
   const f = fight as Fight;
   const p = picks[pos - 1] as Pick;
   p.move = move;
+  focus = pos;
   const m = move === 0 ? null : (f.state.teams[0][pos - 1] as BattleState["teams"][0][0]).moves[move - 1] ?? null;
   const t = targetsFor(f, m);
   if (!t.valid.includes(p.target)) p.target = t.valid[0] ?? 1;
@@ -284,7 +317,7 @@ function selectMove(pos: number, move: number): void {
 function orderBlock(f: Fight, pos: number, spentOthers: number): HTMLElement {
   const soul = f.mine[pos - 1] as Soul;
   const fs = f.state.fighters[0][pos - 1] as BattleState["fighters"][0][0];
-  const head = h("div", { class: "fhead" }, soulShape(soul.combatant.family, 48), h("div", { class: "fname" }, h("b", null, soul.name), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(pos)}`)));
+  const head = h("div", { class: "fhead", onclick: () => ((focus = pos), render()) }, soulShape(soul.combatant.family, 48), h("div", { class: "fname" }, h("b", null, soul.name), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(pos)}`)));
   if (fs.ko) return h("div", { class: "order off" }, head, h("div", { class: "mdesc" }, "KO"));
   if (!eligibleActors(f.state, "A").includes(pos)) return h("div", { class: "order off" }, head, h("div", { class: "mdesc" }, "Aturdida: pierde este turno."));
   const p = picks[pos - 1] as Pick;
@@ -305,9 +338,9 @@ function orderBlock(f: Fight, pos: number, spentOthers: number): HTMLElement {
   const t = targetsFor(f, mv);
   const tnames = (t.side === "A" ? f.mine : f.rival).map((s) => s.name);
   const chips = t.valid.map((tp) =>
-    h("button", { class: "tgt" + (p.target === tp ? " on" : ""), onclick: () => ((p.target = tp), render()) }, tnames[tp - 1] ?? `#${tp}`, h("small", null, ` ${rowName(tp)[0]}`)),
+    h("button", { class: "tgt" + (p.target === tp ? " on" : ""), onclick: () => ((p.target = tp), (focus = pos), render()) }, tnames[tp - 1] ?? `#${tp}`, h("small", null, ` ${rowName(tp)[0]}`)),
   );
-  return h("div", { class: "order" }, head, h("div", { class: "opts" }, ...opts), h("div", { class: "tgts" }, h("span", { class: "lbl" }, mv && mv.area ? "Fila de:" : t.side === "A" ? "Aliado:" : "Objetivo:"), ...chips));
+  return h("div", { class: "order" + (focus === pos ? " focus" : "") }, head, h("div", { class: "opts" }, ...opts), h("div", { class: "tgts" }, h("span", { class: "lbl" }, mv && mv.area ? "Fila de:" : t.side === "A" ? "Aliado:" : "Objetivo:"), ...chips));
 }
 
 function currentPlan(f: Fight): { plan: Action[]; cost: number } {
@@ -321,6 +354,30 @@ function currentPlan(f: Fight): { plan: Action[]; cost: number } {
 function renderPlan(): void {
   const f = fight as Fight;
   const { cost } = currentPlan(f);
+  const elig = eligibleActors(f.state, "A");
+  if (!elig.includes(focus)) focus = elig[0] ?? 1;
+  const fp = picks[focus - 1] as Pick;
+  const fm = fp.move === 0 ? null : (f.state.teams[0][focus - 1] as BattleState["teams"][0][0]).moves[fp.move - 1] ?? null;
+  const ft = targetsFor(f, fm);
+  const tgts: { side: SideId; pos: number }[] = [];
+  if (elig.includes(focus)) {
+    if (fm && fm.area) for (const p of [1, 2, 3, 4]) { if (cfg.combat.frontRow.includes(p) === cfg.combat.frontRow.includes(fp.target) && ft.valid.length > 0) tgts.push({ side: ft.side, pos: p }); }
+    else tgts.push({ side: ft.side, pos: fp.target });
+  }
+  const onPick = (side: SideId, pos: number): void => {
+    if (side === "A" && (eligibleActors(f.state, "A").includes(pos))) {
+      if (focus === pos && ft.side !== "A") return;
+      if (focus !== pos && !(ft.side === "A" && ft.valid.includes(pos))) {
+        focus = pos;
+        render();
+        return;
+      }
+    }
+    if (side === ft.side && ft.valid.includes(pos)) {
+      fp.target = pos;
+      render();
+    }
+  };
   const orders = [1, 2, 3, 4].map((pos) => {
     const spentOthers = eligibleActors(f.state, "A")
       .filter((q) => q !== pos)
@@ -331,7 +388,7 @@ function renderPlan(): void {
     topBar(),
     h("div", { class: "turnbar" }, h("b", null, `Turno ${f.state.turn}/${cfg.combat.maxTurns}`), h("span", { class: "foeE" }, `Energía rival: ${f.state.energy[1]}`)),
     energyBar(f.state.energy[0], cost),
-    buildField(f, f.state).el,
+    buildField(f, f.state, { actor: elig.includes(focus) ? focus : null, tgts, onPick }).el,
     h("h2", null, "Tus órdenes"),
     ...orders,
     h("div", { class: "actions sticky" }, h("button", { class: "btn primary big", onclick: () => confirmTurn() }, "Confirmar turno")),
@@ -345,11 +402,7 @@ function confirmTurn(): void {
   const { plan } = currentPlan(f);
   const { before, events } = playTurn(f, plan);
   report = { lines: narrate(before, events, f.names).lines, before, events };
-  if (f.state.result !== null) {
-    score.played++;
-    if (f.state.result === "A") score.won++;
-    saveScore();
-  }
+  pendingResult = f.state.result;
   phase = "report";
   render();
   window.scrollTo(0, 0);
@@ -392,7 +445,7 @@ function renderReport(): void {
     "div",
     { class: "endbox " + (res === "A" ? "win" : res === "B" ? "lose" : "draw"), hidden: true },
     h("h2", null, res === "A" ? "¡Victoria!" : res === "B" ? "Derrota" : "Empate"),
-    h("p", null, `Turnos jugados: ${f.state.turn}. Partidas: ${score.played} · ganadas: ${score.won}.`),
+    h("p", { id: "endscore" }, `Turnos jugados: ${f.state.turn}.`),
     h("div", { class: "actions" }, h("button", { class: "btn primary", onclick: () => sameTeamAgain() }, "Otra partida (mismo equipo)"), h("button", { class: "btn", onclick: () => newTeam() }, "Otra partida (equipo nuevo)")),
   );
   const next = res === null ? h("button", { class: "btn primary big", disabled: true, onclick: () => beginPlanning() }, "Siguiente turno") : null;
@@ -408,14 +461,31 @@ function renderReport(): void {
   );
   player = playAnim(field, r.before, f.state, r.events, f.names, sub, speed, () => {
     ctrl.classList.add("off");
+    commitScore();
     if (end) end.removeAttribute("hidden");
     if (next) next.removeAttribute("disabled");
     player = null;
   });
 }
 
+/** Suma la partida al marcador (una sola vez) cuando termina la animación del turno final. */
+function commitScore(): void {
+  if (pendingResult === null) return;
+  score.played++;
+  if (pendingResult === "A") score.won++;
+  pendingResult = null;
+  saveScore();
+  const sc = document.getElementById("score");
+  if (sc) sc.textContent = `Partidas: ${score.played} · Ganadas: ${score.won}`;
+  const ep = document.getElementById("endscore");
+  if (ep) ep.textContent = `Turnos jugados: ${(fight as Fight).state.turn}. Partidas: ${score.played} · ganadas: ${score.won}.`;
+}
+
 function render(): void {
-  player?.cancel();
+  if (player) {
+    player.cancel();
+    commitScore();
+  }
   player = null;
   if (phase === "team") renderTeam();
   else if (phase === "plan") renderPlan();
