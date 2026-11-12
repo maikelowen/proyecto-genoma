@@ -26,3 +26,5 @@ export {
 export type { Action, BattleEvent, BattleResult, BattleState, FighterState, Plan, SideId, StatusInstance, TurnResult } from "./engine.ts";
 export { createReferenceAi, energyPrice, runBattle } from "./ai.ts";
 export type { Ai, BattleRecord, EnergyPrice, ReferenceAiOptions, TeamInput } from "./ai.ts";
+export { createSearchAi, evaluateState, searchStateKey } from "./search.ts";
+export type { SearchAiOptions } from "./search.ts";

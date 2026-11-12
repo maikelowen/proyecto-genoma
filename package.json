@@ -13,6 +13,7 @@
     "check": "npm run typecheck && npm test",
     "sim": "node sim/genetics/cli.ts",
     "sim:combat": "node sim/combat/cli.ts",
+    "sim:profundidad": "node sim/depth/cli.ts",
     "build:combate": "node client/build-combate.mjs"
   },
   "devDependencies": {

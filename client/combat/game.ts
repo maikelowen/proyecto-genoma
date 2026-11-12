@@ -3,6 +3,7 @@ import {
   buildCombatant,
   createBattle,
   createReferenceAi,
+  createSearchAi,
   createRng,
   createWildCreature,
   resolveTurn,
@@ -59,7 +60,7 @@ export interface Fight {
 }
 
 /** `mine` y `rival` en orden de posición (1–2 delantera, 3–4 trasera). */
-export function startFight(mine: readonly Soul[], rival: readonly Soul[], seed: string): Fight {
+export function startFight(mine: readonly Soul[], rival: readonly Soul[], seed: string, ai: Fight["ai"] = createReferenceAi()): Fight {
   return {
     seed,
     mine,
@@ -67,7 +68,7 @@ export function startFight(mine: readonly Soul[], rival: readonly Soul[], seed: 
     state: createBattle(mine.map((s) => s.combatant), rival.map((s) => s.combatant), cfg),
     rng: createRng(cfg.combat.seedPrefix + seed),
     names: [mine.map((s) => s.name), rival.map((s) => s.name)],
-    ai: createReferenceAi(),
+    ai,
   };
 }
 
@@ -80,4 +81,24 @@ export function playTurn(f: Fight, plan: readonly Action[]): { before: BattleSta
   const r = resolveTurn(before, plan, planB, f.rng, cfg);
   f.state = r.state;
   return { before, events: r.events };
+}
+
+export type Dificultad = "normal" | "dificil";
+
+/** Presupuesto por decisión de la IA difícil en el navegador (ms). Si una decisión lo supera, el resto de la partida usa la IA normal. */
+export const SEARCH_BUDGET_MS = 800;
+
+/** Punto de enganche de la IA rival: "normal" = referencia; "dificil" = búsqueda del núcleo con respaldo por tiempo. */
+export function chooseOpponentAi(d: Dificultad): Fight["ai"] {
+  const ref = createReferenceAi();
+  if (d !== "dificil") return ref;
+  const search = createSearchAi();
+  let slow = false;
+  return (state, side, c) => {
+    if (slow) return ref(state, side, c);
+    const t = performance.now();
+    const plan = search(state, side, c);
+    if (performance.now() - t > SEARCH_BUDGET_MS) slow = true;
+    return plan;
+  };
 }

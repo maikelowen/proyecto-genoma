@@ -16,3 +16,7 @@
 - `validatePlan` exige una acción por cada alma viva no aturdida: el núcleo no permite "no actuar"; el golpe básico gratis lo sustituye.
 - Los eventos llevan posiciones, no nombres: `narrate` recibe los nombres por bando y el estado previo (para movimientos y familias).
 - Verificación: Playwright (`/opt/npm-tools/node_modules/playwright`) abriendo el file://, a 380 px y a 1100 px, sin errores de consola.
+- Animación (`anim.ts`): se anima sobre el DOM del campo sin re-renderizar; un modelo de vista por alma se actualiza con los eventos (`hp`, `ko`, estados, escudo) y al acabar se sincroniza con el estado real. `render()` cancela el reproductor.
+- El log no trae tipo de ataque: ataque a distancia = `modifier === "alcance"` o `area` del movimiento (estado previo); aliado/propio = `targetSide === side`. Los eventos no dicen la familia de quien causa quemadura/regeneración (se asume llama / verde).
+- Duración: factor global para que un turno no pase de ~7 s a ×1; `Saltar` aplica todo sin esperas. Playwright: la UI se re-renderiza, localizar con `locator().nth()` y no con handles.
+- Dificultad: `chooseOpponentAi` en `game.ts` es el enganche; "Difícil" usa `createSearchAi` (~0,3 s/decisión en node) y cae a la IA normal si una decisión pasa de 800 ms.

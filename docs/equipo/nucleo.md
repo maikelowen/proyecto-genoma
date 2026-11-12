@@ -40,3 +40,6 @@
 - Palancas: también los números "implícitos" de la IA salen de config (10·fA = `golpe_basico.potencia`, +50 % = `condiciones.bonus`, 10 − 3 = `maximo − por_turno`). Barridos con `patchRawConfig`/`buildBattleConfig` (rutas estrictas; forma larga para claves con puntos, como las sales).
 - Si un respaldo "siempre termina", el parser valida la desigualdad del peor caso (`fraccion_minima·B ≤ B − fac_area`) y un test comprueba que el último nivel no se alcanza.
 - Tests de IA: un solo actor vivo y huecos rellenos con movimientos inasequibles (coste 9), para calcular a mano el valor de cada plan.
+- IA con búsqueda: el plan del rival no depende del nuestro (elección simultánea), así que se modela una vez por decisión; números aleatorios comunes entre candidatos (simulación i = misma semilla) para que las diferencias sean del plan, no del azar.
+- Honestidad de la IA: su azar sale de `createRng("search|bando|turno|hash del estado")` y nunca recibe el RNG de la partida; el test sustituye `Math.random`/reloj por funciones que lanzan. Presupuesto en nº de simulaciones, no en ms.
+- Medir una IA de búsqueda contra el mismo rival que modela es su mejor caso: añade siempre un control contra un rival fuera del modelo.

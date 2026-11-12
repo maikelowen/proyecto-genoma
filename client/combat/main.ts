@@ -1,9 +1,10 @@
 /** Interfaz del combate jugable (DOM sin dependencias). Estados: team → plan ⇄ report. */
-import { describeMove, validTargetPositions, eligibleActors, type Action, type BattleState, type Move, type SideId } from "../../packages/core/src/index.ts";
+import { describeMove, validTargetPositions, eligibleActors, type Action, type BattleEvent, type BattleState, type Move, type SideId } from "../../packages/core/src/index.ts";
 import { cfg, familyLabel, gcfg, palette } from "./data.ts";
 import { SOUL_ART } from "./souls.ts";
-import { newSeed, playTurn, rollOffer, rollRival, startFight, type Fight, type Soul } from "./game.ts";
-import { key, narrate, statusName, type LogLine, type Part, type TurnMarks } from "./narrate.ts";
+import { chooseOpponentAi, newSeed, playTurn, rollOffer, rollRival, startFight, type Dificultad, type Fight, type Soul } from "./game.ts";
+import { key, narrate, type LogLine, type Part } from "./narrate.ts";
+import { paintEnergy, paintUnit, playTurn as playAnim, viewFrom, type Field, type Player, type UnitEls } from "./anim.ts";
 
 // ------------------------------------------------------------------ utilidades DOM
 type Attrs = Record<string, string | number | boolean | EventListener | undefined> | null;
@@ -56,7 +57,23 @@ let back: number[] = [];
 let phase: Phase = "team";
 let fight: Fight | null = null;
 let picks: Pick[] = [];
-let report: { lines: LogLine[]; marks: TurnMarks } | null = null;
+let report: { lines: LogLine[]; before: BattleState; events: readonly BattleEvent[] } | null = null;
+let player: Player | null = null;
+let difficulty: Dificultad = "normal";
+const LS_SPEED = "genoma.combate.vel.v1";
+let speed: 1 | 2 = 1;
+try {
+  if (localStorage.getItem(LS_SPEED) === "2") speed = 2;
+} catch {
+  /* sin almacenamiento */
+}
+function saveSpeed(): void {
+  try {
+    localStorage.setItem(LS_SPEED, String(speed));
+  } catch {
+    /* solo en memoria */
+  }
+}
 let hint = "";
 const app = document.getElementById("app") as HTMLElement;
 
@@ -91,31 +108,29 @@ function energyBar(have: number, spent: number): HTMLElement {
   return h("div", { class: "energy" }, h("span", { class: "lbl" }, "Energía"), h("span", { class: "cells" }, ...cells), h("span", { class: "num" }, spent > 0 ? `${have - spent}/${have} (gastas ${spent})` : `${have}`));
 }
 
-function fighterCard(f: Fight, side: SideId, pos: number, marks: TurnMarks | null): HTMLElement {
-  const i = SIDE[side];
-  const soul = (i === 0 ? f.mine : f.rival)[pos - 1] as Soul;
-  const fs = f.state.fighters[i][pos - 1] as BattleState["fighters"][0][0];
-  const c = soul.combatant;
-  const k = key(side, pos);
-  const pal = palette(c.family);
-  const pct = Math.max(0, Math.round((fs.hp / c.maxHp) * 100));
-  const hurt = marks?.hurt.get(k);
-  const healed = marks?.healed.get(k);
-  const chips = fs.statuses.map((s) => h("span", { class: "chip " + cfg.combat.statuses[s.id].kind }, `${statusName(s.id)}${s.id === "quemadura" ? ` x${s.value}` : s.id === "escudo" ? ` ${s.value}` : ""} ${s.turns}t`));
-  return h(
-    "div",
-    { class: `fcard ${side === "A" ? "mine" : "foe"}${fs.ko ? " ko" : ""}${marks?.acted.has(k) ? " acted" : ""}${hurt ? " hurt" : ""}`, style: `--fam:${pal.main}` },
-    h("div", { class: "fhead" }, soulShape(c.family, 60, fs.ko), h("div", { class: "fname" }, h("b", null, soul.name), h("small", null, `${familyLabel(c.family)} · ${rowName(pos)}`))),
-    h("div", { class: "bar" }, h("i", { style: `width:${pct}%` })),
-    h("div", { class: "hptxt" }, fs.ko ? "KO" : `${fs.hp}/${c.maxHp}`, hurt ? h("span", { class: "dmg" }, ` −${hurt}`) : null, healed ? h("span", { class: "heal" }, ` +${healed}`) : null),
-    marks?.acted.has(k) ? h("div", { class: "tag" }, "actuó") : null,
-    chips.length > 0 ? h("div", { class: "chips" }, ...chips) : null,
-  );
-}
-
-function battlefield(f: Fight, marks: TurnMarks | null): HTMLElement {
-  const row = (side: SideId, a: number, b: number): HTMLElement => h("div", { class: "frow" }, fighterCard(f, side, a, marks), fighterCard(f, side, b, marks));
-  return h("div", { class: "field" }, h("div", { class: "side" }, "Rival"), row("B", 3, 4), row("B", 1, 2), h("div", { class: "vs" }, "— frente —"), row("A", 1, 2), row("A", 3, 4), h("div", { class: "side" }, "Tu equipo"));
+/** Campo de batalla: rival arriba, tu equipo abajo; fila trasera más lejos del centro. Devuelve los elementos para animarlos. */
+function buildField(f: Fight, st: BattleState): Field {
+  const units = new Map<string, UnitEls>();
+  const energy = { A: h("span", { class: "en" }), B: h("span", { class: "en" }) } as Record<SideId, HTMLElement>;
+  const unit = (side: SideId, pos: number): HTMLElement => {
+    const i = SIDE[side];
+    const soul = (i === 0 ? f.mine : f.rival)[pos - 1] as Soul;
+    const c = soul.combatant;
+    const ico = h("div", { class: "ico" }, soulShape(c.family, 88));
+    const bar = h("i", null);
+    const hp = h("div", { class: "hpn" });
+    const chips = h("div", { class: "chips" });
+    const el = h("div", { class: `unit ${side === "A" ? "mine" : "foe"}`, style: `--fam:${palette(c.family).main}` }, ico, h("div", { class: "uname" }, soul.name), h("div", { class: "bar" }, bar), hp, chips);
+    const u: UnitEls = { unit: el, ico, bar, hp, chips, maxHp: c.maxHp, family: c.family };
+    units.set(key(side, pos), u);
+    paintUnit(u, viewFrom(st, side, pos), false);
+    return el;
+  };
+  const row = (side: SideId, a: number, b: number): HTMLElement[] => [h("div", { class: "rl" }, rowName(a) + (side === "B" ? " rival" : " tuya")), h("div", { class: "frow" }, unit(side, a), unit(side, b))];
+  paintEnergy(energy.A, st.energy[0]);
+  paintEnergy(energy.B, st.energy[1]);
+  const el = h("div", { class: "field" }, h("div", { class: "side" }, "Rival", energy.B), ...row("B", 3, 4), ...row("B", 1, 2), h("div", { class: "vs" }, "— frente —"), ...row("A", 1, 2), ...row("A", 3, 4), h("div", { class: "side" }, "Tu equipo", energy.A));
+  return { el, units, energy };
 }
 
 const HELP: [string, string][] = [
@@ -210,7 +225,7 @@ function startBattle(): void {
   const mine = mineIdx.map((i) => offer[i] as Soul);
   const seed = pendingFightSeed ?? newSeed();
   pendingFightSeed = null;
-  fight = startFight(mine, rollRival(seed), seed);
+  fight = startFight(mine, rollRival(seed), seed, chooseOpponentAi(difficulty));
   beginPlanning();
 }
 
@@ -228,6 +243,7 @@ function renderTeam(): void {
       h("button", { class: "btn", onclick: () => newOffer() }, "Nuevas almas"),
       h("button", { class: "btn primary", disabled: !ready, onclick: () => ready && startBattle() }, "¡Combatir!"),
     ),
+    h("div", { class: "diff" }, h("span", { class: "lbl" }, "Dificultad del rival"), h("button", { class: "btn" + (difficulty === "normal" ? " on" : ""), onclick: () => ((difficulty = "normal"), render()) }, "Normal"), h("button", { class: "btn" + (difficulty === "dificil" ? " on" : ""), onclick: () => ((difficulty = "dificil"), render()) }, "Difícil")),
     h("p", { class: "sel" }, `Delantera: ${front.map(name).join(", ") || "—"} · Trasera: ${back.map(name).join(", ") || "—"}`, hint ? h("span", { class: "warn" }, " " + hint) : null),
     h("div", { class: "grid" }, ...offer.map((_, i) => soulCard(i))),
     h("p", { class: "seed" }, `semilla de las almas: ${offerSeed}`),
@@ -315,7 +331,7 @@ function renderPlan(): void {
     topBar(),
     h("div", { class: "turnbar" }, h("b", null, `Turno ${f.state.turn}/${cfg.combat.maxTurns}`), h("span", { class: "foeE" }, `Energía rival: ${f.state.energy[1]}`)),
     energyBar(f.state.energy[0], cost),
-    battlefield(f, null),
+    buildField(f, f.state).el,
     h("h2", null, "Tus órdenes"),
     ...orders,
     h("div", { class: "actions sticky" }, h("button", { class: "btn primary big", onclick: () => confirmTurn() }, "Confirmar turno")),
@@ -328,7 +344,7 @@ function confirmTurn(): void {
   const f = fight as Fight;
   const { plan } = currentPlan(f);
   const { before, events } = playTurn(f, plan);
-  report = narrate(before, events, f.names);
+  report = { lines: narrate(before, events, f.names).lines, before, events };
   if (f.state.result !== null) {
     score.played++;
     if (f.state.result === "A") score.won++;
@@ -347,7 +363,7 @@ function lineNode(l: LogLine): HTMLElement {
 function sameTeamAgain(): void {
   const f = fight as Fight;
   const seed = newSeed();
-  fight = startFight(f.mine, rollRival(seed), seed);
+  fight = startFight(f.mine, rollRival(seed), seed, chooseOpponentAi(difficulty));
   beginPlanning();
 }
 function newTeam(): void {
@@ -358,27 +374,49 @@ function newTeam(): void {
 
 function renderReport(): void {
   const f = fight as Fight;
-  const r = report as { lines: LogLine[]; marks: TurnMarks };
+  const r = report as NonNullable<typeof report>;
   const res = f.state.result;
+  const field = buildField(f, r.before);
+  const sub = h("div", { class: "sub", "aria-live": "polite" }, "");
+  const speedBtn = (v: 1 | 2): HTMLElement =>
+    h("button", { class: "btn sp" + (speed === v ? " on" : ""), "data-v": v, onclick: ((e: Event) => {
+      speed = v;
+      saveSpeed();
+      player?.setSpeed(v);
+      for (const b of Array.from(document.querySelectorAll(".sp"))) b.classList.toggle("on", (b as HTMLElement).dataset["v"] === String(v));
+      (e.currentTarget as HTMLElement).blur();
+    }) as EventListener }, `×${v}`);
+  const skipBtn = h("button", { class: "btn", onclick: () => player?.skip() }, "Saltar");
+  const ctrl = h("div", { class: "ctrl" }, h("span", { class: "lbl" }, "Velocidad"), speedBtn(1), speedBtn(2), skipBtn);
   const end = res === null ? null : h(
     "div",
-    { class: "endbox " + (res === "A" ? "win" : res === "B" ? "lose" : "draw") },
+    { class: "endbox " + (res === "A" ? "win" : res === "B" ? "lose" : "draw"), hidden: true },
     h("h2", null, res === "A" ? "¡Victoria!" : res === "B" ? "Derrota" : "Empate"),
     h("p", null, `Turnos jugados: ${f.state.turn}. Partidas: ${score.played} · ganadas: ${score.won}.`),
     h("div", { class: "actions" }, h("button", { class: "btn primary", onclick: () => sameTeamAgain() }, "Otra partida (mismo equipo)"), h("button", { class: "btn", onclick: () => newTeam() }, "Otra partida (equipo nuevo)")),
   );
+  const next = res === null ? h("button", { class: "btn primary big", disabled: true, onclick: () => beginPlanning() }, "Siguiente turno") : null;
   app.replaceChildren(
     topBar(),
-    h("div", { class: "turnbar" }, h("b", null, `Resultado del turno ${res === null ? f.state.turn - 1 : f.state.turn}`)),
-    battlefield(f, r.marks),
-    h("div", { class: "log" }, ...r.lines.map(lineNode)),
+    h("div", { class: "turnbar" }, h("b", null, `Resultado del turno ${res === null ? f.state.turn - 1 : f.state.turn}`), ctrl),
+    field.el,
+    sub,
+    h("details", { class: "help" }, h("summary", null, "Ver detalle del turno"), h("div", { class: "log" }, ...r.lines.map(lineNode))),
     end ?? "",
-    res === null ? h("div", { class: "actions sticky" }, h("button", { class: "btn primary big", onclick: () => beginPlanning() }, "Siguiente turno")) : "",
+    next ? h("div", { class: "actions sticky" }, next) : "",
     h("p", { class: "seed" }, `semilla de las almas: ${offerSeed} · semilla del combate: ${f.seed}`),
   );
+  player = playAnim(field, r.before, f.state, r.events, f.names, sub, speed, () => {
+    ctrl.classList.add("off");
+    if (end) end.removeAttribute("hidden");
+    if (next) next.removeAttribute("disabled");
+    player = null;
+  });
 }
 
 function render(): void {
+  player?.cancel();
+  player = null;
   if (phase === "team") renderTeam();
   else if (phase === "plan") renderPlan();
   else renderReport();

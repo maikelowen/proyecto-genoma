@@ -71,6 +71,10 @@ r.result; r.turns; r.log; r.hash;              // "A" | "B" | "empate"; log[turn
 energyPrice(state, "A", cfg);                  // { lambda, targetCost (c*), bestRate } de la IA (§10.1)
 ```
 
+IA con búsqueda (más fuerte que la de referencia; misma interfaz `Ai`): `createSearchAi({ simulations: 24, horizon: 2, topK: 3, candidates: 10 })`.
+Monte Carlo de horizonte corto con su propio RNG (`"search|bando|turno|hash"`): no ve el de la partida. ≈ 50 ms por decisión en Node.
+Medida de profundidad (búsqueda contra la mejor IA de reglas): `npm run sim:profundidad` → `docs/informes/profundidad-v0.1.md`.
+
 Turno a turno (cliente/servidor): `createBattle(combA, combB, cfg)` → `validatePlan(state, "A", plan, cfg)` →
 `resolveTurn(state, planA, planB, rng, cfg)` → `{ state, events }` (no muta la entrada; **24 tiradas por turno**).
 Una acción es `{ actor: 1–4, move: 0 (golpe) | 1–4 (locus), target: 1–4 }`; un plan inválido se sustituye por golpes básicos.
