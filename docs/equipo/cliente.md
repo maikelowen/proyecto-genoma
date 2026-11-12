@@ -23,3 +23,5 @@
 - Escena (`style.css`, `SPOT` en `main.ts`): las unidades son `position:absolute` con `left/top` en % y `translate:-50% -50%` (la propiedad `translate` no choca con las animaciones WAAPI de `transform`); la caja de la unidad es solo el icono, la info flota fuera con `bottom:100%`, así `getBoundingClientRect` da el centro real para embestidas y proyectiles.
 - Flotación por CSS en el `svg` y sombra aparte; el temblor/brillo siguen en `.ico`. El marcador se suma en `commitScore()` al acabar la animación del turno final (o al cancelarla).
 - Selección: anillos en el suelo (`sel-actor/foe/ally`); clic en la escena cambia de alma o de objetivo (`focus`, `onPick`).
+- Pulido v0.2: las unidades son contextos de apilado (`translate`), así que `z-index` de `.info`/`.ico` solo ordena dentro de la unidad; un alma delantera aún puede tapar el nombre de una trasera. El KO se anima en `.ico` con `fill:forwards` y solo se repinta (clase `ko`) al acabar, si no el CSS lo oculta antes.
+- Los iconos de estado/eficacia son SVG en línea (`STATUS_ICON`, `EFF_ICON` en `anim.ts`); el texto va en `.hpn` (tocar/hover) y en el detalle del turno. Runas del suelo: `plat()` en `main.ts`.

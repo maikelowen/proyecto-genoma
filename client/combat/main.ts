@@ -115,6 +115,19 @@ const SPOT: Record<SideId, [number, number][]> = {
   B: [[46, 36], [70, 46], [64, 15], [86, 23]],
   A: [[54, 64], [30, 54], [36, 85], [14, 77]],
 };
+/** Runas abstractas propias (no son un alfabeto real) en un anillo elíptico; brillan con el color de cada bando. */
+const RUNES = ["M0,-6V6M-4,-2L0,-6L4,-2", "M-5,5Q0,-8 5,5M0,-1V5", "M-4,-6V6M4,-6V6M-4,0H4M-4,-6L4,2", "M-5,0A5,5 0 1 0 5,0A5,5 0 1 0 -5,0M0,-8V8", "M-5,-5L0,5L5,-5M-3,0H3", "M0,-6L5,0L0,6L-5,0ZM0,-2V2"];
+function plat(cls: string): HTMLElement {
+  const el = h("div", { class: "plat " + cls });
+  let g = "";
+  for (let i = 0; i < 10; i++) {
+    const a = ((i + (cls === "pf" ? 0.3 : 0)) / 10) * Math.PI * 2;
+    g += `<path transform="translate(${(Math.cos(a) * 76).toFixed(1)} ${(Math.sin(a) * 30).toFixed(1)}) scale(.8 1.1)" stroke-width="1.6" d="${RUNES[(i * 5 + (cls === "pf" ? 2 : 0)) % RUNES.length]}"/>`;
+  }
+  el.innerHTML = `<svg viewBox="-100 -50 200 100" preserveAspectRatio="none" aria-hidden="true"><ellipse rx="92" ry="40" stroke-width="1.5"/><ellipse rx="58" ry="22" stroke-width="1" stroke-dasharray="3 5"/>${g}</svg>`;
+  return el;
+}
+
 interface Sel {
   actor: number | null;
   tgts: { side: SideId; pos: number }[];
@@ -156,8 +169,8 @@ function buildField(f: Fight, st: BattleState, sel?: Sel): Field {
     "div",
     { class: "stage" },
     h("div", { class: "bg" }, h("div", { class: "stars" }), h("div", { class: "floor" })),
-    h("div", { class: "plat pf" }),
-    h("div", { class: "plat pm" }),
+    plat("pf"),
+    plat("pm"),
     h("div", { class: "tag t1" }, "Rival · ", energy.B),
     h("div", { class: "tag t2" }, "Tú · ", energy.A),
     ...all,
