@@ -6,11 +6,11 @@ Planificado por cuota (D-032). Coste de referencia: un encargo típico de agente
 | # | Tarea | Quién | Coste |
 | --- | --- | --- | --- |
 | 1 | Prueba con 3–5 amigos (`prueba-amigos.md`); traer las respuestas | Miguel | — |
-| 2 | Prueba ciega del arte v3 (galería en la rama `arte-v3`) y veredicto | Miguel | — |
-| 3 | Arte v3, 2.ª y última iteración con el veredicto; fusionar tras la prueba de los amigos | Cliente (Opus) | 150–250 k |
+| 2 | Veredicto del arte v3 final (galería en `arte-v3`) y decisión sobre la silueta (gen de cuerpo o familia) | Miguel | — |
+| 3 | Fusionar `arte-v3` en `main` tras la prueba de los amigos; retoques menores si los pide Miguel | Director / Cliente (Sonnet) | bajo |
 | 4 | Aplicar el nombre Ánimas a los textos del juego | Cliente (Sonnet) | bajo |
 
-Hecho el 13 nov: arte v3 1.ª iteración (218 k); GitHub Pages activo; mensaje y preguntas para los amigos.
+Hecho el 13 nov: arte v3, dos iteraciones (436 k en total); GitHub Pages activo; mensaje y preguntas para los amigos.
 
 ## Después del feedback de los amigos
 | # | Tarea | Agente (modelo) | Coste est. |
