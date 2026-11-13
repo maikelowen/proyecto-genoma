@@ -64,7 +64,8 @@ Orden de autoridad si algo choca: decisiones de Miguel en `DECISIONES.md` > spec
 - **Sé honesto:** si algo va mal, va lento o el plan no se sostiene, dilo claramente y pronto.
 
 ## Situación especial ahora (revisar en ESTADO)
-- **Reglas de combate v0.4 congeladas** hasta el feedback de los amigos (D-045). No cambies reglas ni balance sin decisión de Miguel.
+- **En `main`, reglas de combate congeladas** (v0.4 con energía 3, D-045, D-052) hasta el feedback de los amigos: `docs/jugable/combate.html` es lo que están probando y no se toca.
+- **Rama `combate-v0.5`**: ciclo de reglas autorizado por Miguel (D-053, D-054, D-055). Para que Miguel lo pruebe, se publica **solo** la página aparte `docs/jugable/combate-v05.html` en `main` (construida desde la rama); nada más de la rama llega a `main` hasta después del feedback.
 - **Rama `arte-v3`**: arte nuevo terminado y congelado (D-050). No fusionar en `main` hasta que contesten los amigos (D-047).
 
 ## Técnica (detalle en `docs/equipo/nucleo.md` y `cliente.md`)

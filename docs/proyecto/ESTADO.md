@@ -20,9 +20,10 @@ Actualizado: 2026-11-13 (noche). Fuente de verdad: este fichero (el repositorio)
 
 ## Siguiente paso
 1. Hecho: enlace enviado a los amigos (13 nov, noche). **Miguel trae las respuestas** tal cual.
-2. Mirar en el feedback: bola de nieve (P-01, P-07) y si sobran rondas de ataque gratis (efecto de D-052).
-3. Con el feedback (P-01): cerrar la Fase 1 o iterar reglas; fusionar `arte-v3` (al fusionar, hay conflicto esperado en `client/combat/main.ts` y en `docs/jugable/combate.html`: conservar el SPOT en espejo de `main` y regenerar con `npm run build:combate`); aplicar el nombre Ánimas a los textos.
-4. Fase 2 según `HOJA-DE-RUTA.md`, cuando Miguel confirme su alcance (P-02).
+2. **Ciclo de reglas v0.5** en Claude Code (D-053, D-054, D-055; BACKLOG n.º 4), en la rama `combate-v0.5` sin tocar el juego que prueban los amigos.
+3. Mirar en el feedback: bola de nieve (P-01) y si sobran rondas de ataque gratis (efecto de D-052).
+4. Con el feedback (P-01): cerrar la Fase 1 o iterar reglas; fusionar `arte-v3` (al fusionar, hay conflicto esperado en `client/combat/main.ts` y en `docs/jugable/combate.html`: conservar el SPOT en espejo de `main` y regenerar con `npm run build:combate`); aplicar el nombre Ánimas a los textos.
+5. Fase 2 según `HOJA-DE-RUTA.md`, cuando Miguel confirme su alcance (P-02).
 
 ## Pendientes menores
 - QA R-01 (claves desconocidas en bloques antiguos de config) y R-02 (la IA de referencia no ve el provocar del turno); `placement.ts:61` con un 3 fijo; tests de provocador que cae a mitad de turno.

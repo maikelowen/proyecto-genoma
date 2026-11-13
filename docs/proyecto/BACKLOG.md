@@ -7,7 +7,7 @@ Planificado por cuota (D-032). Coste de referencia: un encargo típico de agente
 | --- | --- | --- | --- | --- |
 | 2 | Prueba con 3–5 amigos (enlace enviado); traer las respuestas tal cual | Miguel | — | — |
 | 3 | Diagnóstico del feedback y propuesta de cierre de la Fase 1 | Director | bajo | 2 |
-| 4 | Doble acción de la última ánima (D-053): spec + núcleo + simulación (comparada con "Brasa") + revisión + interfaz, en rama | disenador + nucleo (Opus) + analista (Sonnet) + revisor + cliente | 300–500 k | P-07 |
+| 4 | **Ciclo v0.5 (D-055):** varios ataques de la última ánima (D-053) + energía pagada al confirmar (D-054), en la rama `combate-v0.5`; página de prueba `jugable/combate-v05.html` | disenador + nucleo (Opus) + analista (Sonnet) + revisor + cliente (Sonnet) | 300–500 k | — |
 | 5 | Fusionar `arte-v3` en `main` (ver nota de conflicto en ESTADO) y comprobar el combate a 380/1100 px | Director / cliente (Sonnet) | bajo | P-01 |
 | 6 | Aplicar el vocabulario a los textos del juego (Ánimas y lo que se decida en P-03) | cliente (Sonnet) | 50–100 k | 5, P-03 |
 

@@ -6,12 +6,6 @@ Formato de cada pregunta: contexto en 2–3 líneas, opciones con su consecuenci
 
 ## Abiertas
 
-### P-07 · Ciclo de reglas v0.5: varios ataques de la última ánima (D-053) y energía perdida al caer antes de actuar
-- **Varios ataques (decidido, D-053):** falta confirmar si el gratis se puede combinar con los de pago en el mismo turno (propuesta: sí, cada movimiento una vez como máximo, hasta 4 acciones si hay energía).
-- **Energía perdida (propuesta de Miguel, pendiente):** si un ánima cae antes de ejecutar su movimiento, la energía se pierde (hoy se devuelve). A favor: premia leer al rival y proteger al ánima frágil. En contra: castiga más al que va perdiendo (empeora la bola de nieve). Propuesta del director: probarlo y medirlo junto con D-053, que compensa justo ese efecto.
-- **Cuándo:** en una rama, spec + núcleo + simulación + revisión + interfaz (~300–500 k), publicado tras el feedback de los amigos.
-- **Bloquea:** el ciclo v0.5.
-
 ### P-01 · Cierre de la Fase 1 tras la prueba con amigos
 - **Contexto:** el combate v0.4 está publicado y en prueba (`prueba-amigos.md`). Riesgo conocido: bola de nieve (~72 % gana quien hace el primer KO, D-044).
 - **Opciones:** A) los amigos se divierten → cerrar la Fase 1 y empezar la 2; B) notan bola de nieve → mecánica "Brasa" y cerrar; C) no se divierten → hasta dos iteraciones de reglas (D-026).
