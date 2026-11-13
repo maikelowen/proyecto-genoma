@@ -84,10 +84,16 @@ export type BattleEvent =
       readonly energy: number;
       readonly synergy: readonly number[];
     }
-  | { readonly type: "order"; readonly queue: readonly { readonly side: SideId; readonly actor: number; readonly priority: number; readonly initiative: number }[] }
-  | { readonly type: "action"; readonly side: SideId; readonly actor: number; readonly move: number; readonly moveId: string | null; readonly targetSide: SideId; readonly targets: readonly number[] }
-  | { readonly type: "cancel"; readonly side: SideId; readonly actor: number; readonly reason: "ko" | "aturdido"; readonly refund: number }
-  | { readonly type: "lost"; readonly side: SideId; readonly actor: number }
+  /** combate v0.5 §3.1: el hueco de una última ánima lleva `moves` (su secuencia, en orden); si no, no existe. */
+  | { readonly type: "order"; readonly queue: readonly { readonly side: SideId; readonly actor: number; readonly priority: number; readonly initiative: number; readonly moves?: readonly number[] }[] }
+  /** combate v0.5 §4.6: `seq` (posición 1-based y longitud) solo en movimientos de una última ánima. */
+  | { readonly type: "action"; readonly side: SideId; readonly actor: number; readonly move: number; readonly moveId: string | null; readonly targetSide: SideId; readonly targets: readonly number[]; readonly seq?: SeqInfo }
+  /**
+   * combate §3.5 / v0.5 §1 (C25): un evento por movimiento cancelado. `refund` = lo devuelto.
+   * `lost` (energía perdida = coste) solo existe con `energia.pago_al_confirmar`; `move` y `seq`, solo en una última ánima.
+   */
+  | { readonly type: "cancel"; readonly side: SideId; readonly actor: number; readonly reason: "ko" | "aturdido"; readonly refund: number; readonly lost?: number; readonly move?: number; readonly seq?: SeqInfo }
+  | { readonly type: "lost"; readonly side: SideId; readonly actor: number; readonly move?: number; readonly seq?: SeqInfo }
   | { readonly type: "damage"; readonly side: SideId; readonly pos: number; readonly amount: number; readonly absorbed: number; readonly hp: number; readonly condition: boolean }
   | { readonly type: "drain"; readonly side: SideId; readonly pos: number; readonly amount: number; readonly hp: number }
   | { readonly type: "status"; readonly side: SideId; readonly pos: number; readonly status: StatusId; readonly turns: number; readonly value: number }
@@ -102,6 +108,12 @@ export type BattleEvent =
   | { readonly type: "regen"; readonly side: SideId; readonly pos: number; readonly amount: number; readonly hp: number }
   | { readonly type: "expire"; readonly side: SideId; readonly pos: number; readonly status: StatusId }
   | { readonly type: "end"; readonly result: BattleResult };
+
+/** combate v0.5 §4.6 — movimiento `index` (1-based) de una secuencia de `of` de la última ánima ("2/3"). */
+export interface SeqInfo {
+  readonly index: number;
+  readonly of: number;
+}
 
 export interface TurnResult {
   readonly state: BattleState;
@@ -148,16 +160,50 @@ export function validTargetPositions(move: Move | null, alive: readonly boolean[
   return front.length > 0 ? front : cfg.backRow.filter((p) => alive[p - 1]);
 }
 
-/** ¿Puede la criatura elegir acción este turno? (viva y no aturdida) */
-export function canAct(state: BattleState, side: 0 | 1, idx: number): boolean {
-  const f = state.fighters[side][idx] as FighterState;
-  return !f.ko && f.skipTurn !== state.turn;
+type AnyConfig = BattleConfig | CombatConfig;
+const combatOf = (cfg: AnyConfig): CombatConfig => ("combat" in cfg ? cfg.combat : cfg);
+
+/** combate v0.5 §2.2 — máximo de movimientos de pago de una secuencia (estructural: cabeza, cuerpo y cola). */
+const SEQ_MAX = 3;
+
+function lastIdx(state: BattleState, s: 0 | 1, C: CombatConfig): number {
+  if (!C.variants.lastAnima.active) return 0;
+  let pos = 0;
+  for (let p = 1; p <= 4; p++) {
+    if ((state.fighters[s][p - 1] as FighterState).ko) continue;
+    if (pos > 0) return 0;
+    pos = p;
+  }
+  return pos;
 }
 
-/** Posiciones (1–4) que deben recibir acción en el plan de `side`. */
-export function eligibleActors(state: BattleState, side: SideId): number[] {
+/**
+ * combate v0.5 §2.1 — casilla (1–4) de la última ánima del bando en este turno, o 0:
+ * con `variantes.ultima_anima.activo`, el bando tiene exactamente una viva al empezar
+ * el turno (el estado que se pasa es el del inicio del turno). Una vez última, lo es hasta el final.
+ */
+export function lastAnimaPos(state: BattleState, side: SideId, cfg: AnyConfig): number {
+  return lastIdx(state, sideIndex(side), combatOf(cfg));
+}
+
+/**
+ * ¿Puede la criatura elegir acción este turno? (viva y no aturdida).
+ * combate v0.5 §3.3 U4 (C26): con `ultima_anima.aturdir = "primero"`, la última con
+ * `skipTurn = turno` sí elige (se le cancela el 1.º movimiento); hace falta `cfg` para verlo.
+ */
+export function canAct(state: BattleState, side: 0 | 1, idx: number, cfg?: AnyConfig): boolean {
+  const f = state.fighters[side][idx] as FighterState;
+  if (f.ko) return false;
+  if (f.skipTurn !== state.turn) return true;
+  if (cfg === undefined) return false;
+  const C = combatOf(cfg);
+  return C.variants.lastAnima.stun === "primero" && lastIdx(state, side, C) === idx + 1;
+}
+
+/** Posiciones (1–4) que deben recibir acción en el plan de `side` (con `cfg`, incluye el plan B de aturdir de v0.5). */
+export function eligibleActors(state: BattleState, side: SideId, cfg?: AnyConfig): number[] {
   const s = sideIndex(side);
-  return [1, 2, 3, 4].filter((p) => canAct(state, s, p - 1));
+  return [1, 2, 3, 4].filter((p) => canAct(state, s, p - 1, cfg));
 }
 
 function aliveMask(fs: readonly { readonly ko: boolean }[]): boolean[] {
@@ -166,8 +212,12 @@ function aliveMask(fs: readonly { readonly ko: boolean }[]): boolean[] {
 
 // ---------------------------------------------------------------- variantes v0.3
 
-/** variantes v0.3 V2 — movimientos (1–4) de la criatura `pos` que están en descanso este turno. */
-export function restingMoves(state: BattleState, side: SideId, pos: number): number[] {
+/**
+ * variantes v0.3 V2 — movimientos (1–4) de la criatura `pos` que están en descanso este turno.
+ * combate v0.5 §2.4: con `cfg`, la última ánima no tiene ninguno (sus contadores se ignoran).
+ */
+export function restingMoves(state: BattleState, side: SideId, pos: number, cfg?: AnyConfig): number[] {
+  if (cfg !== undefined && lastIdx(state, sideIndex(side), combatOf(cfg)) === pos) return [];
   const rest = (state.fighters[sideIndex(side)][pos - 1] as FighterState).rest;
   const out: number[] = [];
   if (rest) rest.forEach((n, k) => { if (n > 0) out.push(k + 1); });
@@ -352,7 +402,14 @@ export function placementOf(state: BattleState, side: SideId, cfg: BattleConfig)
  */
 export function planSynergy(team: readonly (Combatant | null)[], plan: Plan, cfg: CombatConfig): { bonus: number[]; combo: boolean[] } {
   // combate v0.4 §5: el gratis ni cuenta ni recibe bonus (`sinergia.cuenta_gratis` = false)
-  const users = plan.filter((a) => a.move !== 0 && (cfg.synergy.countsFree || ((team[a.actor - 1] as Combatant).moves[a.move - 1] as Move).cost !== 0));
+  // combate v0.5 §8 / U9 (D-057): se cuentan ánimas distintas, no entradas del plan (la última, grupo de 1 ⇒ 0)
+  const counted = new Set<number>();
+  const users = plan.filter((a) => {
+    if (a.move === 0 || counted.has(a.actor)) return false;
+    if (!cfg.synergy.countsFree && ((team[a.actor - 1] as Combatant).moves[a.move - 1] as Move).cost === 0) return false;
+    counted.add(a.actor);
+    return true;
+  });
   const count = new Map<string, number>();
   for (const a of users) for (const g of (team[a.actor - 1] as Combatant).groups) count.set(g, (count.get(g) ?? 0) + 1);
   const bonus = [0, 0, 0, 0];
@@ -378,14 +435,17 @@ export function validatePlan(state: BattleState, side: SideId, plan: Plan, cfg: 
   if (state.result !== null) return "la partida ha terminado";
   if (!Array.isArray(plan)) return "el plan no es una lista";
   const team = state.teams[s];
-  const eligible = eligibleActors(state, side);
+  const eligible = eligibleActors(state, side, cfg);
+  // combate v0.5 §2.3: la última ánima (si elige este turno) puede tener varias entradas
+  const last = eligible.length === 1 && lastIdx(state, s, cfg.combat) === eligible[0] ? (eligible[0] as number) : 0;
+  const lastMoves: number[] = [];
   const seen = new Set<number>();
   let cost = 0;
   for (const a of plan) {
     if (typeof a !== "object" || a === null) return "acción mal formada";
     const { actor, move, target } = a;
     if (!Number.isInteger(actor) || actor < 1 || actor > 4) return `actor inválido ${actor}`;
-    if (seen.has(actor)) return `actor ${actor} repetido`;
+    if (seen.has(actor) && actor !== last) return `actor ${actor} repetido`;
     seen.add(actor);
     if (!eligible.includes(actor)) return `la criatura ${actor} no puede actuar (KO o aturdida)`;
     const c = team[actor - 1] as Combatant;
@@ -397,13 +457,23 @@ export function validatePlan(state: BattleState, side: SideId, plan: Plan, cfg: 
       const valid = validTargetPositions(m, aliveMask(state.fighters[tSide]), cfg.combat);
       if (!Number.isInteger(target) || !valid.includes(target)) return `objetivo inválido ${target} (actor ${actor})`;
     }
-    // variantes v0.3 V2: el movimiento usado no se puede repetir mientras descansa
-    if (move !== 0 && cfg.combat.variants.rest.active && (((state.fighters[s][actor - 1] as FighterState).rest ?? [])[move - 1] ?? 0) > 0) {
+    if (actor === last) {
+      // combate v0.5 §2.2–2.4: ningún movimiento se repite y los descansos de la última no cuentan
+      if (lastMoves.includes(move)) return `movimiento ${move} repetido (última ánima ${actor})`;
+      lastMoves.push(move);
+    } else if (move !== 0 && cfg.combat.variants.rest.active && (((state.fighters[s][actor - 1] as FighterState).rest ?? [])[move - 1] ?? 0) > 0) {
+      // variantes v0.3 V2: el movimiento usado no se puede repetir mientras descansa
       return `movimiento ${move} en descanso (actor ${actor})`;
     }
     cost += actionCost(c, move, cfg.combat);
   }
   if (seen.size !== eligible.length) return "falta la acción de alguna criatura";
+  if (last > 0) {
+    // combate v0.5 §2.3 regla 2: o el gratis solo, o 1–3 pagos distintos
+    const c = team[last - 1] as Combatant;
+    if (lastMoves.length > 1 && lastMoves.some((m) => actionCost(c, m, cfg.combat) === 0)) return `el gratis va solo (última ánima ${last})`;
+    if (lastMoves.length > SEQ_MAX) return `más de ${SEQ_MAX} movimientos (última ánima ${last})`;
+  }
   if (cost > state.energy[s]) return `energía insuficiente (${cost} > ${state.energy[s]})`;
   return null;
 }
@@ -414,8 +484,9 @@ export function validatePlan(state: BattleState, side: SideId, plan: Plan, cfg: 
  */
 export function fallbackPlan(state: BattleState, side: SideId, cfg: CombatConfig): Action[] {
   const s = sideIndex(side);
+  // combate v0.5 §2.3: la última ánima también hace su gratis (una sola entrada)
   if (!cfg.damage.basicActive) {
-    return eligibleActors(state, side).map((actor) => {
+    return eligibleActors(state, side, cfg).map((actor) => {
       const c = state.teams[s][actor - 1] as Combatant;
       const move = freeMoveSlot(c);
       if (cfg.variants.autoTarget.active) return { actor, move, target: 0 };
@@ -425,9 +496,94 @@ export function fallbackPlan(state: BattleState, side: SideId, cfg: CombatConfig
     });
   }
   // variantes v0.3 V4: sin objetivo (0)
-  if (cfg.variants.autoTarget.active) return eligibleActors(state, side).map((actor) => ({ actor, move: 0, target: 0 }));
+  if (cfg.variants.autoTarget.active) return eligibleActors(state, side, cfg).map((actor) => ({ actor, move: 0, target: 0 }));
   const valid = validTargetPositions(null, aliveMask(state.fighters[1 - s] as readonly FighterState[]), cfg);
-  return eligibleActors(state, side).map((actor) => ({ actor, move: 0, target: valid[0] ?? 1 }));
+  return eligibleActors(state, side, cfg).map((actor) => ({ actor, move: 0, target: valid[0] ?? 1 }));
+}
+
+/**
+ * combate v0.5 §2.2 y §5 — todos los planes válidos de la última ánima: su gratis (o el
+ * golpe básico) y cada secuencia ordenada de 1–3 pagos distintos con Σ coste ≤ energía.
+ * Orden determinista: opciones por lista ascendente de movimientos (lexicográfico; el gratis
+ * como su propio índice) y, dentro de cada una, sus órdenes en orden lexicográfico.
+ * Lista vacía si el bando no tiene una última ánima que elija este turno. Sin tiradas.
+ */
+export function lastAnimaPlans(state: BattleState, side: SideId, cfg: BattleConfig): Action[][] {
+  const s = sideIndex(side);
+  const C = cfg.combat;
+  if (state.result !== null) return [];
+  const last = lastIdx(state, s, C);
+  if (last === 0 || !canAct(state, s, last - 1, C)) return [];
+  const c = state.teams[s][last - 1] as Combatant;
+  const e = state.energy[s];
+  const target = (move: number): number => {
+    if (C.variants.autoTarget.active) return 0;
+    const m = actionMove(c, move);
+    const tSide = m && m.target === "aliado" ? s : 1 - s;
+    return validTargetPositions(m, aliveMask(state.fighters[tSide] as readonly FighterState[]), C)[0] ?? 1;
+  };
+  const free = C.damage.basicActive ? 0 : freeMoveSlot(c);
+  const paid: number[] = [];
+  c.moves.forEach((m, k) => {
+    if (m.cost > 0) paid.push(k + 1);
+  });
+  const options: number[][] = [[free]];
+  const n = paid.length;
+  for (let mask = 1; mask < 1 << n; mask++) {
+    const sub = paid.filter((_, i) => ((mask >> i) & 1) === 1);
+    if (sub.length > SEQ_MAX) continue;
+    let cost = 0;
+    for (const k of sub) cost += actionCost(c, k, C);
+    if (cost <= e) options.push(sub);
+  }
+  options.sort(lexCompare);
+  const plans: Action[][] = [];
+  for (const sub of options) for (const order of permutations(sub)) plans.push(order.map((move) => ({ actor: last, move, target: target(move) })));
+  return plans;
+}
+
+/** Comparación lexicográfica de listas de enteros (desempate total; más corta primero si es prefijo). */
+function lexCompare(a: readonly number[], b: readonly number[]): number {
+  for (let i = 0; i < a.length && i < b.length; i++) if (a[i] !== b[i]) return (a[i] as number) - (b[i] as number);
+  return a.length - b.length;
+}
+
+/** Permutaciones en orden lexicográfico (la entrada, ascendente). */
+function permutations(xs: readonly number[]): number[][] {
+  if (xs.length <= 1) return [xs.slice()];
+  const out: number[][] = [];
+  xs.forEach((x, i) => {
+    for (const r of permutations([...xs.slice(0, i), ...xs.slice(i + 1)])) out.push([x, ...r]);
+  });
+  return out;
+}
+
+/**
+ * combate v0.5 §3.1 — nivel de prioridad del hueco de una secuencia: el del primer
+ * movimiento (`prioridad_hueco = "primero"`) o el menor (`"minimo"`). Una acción suelta: el suyo.
+ */
+export function slotPriority(moves: readonly (Move | null)[], cfg: CombatConfig): number {
+  const first = actionPriority(moves[0] ?? null, cfg);
+  if (cfg.variants.lastAnima.slotPriority === "primero") return first;
+  let p = first;
+  for (const m of moves) p = Math.min(p, actionPriority(m, cfg));
+  return p;
+}
+
+/**
+ * combate v0.5 §1 — energía perdida por cancelaciones (eventos `cancel` con `lost`) en un
+ * registro de partida, por bando y motivo; `last` = la parte de últimas ánimas (eventos con `seq`).
+ */
+export function energyLost(log: readonly (readonly BattleEvent[])[]): Record<SideId, { readonly ko: number; readonly aturdido: number; readonly last: number }> {
+  const out = { A: { ko: 0, aturdido: 0, last: 0 }, B: { ko: 0, aturdido: 0, last: 0 } };
+  for (const turn of log) {
+    for (const e of turn) {
+      if (e.type !== "cancel" || !e.lost) continue;
+      out[e.side][e.reason] += e.lost;
+      if (e.seq) out[e.side].last += e.lost;
+    }
+  }
+  return out;
 }
 
 /**
@@ -481,12 +637,22 @@ interface Work {
   usedSlot: number;
 }
 
-interface Entry {
-  side: 0 | 1;
-  idx: number;
+/** Un movimiento de un hueco (una acción normal, o uno de la secuencia de la última ánima). */
+interface Step {
   action: Action;
   move: Move | null;
   cost: number;
+  /** combate v0.5 §3.4: casilla (índice 0–3) cuyo par de varianza usa este movimiento. */
+  varSlot: number;
+}
+
+/** Hueco de la cola (combate §4; v0.5 §3.1: la secuencia de la última ánima ocupa uno). */
+interface Entry {
+  side: 0 | 1;
+  idx: number;
+  steps: Step[];
+  /** combate v0.5: hueco de una última ánima (sus eventos llevan `seq`). */
+  seq: boolean;
   priority: number;
   initiative: number;
 }
@@ -558,6 +724,8 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
   const V = C.variants;
   if (state.result !== null) throw new RangeError("resolveTurn: la partida ya ha terminado");
   const t = state.turn;
+  // combate v0.5 §2.1: la última ánima se fija al empezar el turno (0 = ninguna o variante inactiva)
+  const lastPos = [lastIdx(state, 0, C), lastIdx(state, 1, C)] as const;
   const events: BattleEvent[] = [];
   const energy: [number, number] = [state.energy[0], state.energy[1]];
   events.push({ type: "turn", turn: t, energy: [energy[0], energy[1]] });
@@ -606,10 +774,20 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
   // 5. orden (combate §4)
   const entries: Entry[] = [];
   for (const s of [0, 1] as const) {
+    // combate v0.5 §3.1: un hueco por ánima; la última agrupa su secuencia en el orden del plan
+    const byActor = new Map<number, Action[]>();
     for (const a of plans[s]) {
-      const idx = a.actor - 1;
+      const list = byActor.get(a.actor);
+      if (list) list.push(a);
+      else byActor.set(a.actor, [a]);
+    }
+    for (const [actor, acts] of byActor) {
+      const idx = actor - 1;
       const c = state.teams[s][idx] as Combatant;
-      const m = actionMove(c, a.move);
+      const seq = lastPos[s] === actor;
+      // combate v0.5 §3.4: L = [casilla de la última] ++ las otras 3 en orden ascendente; el movimiento j usa L[j]
+      const L = [idx, ...[0, 1, 2, 3].filter((i) => i !== idx)];
+      const steps: Step[] = acts.map((a, j) => ({ action: a, move: actionMove(c, a.move), cost: actionCost(c, a.move, C), varSlot: L[j] as number }));
       const w = W[s][idx] as Work;
       w.hasAction = true;
       let ini = c.initiative;
@@ -621,10 +799,10 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
       entries.push({
         side: s,
         idx,
-        action: a,
-        move: m,
-        cost: actionCost(c, a.move, C),
-        priority: actionPriority(m, C),
+        steps,
+        seq,
+        // combate v0.5 §3.1: nivel del hueco según `prioridad_hueco` (una acción suelta: el suyo)
+        priority: seq ? slotPriority(steps.map((st) => st.move), C) : actionPriority((steps[0] as Step).move, C),
         initiative: ini,
       });
     }
@@ -638,7 +816,10 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
       x.idx - y.idx ||
       x.side - y.side,
   );
-  events.push({ type: "order", queue: entries.map((e) => ({ side: SIDE_IDS[e.side], actor: e.idx + 1, priority: e.priority, initiative: e.initiative })) });
+  events.push({
+    type: "order",
+    queue: entries.map((e) => ({ side: SIDE_IDS[e.side], actor: e.idx + 1, priority: e.priority, initiative: e.initiative, ...(e.seq ? { moves: e.steps.map((st) => st.action.move) } : {}) })),
+  });
 
   const knockOut = (s: 0 | 1, i: number): void => {
     const w = W[s][i] as Work;
@@ -691,8 +872,8 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
   };
 
   // condiciones (movimientos §2.5), evaluadas al ejecutar
-  const condMet = (e: Entry, tSide: 0 | 1, tIdx: number): boolean => {
-    const m = e.move;
+  // combate v0.5 U14: se evalúan por movimiento al ejecutarlo
+  const condMet = (e: Entry, m: Move | null, tSide: 0 | 1, tIdx: number): boolean => {
     if (!m || !m.condition) return false;
     const me = W[e.side][e.idx] as Work;
     const c = state.teams[e.side][e.idx] as Combatant;
@@ -710,20 +891,56 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
     }
   };
 
+  /**
+   * combate §3.5 / v0.5 §1: KO o aturdido antes de actuar ⇒ movimiento cancelado (no descansa).
+   * Sin `pago_al_confirmar` se devuelve el coste (tope `maximo`); con él, se pierde (`lost`).
+   */
+  const cancel = (e: Entry, st: Step, j: number, reason: "ko" | "aturdido"): void => {
+    const pay = C.energy.payOnConfirm;
+    const refund = pay ? 0 : st.cost;
+    energy[e.side] = Math.min(C.energy.max, energy[e.side] + refund);
+    events.push({
+      type: "cancel",
+      side: SIDE_IDS[e.side],
+      actor: e.idx + 1,
+      reason,
+      refund,
+      // combate v0.5 C25: campos nuevos solo con su mecánica (sin ellas, el registro es el de v0.4)
+      ...(pay ? { lost: st.cost } : {}),
+      ...(e.seq ? { move: st.action.move, seq: { index: j + 1, of: e.steps.length } } : {}),
+    });
+  };
+
   for (const e of entries) {
+    const me = W[e.side][e.idx] as Work;
+    for (let j = 0; j < e.steps.length; j++) {
+      const st = e.steps[j] as Step;
+      // combate v0.5 U5/U6: KO antes (o en medio) ⇒ se cancela lo que queda
+      if (me.ko) {
+        cancel(e, st, j, "ko");
+        continue;
+      }
+      // combate v0.5 U2–U4: aturdida antes de su hueco pierde la secuencia ("turno") o solo el 1.º ("primero",
+      // también si arrastra el aturdimiento del turno anterior, C26)
+      const first = e.seq && V.lastAnima.stun === "primero";
+      if (first ? j === 0 && (me.stunnedNow || me.skipTurn === t) : me.stunnedNow) {
+        cancel(e, st, j, "aturdido");
+        continue;
+      }
+      me.acted = true; // combate v0.5 §8.4: al empezar el primero que se ejecuta
+      executeStep(e, st, j);
+    }
+  }
+
+  function executeStep(e: Entry, st: Step, j: number): void {
     const side = SIDE_IDS[e.side];
     const me = W[e.side][e.idx] as Work;
     const c = state.teams[e.side][e.idx] as Combatant;
-    // combate §3.5: KO o aturdido antes de actuar ⇒ cancelada y se devuelve el coste
-    if (me.ko || me.stunnedNow) {
-      energy[e.side] = Math.min(C.energy.max, energy[e.side] + e.cost);
-      events.push({ type: "cancel", side, actor: e.idx + 1, reason: me.ko ? "ko" : "aturdido", refund: e.cost });
-      continue;
-    }
-    me.acted = true;
-    const m = e.move;
+    const seqInfo = e.seq ? { seq: { index: j + 1, of: e.steps.length } } : {};
+    const m = st.move;
     // variantes v0.3 V2: ejecutado (aunque se pierda) ⇒ descansa; combate v0.4 §2: el gratis no descansa
-    if (m && (V.rest.freeRests || m.cost !== 0)) me.usedSlot = e.action.move;
+    // combate v0.5 §2.4: lo que ejecuta la última ánima no descansa
+    if (!e.seq && m && (V.rest.freeRests || m.cost !== 0)) me.usedSlot = st.action.move;
     const tSide: 0 | 1 = m && m.target === "aliado" ? e.side : ((1 - e.side) as 0 | 1);
     const taunting = W[tSide].map((w) => !w.ko && w.taunt > 0);
     let tPos: number | undefined;
@@ -734,7 +951,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
     } else {
       // combate §2: reobjetivo a la primera válida por posición ascendente
       const valid = validTargetPositions(m, aliveMask(W[tSide]), C);
-      tPos = valid.includes(e.action.target) ? e.action.target : valid[0];
+      tPos = valid.includes(st.action.target) ? st.action.target : valid[0];
       // variantes v0.3 (provocar con objetivo manual): un ataque enemigo de un solo objetivo se desvía a quien provoca
       if (tPos !== undefined && tSide !== e.side && !(m && m.area) && !taunting[tPos - 1]) {
         const taunter = laneOrder(e.idx + 1, false, C).find((p) => taunting[p - 1]);
@@ -742,16 +959,17 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
       }
     }
     if (tPos === undefined) {
-      events.push({ type: "lost", side, actor: e.idx + 1 });
-      continue;
+      // combate v0.5 U8: sin enemigos vivos, el movimiento ofensivo se pierde (pagado)
+      events.push({ type: "lost", side, actor: e.idx + 1, ...(e.seq ? { move: st.action.move } : {}), ...seqInfo });
+      return;
     }
     const row = rowOf(tPos, C);
     const targets = m && m.area ? row.filter((p) => !(W[tSide][p - 1] as Work).ko) : [tPos];
-    events.push({ type: "action", side, actor: e.idx + 1, move: e.action.move, moveId: m ? m.id : null, targetSide: SIDE_IDS[tSide], targets });
+    events.push({ type: "action", side, actor: e.idx + 1, move: st.action.move, moveId: m ? m.id : null, targetSide: SIDE_IDS[tSide], targets, ...seqInfo });
     const syn = m ? 1 + ((synergy[e.side] as { bonus: number[] }).bonus[e.idx] as number) : 1;
     const basePower = m ? m.power : C.damage.basicPower;
     const potFor = (tIdx: number): { pot: number; met: boolean } => {
-      const met = condMet(e, tSide, tIdx);
+      const met = condMet(e, m, tSide, tIdx);
       return { pot: basePower * (met ? 1 + M.conditions.bonus : 1) * syn, met };
     };
 
@@ -764,8 +982,9 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
         const tc = state.teams[tSide][p - 1] as Combatant;
         const { pot, met } = potFor(p - 1);
         // combate §5/§11: tiradas de varianza de la posición del actor; en área, por orden de posición en la fila
+        // combate v0.5 §3.4: el movimiento j de una secuencia usa el par de la casilla L[j]
         const k = m && m.area ? row.indexOf(p) : 0;
-        const u = varU[(e.side * C.slots + e.idx) * C.draws.variancePerAction + k] as number;
+        const u = varU[(e.side * C.slots + st.varSlot) * C.draws.variancePerAction + k] as number;
         const variance = 1 - C.damage.variance + 2 * C.damage.variance * u;
         const dmg = damageAmount(pot, c.attack, m ? m.family : c.family, tc.family, !!getStatus(tw, "marca"), !!getStatus(me, "debilitar"), variance, t, C);
         let rest = dmg;
@@ -794,7 +1013,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
       const fx = basicEffectOf(c, cfg);
       if (fx && fx.kind === "estado") {
         // probabilidad con la 2.ª tirada de varianza de la posición (el golpe solo gasta la 1.ª)
-        const u = varU[(e.side * C.slots + e.idx) * C.draws.variancePerAction + 1] as number;
+        const u = varU[(e.side * C.slots + st.varSlot) * C.draws.variancePerAction + 1] as number;
         if (u < fx.chance) {
           if (fx.status === "prisa" || fx.status === "regenerar") applyStatus(e.side, e.idx, fx.status);
           else if (!(W[tSide][tPos - 1] as Work).ko) applyStatus(tSide, tPos - 1, fx.status);
@@ -807,7 +1026,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
         const total = addShield(me, fx.amount);
         events.push({ type: "shield", side, pos: e.idx + 1, amount: fx.amount, total, condition: false });
       }
-      continue;
+      return;
     }
     // estado
     if (m.status === "prisa") {

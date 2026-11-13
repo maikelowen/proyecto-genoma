@@ -26,7 +26,7 @@
 - En los estadísticos, la tolerancia es de 5 errores estándar (`tol5`) con semilla fija: sin inestabilidad y sensibles a errores de ~1 punto.
 - Además de las frecuencias, probar las invariantes tras muchas generaciones con mutación alta, los casos borde construidos a mano (`makeCreature`, `hybridGene`) y llamadas directas a funciones internas para los respaldos.
 - Los tests de QA (`qa-genetica.test.ts`) no se debilitan: si hay que adaptarlos, solo se cambia lo que exige la API nueva.
-- `npm run check` debe tardar menos de 25 s (ahora, ~11 s con combate v0.4).
+- `npm run check` debe tardar menos de 25 s (nov 2026: ~20 s en esta máquina con combate v0.5; vigílalo).
 
 ## Lecciones
 - Una spec con "suma fija" necesita una función común de reparto (`distribute`) con un ajuste de redondeo explícito, no soluciones distintas en cada sitio.
@@ -50,3 +50,7 @@
 - v0.4: un cambio de reglas va en configs nuevas (`*.v0.4.json`) con claves obligatorias, y el parser sigue cargando la versión anterior con valores que la reproducen: los dorados viejos prueban la regresión y los nuevos fijan las reglas nuevas.
 - Casilla vacía = `null` en `teams` y `FighterState` en KO: todo lo que ya filtraba KO funciona solo. Índices de tiradas por casilla (`slots`), nunca por `tamano`.
 - Las garantías de la gramática ("toda cola con alcance o área") se prueban con miles de claves mutadas, no con el catálogo: el respaldo puede quitar lo que garantizaba.
+- v0.5: una acción con varios movimientos se modela como un hueco con `steps` (cola agrupada por actor conservando el orden del plan): para planes de una entrada por actor el algoritmo es idéntico y el dorado viejo lo prueba. Los eventos nuevos (`lost`, `seq`, `moves`) solo se añaden con su mecánica activa.
+- Un estado derivable ("última ánima" = una sola viva al empezar el turno) no se guarda en `FighterState`: se recalcula con una función pública que usan motor, IA y cliente.
+- Funciones viejas que necesitan la config para una regla nueva (`eligibleActors`, `restingMoves`): parámetro `cfg?` opcional; sin él, la regla de siempre (no rompe cliente ni simuladores).
+- Tests de desempate de la IA: añade el control con la palanca contraria ("minimo") para demostrar que de verdad había empate; y calcula λ antes de diseñar el caso (guardar energía puede valer más que el movimiento que quieres probar).

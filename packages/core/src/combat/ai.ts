@@ -18,10 +18,13 @@ import {
   damageAmount,
   eligibleActors,
   freeMoveSlot,
+  lastAnimaPlans,
+  lastAnimaPos,
   planSynergy,
   resolveTurn,
   rowOf,
   sideIndex,
+  slotPriority,
   validTargetPositions,
   type Action,
   type BattleEvent,
@@ -136,7 +139,7 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
   const o = (1 - s) as 0 | 1;
   const team = state.teams[s];
   const enemyTeam = state.teams[o];
-  const actors = eligibleActors(state, side);
+  const actors = eligibleActors(state, side, cfg);
   if (actors.length === 0) return [];
   const e = state.energy[s];
   const t = state.turn;
@@ -150,18 +153,22 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
   const auto = C.variants.autoTarget.active;
   const enemyTaunting = state.fighters[o].map((f) => !f.ko && (f.taunt ?? 0) > 0);
   const noTaunt = [false, false, false, false];
-  const resting = (pos: number, slot: number): boolean => C.variants.rest.active && (((state.fighters[s][pos - 1] as FighterState).rest ?? [])[slot - 1] ?? 0) > 0;
+  // combate v0.5 §2.4/§5: la última ánima ignora sus descansos
+  const last = lastAnimaPos(state, side, cfg);
+  const resting = (pos: number, slot: number): boolean => pos !== last && C.variants.rest.active && (((state.fighters[s][pos - 1] as FighterState).rest ?? [])[slot - 1] ?? 0) > 0;
   // combate v0.4 §2: la acción "por defecto" de cada alma (golpe básico en v0.2; gratis en v0.4)
   const baseMove = actors.map((pos) => (C.damage.basicActive ? 0 : freeMoveSlot(team[pos - 1] as Combatant)));
   // combate v0.4 §8: simular en orden de iniciativa estimada (prioridad, iniciativa sin jitter con prisa/ralentizar, casilla)
   const rowRules = C.variants.autoTarget.rowPriority;
-  const estIni = actors.map((pos) => {
+  const estIniOf = (pos: number): number => {
     const f = state.fighters[s][pos - 1] as FighterState;
     return (team[pos - 1] as Combatant).initiative + (hasStatus(f, "prisa") ? C.statuses.prisa.value : 0) + (hasStatus(f, "ralentizar") ? C.statuses.ralentizar.value : 0);
-  });
+  };
 
   // combate §10.3 — evalúa una combinación (índices de movimiento por actor). Devuelve valor y objetivos.
-  const evaluate = (combo: readonly number[], withSynergy: boolean): { value: number; targets: number[] } => {
+  // combate v0.5 §5: con `seq`, `combo` es la secuencia de la última ánima `seq` y se simula en el orden dado (un hueco)
+  const evaluate = (combo: readonly number[], withSynergy: boolean, seq = 0): { value: number; targets: number[] } => {
+    const actorsOf: readonly number[] = seq > 0 ? combo.map(() => seq) : actors;
     const sim: Sim = {
       hp: [state.fighters[0].map((f) => f.hp), state.fighters[1].map((f) => f.hp)],
       neg: [negOf(state.fighters[0]), negOf(state.fighters[1])],
@@ -169,7 +176,7 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
       acted: [[false, false, false, false], [false, false, false, false]],
       shield: state.fighters[s].map(shieldOf),
     };
-    const plan: Action[] = actors.map((a, i) => ({ actor: a, move: combo[i] as number, target: 1 }));
+    const plan: Action[] = actorsOf.map((a, i) => ({ actor: a, move: combo[i] as number, target: 1 }));
     const syn = withSynergy ? planSynergy(team, plan, C) : { bonus: [0, 0, 0, 0], combo: [false, false, false, false] };
     let cost = 0;
     for (const a of plan) {
@@ -181,14 +188,15 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
     let value = price.lambda * Math.min(afterPay, saveCap) - A.costPenalty * cost;
 
 
-    const order = actors.map((_, i) => i);
-    if (rowRules) {
-      const pri = actors.map((pos, i) => actionPriority(actionMove(team[pos - 1] as Combatant, combo[i] as number), C));
-      order.sort((a, b) => (pri[b] as number) - (pri[a] as number) || (estIni[b] as number) - (estIni[a] as number) || a - b);
+    const order = actorsOf.map((_, i) => i);
+    if (rowRules && seq === 0) {
+      const pri = actorsOf.map((pos, i) => actionPriority(actionMove(team[pos - 1] as Combatant, combo[i] as number), C));
+      const ini = actorsOf.map(estIniOf);
+      order.sort((a, b) => (pri[b] as number) - (pri[a] as number) || (ini[b] as number) - (ini[a] as number) || a - b);
     }
-    const targets: number[] = actors.map(() => 1);
+    const targets: number[] = actorsOf.map(() => 1);
     order.forEach((i) => {
-      const pos = actors[i] as number;
+      const pos = actorsOf[i] as number;
       const idx = pos - 1;
       const c = team[idx] as Combatant;
       const m = actionMove(c, combo[i] as number);
@@ -373,6 +381,22 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
     if (!canKo) {
       return toPlan(baseMove, evaluate(baseMove, false).targets);
     }
+  }
+
+  // combate v0.5 §5 — última ánima: {gratis} ∪ subconjuntos de pagos con Σcoste ≤ e, cada uno con todos sus órdenes
+  // (≤ 16 simulaciones). Mejor valor; empate dentro del subconjunto: más prioridad del hueco y luego orden
+  // lexicográfico; entre opciones, la combinación menor (la primera, `lastAnimaPlans` ya las ordena así).
+  if (last > 0 && actors.length === 1 && actors[0] === last) {
+    const c = team[last - 1] as Combatant;
+    const key = (p: Plan): string => p.map((a) => a.move).slice().sort((x, y) => x - y).join(",");
+    const prio = (p: Plan): number => slotPriority(p.map((a) => actionMove(c, a.move)), C);
+    let best: { plan: Plan; value: number; targets: number[] } | null = null;
+    for (const p of lastAnimaPlans(state, side, cfg)) {
+      const r = evaluate(p.map((a) => a.move), true, last);
+      const better = best === null || r.value > best.value || (r.value === best.value && key(p) === key(best.plan) && prio(p) > prio(best.plan));
+      if (better) best = { plan: p, value: r.value, targets: r.targets };
+    }
+    if (best !== null) return best.plan.map((a, i) => ({ actor: a.actor, move: a.move, target: auto ? 0 : (best.targets[i] as number) }));
   }
 
   // combate §10.3 — enumeración lexicográfica (golpe = 0, movimientos 1–4), Σcoste ≤ e

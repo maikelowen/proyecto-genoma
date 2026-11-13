@@ -87,6 +87,12 @@ export interface CombatVariants {
   };
   /** V4 — pieza provocar: nº de finales de turno que dura y valor para la IA (vida equivalente). [v0.4] `aiRequiresEndurance` (combate §8). */
   readonly taunt: { readonly duration: number; readonly aiValue: number; readonly aiRequiresEndurance: boolean };
+  /**
+   * combate v0.5 §2 (D-053, D-056) — última ánima: gratis solo o secuencia de 1–3 pagos distintos
+   * en un único hueco, sin descanso. `stun`: "turno" (pierde la secuencia) o "primero" (plan B:
+   * solo el 1.º movimiento); `slotPriority`: nivel del hueco ("primero" o "minimo", §3.1).
+   */
+  readonly lastAnima: { readonly active: boolean; readonly stun: "turno" | "primero"; readonly slotPriority: "primero" | "minimo" };
 }
 
 /** combate v0.4 §7 — regla de colocación de la IA (null en configs sin casilla vacía). */
@@ -118,7 +124,8 @@ export interface CombatConfig {
     readonly betaQuality: number;
   };
   /** combate §3 */
-  readonly energy: { readonly initial: number; readonly perTurn: number; readonly max: number };
+  /** [v0.5] `payOnConfirm` (D-054): la energía de una acción cancelada se pierde (false: se devuelve, v0.2–v0.4). */
+  readonly energy: { readonly initial: number; readonly perTurn: number; readonly max: number; readonly payOnConfirm: boolean };
   /** combate §4 */
   readonly order: {
     readonly jitter: number;
@@ -193,8 +200,30 @@ function v04<T>(v04: boolean, value: unknown, path: string, legacy: T, parse: (x
   return parse(value);
 }
 
+/** combate v0.5 §8 — clave nueva de v0.5: obligatoria en la config v0.5; antes, el valor de regresión (`legacy`). */
+function v05<T>(is05: boolean, value: unknown, path: string, legacy: T, parse: (x: unknown) => T): T {
+  if (value === undefined) {
+    if (is05) fail(path, "obligatoria en la config v0.5");
+    return legacy;
+  }
+  return parse(value);
+}
+
+/** combate v0.5 §0/§8 — bloque `variantes.ultima_anima` (desactivado si falta antes de v0.5). */
+const LAST_OFF = Object.freeze({ active: false, stun: "turno" as const, slotPriority: "primero" as const });
+function parseLastAnima(v: unknown): CombatVariants["lastAnima"] {
+  const P = "variantes.ultima_anima";
+  const o = obj(v, P);
+  onlyKeys(o, ["activo", "aturdir", "prioridad_hueco"], P);
+  const stun = str(o["aturdir"], `${P}.aturdir`);
+  if (stun !== "turno" && stun !== "primero") fail(`${P}.aturdir`, "debe ser turno|primero");
+  const sp = str(o["prioridad_hueco"], `${P}.prioridad_hueco`);
+  if (sp !== "primero" && sp !== "minimo") fail(`${P}.prioridad_hueco`, "debe ser primero|minimo");
+  return Object.freeze({ active: bool(o["activo"], `${P}.activo`), stun, slotPriority: sp });
+}
+
 /** variantes v0.3 §2 — bloque `variantes` (opcional en v0.2). Q-03: rechaza claves desconocidas en todos sus bloques. */
-function parseVariants(v: unknown, baseRing: readonly string[], is04: boolean): CombatVariants {
+function parseVariants(v: unknown, baseRing: readonly string[], is04: boolean, is05: boolean): CombatVariants {
   const effects: Record<FamilyId, BasicEffect> = {};
   for (const f of baseRing) effects[f] = NO_EFFECT;
   if (v === undefined) {
@@ -204,10 +233,11 @@ function parseVariants(v: unknown, baseRing: readonly string[], is04: boolean): 
       rest: Object.freeze({ active: false, turns: 1, freeRests: true }),
       autoTarget: Object.freeze({ active: false, tauntShieldsSelf: true, rowPriority: false, shieldExposedRow: false, healIfAllFull: "primero" as const }),
       taunt: Object.freeze({ duration: 1, aiValue: 0, aiRequiresEndurance: false }),
+      lastAnima: LAST_OFF,
     });
   }
   const r = obj(v, "variantes");
-  onlyKeys(r, ["golpe_basico_efecto", "descanso", "objetivo_automatico", "provocar"], "variantes");
+  onlyKeys(r, ["golpe_basico_efecto", "descanso", "objetivo_automatico", "provocar", "ultima_anima"], "variantes");
   // V1
   const gb = obj(r["golpe_basico_efecto"], "variantes.golpe_basico_efecto");
   onlyKeys(gb, ["activo", "componente_hibrida", "efectos"], "variantes.golpe_basico_efecto");
@@ -263,6 +293,8 @@ function parseVariants(v: unknown, baseRing: readonly string[], is04: boolean): 
       aiValue: num(pv["valor_ia"], "variantes.provocar.valor_ia", 0),
       aiRequiresEndurance: v04(is04, pv["ia_exige_aguante"], "variantes.provocar.ia_exige_aguante", false, (x) => bool(x, "variantes.provocar.ia_exige_aguante")),
     }),
+    // combate v0.5 §0: obligatoria en v0.5; antes puede faltar (desactivada) o venir para estudiarla
+    lastAnima: v05(is05, r["ultima_anima"], "variantes.ultima_anima", LAST_OFF, parseLastAnima),
   });
 }
 
@@ -319,8 +351,10 @@ export function parseCombatConfig(raw: unknown): CombatConfig {
   const r = obj(raw, "config");
   const version = str(r["version"], "version");
   // v0.4 es la vigente; v0.2 se sigue cargando (claves nuevas opcionales con su valor anterior) para los tests de regresión
-  if (version !== "0.2" && version !== "0.4") fail("version", `solo se admiten las configs de combate v0.2 y v0.4 (recibida '${version}')`);
-  const is04 = version === "0.4";
+  // combate v0.5 §8: la v0.5 exige todo lo de v0.4 más sus dos claves nuevas
+  if (version !== "0.2" && version !== "0.4" && version !== "0.5") fail("version", `solo se admiten las configs de combate v0.2, v0.4 y v0.5 (recibida '${version}')`);
+  const is04 = version === "0.4" || version === "0.5";
+  const is05 = version === "0.5";
   // Q-03: claves desconocidas en la raíz
   onlyKeys(
     r,
@@ -357,10 +391,13 @@ export function parseCombatConfig(raw: unknown): CombatConfig {
 
   // combate §3
   const en = obj(r["energia"], "energia");
+  onlyKeys(en, ["inicial", "por_turno", "maximo", "pago_al_confirmar"], "energia"); // combate v0.5 §8
   const energy = {
     initial: int(en["inicial"], "energia.inicial", 0),
     perTurn: int(en["por_turno"], "energia.por_turno", 0),
     max: int(en["maximo"], "energia.maximo", 1),
+    // combate v0.5 §1 (D-054): obligatoria en v0.5; en v0.2/v0.4, false (se devuelve)
+    payOnConfirm: v05(is05, en["pago_al_confirmar"], "energia.pago_al_confirmar", false, (x) => bool(x, "energia.pago_al_confirmar")),
   };
   if (energy.initial > energy.max) fail("energia.inicial", "mayor que el máximo");
 
@@ -504,7 +541,7 @@ export function parseCombatConfig(raw: unknown): CombatConfig {
   if (teamSize < slots && ai.placement === null) fail("ia.colocacion", "obligatoria con casilla vacía (tamano < casillas)");
   onlyKeys(ia, ["reserva_por_defecto", "bonus_ko", "kappa", "valor_estado", "holgura_regenerar", "valor_max_escudo", "objetivos_area_estimados", "factor_cura_estimada", "prob_condicion_estimada", "penalizacion_coste", "colocacion"], "ia");
 
-  const variants = parseVariants(r["variantes"], baseRing, is04);
+  const variants = parseVariants(r["variantes"], baseRing, is04, is05);
   // combate v0.4 §2: sin golpe básico no hay a qué ponerle efecto (V1)
   if (!damage.basicActive && variants.basicEffect.active) fail("variantes.golpe_basico_efecto.activo", "requiere dano.golpe_basico.activo = true");
 

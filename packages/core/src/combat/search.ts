@@ -27,6 +27,7 @@ import {
   autoTarget,
   damageAmount,
   eligibleActors,
+  lastAnimaPlans,
   resolveTurn,
   rowOf,
   sideIndex,
@@ -214,7 +215,7 @@ export function createSearchAi(options: SearchAiOptions = {}): Ai {
     const s = sideIndex(side);
     const other: SideId = s === 0 ? "B" : "A";
     if (state.result !== null) return [];
-    const actors = eligibleActors(state, side);
+    const actors = eligibleActors(state, side, cfg);
     if (actors.length === 0) return [];
     const auto = cfg.combat.variants.autoTarget.active;
 
@@ -229,6 +230,9 @@ export function createSearchAi(options: SearchAiOptions = {}): Ai {
     };
     add(refDefault(state, side, cfg));
     add(refGreedy(state, side, cfg));
+    // combate v0.5 §5: la última ánima enumera todas sus opciones (gratis y cada orden de cada secuencia; ≤ 16)
+    const seqPlans = lastAnimaPlans(state, side, cfg);
+    for (const p of seqPlans) add(p);
     const lambda = energyPrice(state, side, cfg).lambda;
     const opts = actors.map((pos) => {
       const all = actionOptions(state, s, pos, cfg, lambda);
@@ -253,7 +257,7 @@ export function createSearchAi(options: SearchAiOptions = {}): Ai {
         cur.pop();
       }
     };
-    rec(0, 0);
+    if (seqPlans.length === 0) rec(0, 0);
     combos.sort((a, b) => b.score - a.score || a.idx - b.idx);
     const fixed = cands.length;
     for (const c of combos) {
