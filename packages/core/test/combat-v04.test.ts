@@ -63,7 +63,7 @@ describe("config v0.4 y Q-03", () => {
     assert.equal(BCFG04.combat.draws.perTurn, 24);
     assert.equal(BCFG04.moves.drawsPerMove, 8);
     assert.deepEqual(BCFG04.combat.synergy.bonusByCount, [0, 0, 0.1, 0.25]);
-    assert.equal(BCFG04.combat.energy.perTurn, 4);
+    assert.equal(BCFG04.combat.energy.perTurn, 3); // D-052 (antes 4)
     for (const [path, del] of [
       ["equipo.casillas", (r: any) => delete r.equipo.casillas],
       ["dano.golpe_basico.activo", (r: any) => delete r.dano.golpe_basico.activo],
@@ -363,8 +363,8 @@ describe("IA v0.4 (referencia y búsqueda)", () => {
   });
 });
 
-// Vector dorado de partida v0.4 (regenerado: reglas nuevas; v0.4.1: sales de familias). Si falla, ha cambiado el algoritmo o la config vigente.
-const GOLDEN04 = { result: "A", turns: 5, hash: "e0a3b31ec5ba57115c1f37d390d02d6c" };
+// Vector dorado de partida v0.4 (regenerado: reglas nuevas; v0.4.1: sales de familias; D-052: energía 3, con energía 4 sale el vector anterior A/5/e0a3b31e…). Si falla, ha cambiado el algoritmo o la config vigente.
+const GOLDEN04 = { result: "B", turns: 8, hash: "c93573688987eaf1fecd172ab90cee91" };
 describe("vector dorado v0.4", () => {
   it("partida completa con semilla fija y colocación de la IA", () => {
     const pop = createWildPopulation(createRng("dorado-combate-v04"), GCFG, 6);

@@ -15,12 +15,12 @@ Actualizado: 2026-11-13 (noche). Fuente de verdad: este fichero (el repositorio)
   - Nombre **Ánimas** (D-046).
   - Arte v3 en dos iteraciones (commit 848fa3b en `arte-v3`; 436 k): un gen = una zona, 18 siluetas, 8 bocas, Llama redibujada, 4 complementos de muestra. Galería `docs/arte/galeria-v3.html` (en la rama).
   - **Arreglo:** la escena dibujaba al rival girado 180°, así que el objetivo automático por carril parecía atacar al ánima del lado opuesto. Ahora se dibuja en espejo (d2ebf98, en `main` y publicado).
-  - Medida con **energía 3 por turno** (semillas nuevas `miguelE3`, sin adoptar): menos bola de nieve pero más golpes gratis; ver P-00.
+  - **Energía 3 por turno** (D-052), aplicada antes de que nadie jugara: menos bola de nieve, pero el gratis sube al 59 % (criterio ≤ 50 % aceptado para la prueba). Vector dorado regenerado (con energía 4 se reproduce el anterior).
   - Preparación para Claude Code: `CLAUDE.md`, subagentes en `.claude/agents/`, comandos `/empezar`, `/cerrar`, `/preguntas`, `/decision`; `plan-diseno.md`, `HOJA-DE-RUTA.md`, `PREGUNTAS.md`, `vocabulario.md` y `DECISIONES.md` completo en el repositorio.
 
 ## Siguiente paso
-1. **Miguel decide P-00** (energía 3 o 4) antes de mandar el juego a los amigos.
-2. **Miguel envía el juego a 3–5 amigos** (`prueba-amigos.md`) y trae las respuestas.
+1. Hecho: enlace enviado a los amigos (13 nov, noche). **Miguel trae las respuestas** tal cual.
+2. Mirar en el feedback: bola de nieve (P-01, P-07) y si sobran rondas de ataque gratis (efecto de D-052).
 3. Con el feedback (P-01): cerrar la Fase 1 o iterar reglas; fusionar `arte-v3` (al fusionar, hay conflicto esperado en `client/combat/main.ts` y en `docs/jugable/combate.html`: conservar el SPOT en espejo de `main` y regenerar con `npm run build:combate`); aplicar el nombre Ánimas a los textos.
 4. Fase 2 según `HOJA-DE-RUTA.md`, cuando Miguel confirme su alcance (P-02).
 

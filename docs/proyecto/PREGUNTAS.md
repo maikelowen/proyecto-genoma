@@ -6,22 +6,11 @@ Formato de cada pregunta: contexto en 2–3 líneas, opciones con su consecuenci
 
 ## Abiertas
 
-### P-00 · Energía por turno: 3 o 4 (antes de la prueba con amigos)
-- **Contexto:** Miguel siente que 4 por turno es demasiado. Medido el 13 nov con semillas nuevas (`miguelE3`), mismo simulador v0.4, solo cambia la energía (inicial y por turno):
-
-  | Medida | Energía 4 (vigente) | Energía 3 | Objetivo |
-  | --- | --- | --- | --- |
-  | Gana quien hace el primer KO | 72,0 % | **69,2 %** | < 65 % |
-  | Gana el líder de vida tras el turno 3 | 71,6 % | **63,9 %** ✔ | < 65 % |
-  | Turnos por partida | 7,3 | 8,9 | 6–10 |
-  | Acciones con el movimiento gratis | **48,7 %** ✔ | 59,0 % ✘ | ≤ 50 % |
-  | Movimientos de pago distintos por ánima | 1,95 | 1,72 | ≥ 2 |
-  | Familias fuera de banda | 0 | 1 | 0 |
-  | Profundidad | 80,3 % | 83,5 % | > 60 % |
-- **Opciones:** A) mantener 4; B) bajar a 3 (menos bola de nieve y partidas más largas, pero 6 de cada 10 acciones serían el ataque gratis, lo que Miguel ya criticó como "muchas rondas de golpes básicos"); C) 3 por turno abaratando los movimientos de pago (otra ronda de reglas, ~300 k).
-- **Recomendación del director:** A para la prueba con amigos (una pregunta de la encuesta ya mide si la partida se decide pronto); si confirman bola de nieve, comparar B/C con "Brasa".
-- **Bloquea:** enviar el juego a los amigos (cambiarlo a mitad de prueba mezcla resultados).
-
+### P-07 · ¿Un ánima puede actuar dos veces en un turno?
+- **Contexto:** Miguel lo propone porque, cuando queda una sola ánima, sobra energía (con energía compartida, el bando con menos ánimas acumula y no puede gastar). Funcionaría como **mecánica de remontada**, igual que "Brasa", así que compite con ella por el mismo problema (bola de nieve, D-044).
+- **Opciones:** A) segunda acción en el mismo turno pagando un recargo (p. ej. +2 de energía), con descanso impidiendo repetir el mismo movimiento; B) solo cuando al bando le queda **una** ánima; C) "Brasa" (+energía al caer un ánima propia); D) nada.
+- **Recomendación del director:** no tocar reglas durante la prueba; con el feedback, simular B y C juntas (~300–400 k) y elegir. B es la más simple de entender y no cambia las partidas igualadas.
+- **Bloquea:** nada hasta el feedback de los amigos.
 
 ### P-01 · Cierre de la Fase 1 tras la prueba con amigos
 - **Contexto:** el combate v0.4 está publicado y en prueba (`prueba-amigos.md`). Riesgo conocido: bola de nieve (~72 % gana quien hace el primer KO, D-044).

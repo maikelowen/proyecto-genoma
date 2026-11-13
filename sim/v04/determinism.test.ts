@@ -27,7 +27,7 @@ test("v04: los parches cambian la config (y las erratas se rechazan)", () => {
   checkVariants([BASE, ...CANDIDATES, CONTROL]);
   const bad = { id: "mala", label: "x", combat: {}, moves: { "presupuesto_por_coste.9": 3 }, salts: {} };
   assert.throws(() => checkVariants([bad]), /no existe/);
-  const noop = { id: "nada", label: "x", combat: { "energia.por_turno": 4 }, moves: {}, salts: {} };
+  const noop = { id: "nada", label: "x", combat: { "energia.por_turno": 3 }, moves: {}, salts: {} };
   assert.throws(() => checkVariants([noop]), /no cambia la config efectiva/);
   registerVariant(CONTROL);
   const r = runVJob({ ...c1, config: CONTROL.id });

@@ -49,8 +49,8 @@
     "nivel": false
   },
   "energia": {
-    "inicial": 4,
-    "por_turno": 4,
+    "inicial": 3,
+    "por_turno": 3,
     "maximo": 10
   },
   "orden": {
