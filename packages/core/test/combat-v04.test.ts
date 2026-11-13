@@ -363,8 +363,8 @@ describe("IA v0.4 (referencia y búsqueda)", () => {
   });
 });
 
-// Vector dorado de partida v0.4 (regenerado: reglas nuevas). Si falla, ha cambiado el algoritmo o la config vigente.
-const GOLDEN04 = { result: "B", turns: 6, hash: "244e741c97edd9dbb9e66160a0fee59e" };
+// Vector dorado de partida v0.4 (regenerado: reglas nuevas; v0.4.1: sales de familias). Si falla, ha cambiado el algoritmo o la config vigente.
+const GOLDEN04 = { result: "A", turns: 5, hash: "e0a3b31ec5ba57115c1f37d390d02d6c" };
 describe("vector dorado v0.4", () => {
   it("partida completa con semilla fija y colocación de la IA", () => {
     const pop = createWildPopulation(createRng("dorado-combate-v04"), GCFG, 6);

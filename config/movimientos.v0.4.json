@@ -617,7 +617,11 @@
       "brote.cabeza.3": "c1",
       "sombra.cabeza.3": "c2",
       "roca.cabeza.2": "p5",
-      "brote.cuerpo.1": "p2"
+      "brote.cuerpo.1": "p2",
+      "llama.cabeza.3": "c4",
+      "brote.cola.2": "c1",
+      "roca.cola.2": "c4",
+      "brote.cuerpo.2": "c3"
     }
   },
   "criterios_sim": {
