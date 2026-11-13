@@ -22,9 +22,10 @@ Actualizado: 2026-11-13 (noche). Fuente de verdad: este fichero (el repositorio)
 Rama `combate-v0.5` (D-055 a D-057; plan recortado ~650 k). Si la sesión se corta, retomar por el primer paso sin marcar:
 - [x] Decisiones D-056 (precisiones de Miguel) y D-057 (plan) en `main` (f30441b).
 - [x] Spec `docs/spec/combate-v0.5.md` + `config/combate.v0.5.json` en la rama (91e776f; disenador, 117 k). Abiertas resueltas por el director: prioridad del hueco "primero"; plan B de aturdir también para el arrastrado.
-- [ ] Núcleo (nucleo, Opus): lanzado. **Si se corta a medias, su trabajo queda sin commit en la carpeta del repo en la rama `combate-v0.5`**: mirar `git status` y `npm run check` antes de relanzar; no relanzar desde cero.
-- [ ] Revisión única spec + núcleo (revisor) **en paralelo** con la simulación de 4 configs (analista, Sonnet; criterios en spec §criterios y `criterios_sim.v05`).
-- [ ] Interfaz y página `docs/jugable/combate-v05.html` (cliente, Sonnet); publicar en `main` solo esa página.
+- [x] Núcleo en la rama (de939ea; nucleo, 226 k): 249 tests, dorado v0.4 intacto. Aviso: ~4,9 de energía perdida por partida (spec esperaba 0,5–3).
+- [ ] Lanzados **en paralelo** sobre de939ea: revisión spec + núcleo (→ `docs/revisiones/qa-combate-v0.5.md`), simulación de 4 configs (analista Sonnet → `sim/v05`, `docs/informes/combate-v0.5.md`) e interfaz (cliente Sonnet → `npm run build:combate-v05`, `docs/jugable/combate-v05.html`). **Si se corta a medias, su trabajo queda sin commit en la carpeta del repo en la rama**: `git status` y `npm run check` antes de relanzar; no relanzar desde cero.
+- [ ] Aplicar arreglos del revisor (nucleo) y, si cambian reglas, repetir la simulación; publicar en `main` solo `combate-v05.html`.
+- Nota: el subagente `revisor` no aparece en esta sesión (su fichero existe); se usó un agente general con el rol de `.claude/agents/revisor.md`.
 - [ ] `/cerrar`.
 
 ## Siguiente paso
