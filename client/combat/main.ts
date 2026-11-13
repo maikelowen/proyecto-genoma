@@ -1,7 +1,7 @@
 /** Interfaz del combate jugable (DOM sin dependencias). Estados: team → plan ⇄ report. */
 import { attackable, describeMove, describeMoveShort, eligibleActors, forecastTargets, freeMoveSlot, restingMoves, validatePlacement, type Action, type BattleEvent, type BattleState, type Move, type SideId } from "../../packages/core/src/index.ts";
 import { cfg, familyLabel, gcfg, palette } from "./data.ts";
-import { SOUL_ART } from "./souls.ts";
+import { SOUL_CSS, soulSvg } from "../art/soul.ts";
 import { chooseOpponentAi, newSeed, playTurn, rollOffer, rollRival, startFight, type Dificultad, type Fight, type Soul } from "./game.ts";
 import { key, narrate, type LogLine, type Part } from "./narrate.ts";
 import { paintEnergy, paintUnit, playTurn as playAnim, viewFrom, type Field, type Player, type UnitEls } from "./anim.ts";
@@ -84,19 +84,18 @@ const alive = (s: BattleState, side: SideId): boolean[] => s.fighters[SIDE[side]
 const rowName = (pos: number): string => (cfg.combat.frontRow.includes(pos) ? "Delantera" : "Trasera");
 
 // ------------------------------------------------------------------ componentes visuales
-/** Icono del alma: silueta y cara estáticas de la familia (híbridas: la del primer componente con halo del segundo). */
-function soulShape(family: string, size: number, ko = false): SVGElement {
-  const hy = gcfg.hybridById.get(family);
-  const art = SOUL_ART[hy ? hy.components[0] : family] ?? (SOUL_ART["sombra"] as { viewBox: string; svg: string });
-  const svg = document.createElementNS(svgNS, "svg");
-  svg.setAttribute("viewBox", art.viewBox);
-  svg.setAttribute("width", String(size));
-  svg.setAttribute("height", String(size));
-  svg.setAttribute("aria-hidden", "true");
-  svg.setAttribute("class", "soul" + (ko ? " dead" : ""));
-  if (hy) svg.setAttribute("style", `filter:drop-shadow(0 0 3px ${palette(hy.components[1]).main}) drop-shadow(0 0 2px ${palette(hy.components[1]).main})`);
-  svg.innerHTML = art.svg; // constante estática de souls.ts, nunca datos del usuario
-  return svg;
+/** Icono del alma: arte v3 generado desde sus genes (client/art/soul.ts). `ko` muestra los ojos de caída. */
+function soulShape(soul: Soul, size: number, ko = false): SVGElement {
+  const tpl = document.createElementNS(svgNS, "g");
+  tpl.innerHTML = soulSvg(soul.creature, gcfg, { size, mood: ko ? "ko" : "idle", className: "soul" }); // SVG generado por nuestro código, nunca datos del usuario
+  return tpl.firstElementChild as SVGElement;
+}
+// CSS del arte v3 (estados de los ojos y vaivén por temperamento), una sola vez
+if (typeof document !== "undefined" && !document.getElementById("soul3-css")) {
+  const st = document.createElement("style");
+  st.id = "soul3-css";
+  st.textContent = SOUL_CSS;
+  document.head.append(st);
 }
 
 function partNode(p: Part): Node {
@@ -156,7 +155,7 @@ function buildField(f: Fight, st: BattleState, sel?: Sel): Field {
     const c = soul.combatant;
     const [x, y] = SPOT[side][pos - 1] as [number, number];
     const front = cfg.combat.frontRow.includes(pos);
-    const ico = h("div", { class: "ico" }, soulShape(c.family, 100));
+    const ico = h("div", { class: "ico" }, soulShape(soul, 100));
     const bar = h("i", null);
     const hp = h("div", { class: "hpn" });
     const chips = h("div", { class: "chips" });
@@ -302,7 +301,7 @@ function soulCard(i: number): HTMLElement {
   return h(
     "div",
     { class: `scard${k >= 0 ? " picked" : ""}`, style: `--fam:${pal.main}`, role: "button", tabindex: 0, onclick: () => toggleSoul(i), onkeydown: ((e: KeyboardEvent) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggleSoul(i))) as EventListener },
-    h("div", { class: "fhead" }, soulShape(c.family, 64), h("div", { class: "fname" }, h("b", null, s.name), h("small", null, familyLabel(c.family))), k >= 0 ? h("span", { class: "pk" }, String(k + 1)) : null),
+    h("div", { class: "fhead" }, soulShape(s, 64), h("div", { class: "fname" }, h("b", null, s.name), h("small", null, familyLabel(c.family))), k >= 0 ? h("span", { class: "pk" }, String(k + 1)) : null),
     h("div", { class: "stats" }, h("span", null, `Vida ${c.maxHp}`), h("span", null, `Ataque ${c.attack.toFixed(2)}`), h("span", null, `Iniciativa ${Math.round(c.initiative)}`)),
     h("ul", { class: "moves" }, ...moves),
   );
@@ -381,7 +380,7 @@ function renderPlace(): void {
         ondragover: ((e: Event) => e.preventDefault()) as EventListener,
         ondrop: ((e: Event) => { e.preventDefault(); if (dragging !== null) putIn(slot, dragging); }) as EventListener,
       },
-      soul ? soulShape(soul.combatant.family, 38) : null,
+      soul ? soulShape(soul, 38) : null,
       soul ? h("span", { class: "pn" }, soul.name) : h("span", { class: "pe" }, selSoul !== null ? "Colocar aquí" : "Vacía"),
       soul ? h("small", null, familyLabel(soul.combatant.family)) : null,
     );
@@ -389,7 +388,7 @@ function renderPlace(): void {
   };
   const pool = team.map((s, si) => ({ s, si })).filter((x) => !slots.includes(x.si));
   const chip = ({ s, si }: { s: Soul; si: number }): HTMLElement =>
-    h("button", { class: "pchip" + (si === selSoul ? " sel" : ""), "data-soul": si, draggable: "true", style: `--fam:${palette(s.combatant.family).main}`, onclick: () => clickChip(si), ondragstart: (() => (dragging = si)) as EventListener }, soulShape(s.combatant.family, 30), h("span", { class: "pn" }, s.name));
+    h("button", { class: "pchip" + (si === selSoul ? " sel" : ""), "data-soul": si, draggable: "true", style: `--fam:${palette(s.combatant.family).main}`, onclick: () => clickChip(si), ondragstart: (() => (dragging = si)) as EventListener }, soulShape(s, 30), h("span", { class: "pn" }, s.name));
   const ok = slots.filter((x) => x !== null).length === 3;
   const placement = (): number[] => team.map((_, si) => slots.indexOf(si) + 1);
   app.replaceChildren(
@@ -533,7 +532,7 @@ function trayPlan(f: Fight): HTMLElement {
   if (inspect !== null) {
     const soul = f.rival[inspect - 1] as Soul;
     const fs = f.state.fighters[1][inspect - 1] as BattleState["fighters"][0][0];
-    head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "nb" }, `${soul.name} (rival)`), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(inspect)}${fs.ko ? " · KO" : ` · vida ${fs.hp}/${soul.combatant.maxHp}`}`), h("span", { class: "tnote" }, "Sus movimientos"));
+    head = h("div", { class: "thead" }, soulShape(soul, 30), h("b", { class: "nb" }, `${soul.name} (rival)`), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(inspect)}${fs.ko ? " · KO" : ` · vida ${fs.hp}/${soul.combatant.maxHp}`}`), h("span", { class: "tnote" }, "Sus movimientos"));
     body = h("div", { class: "opts5" }, ...orderedMoves(soul.combatant).map(({ m, slot }) => optButton(m, slot, "ro", false)));
   } else {
     const pos = focus;
@@ -543,7 +542,7 @@ function trayPlan(f: Fight): HTMLElement {
     const fc = eligibleActors(f.state, "A").includes(pos) ? forecastTargets(f.state, "A", pos, p.move, cfg) : null;
     const nm = fc ? (fc.side === "A" ? f.mine : f.rival) : [];
     const tgt = !fc ? "" : "Irá a: " + (fc.positions.map((q) => nm[q - 1]?.name ?? "?").join(" y ") || "nadie");
-    head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "na" }, soul.name), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(pos)}`), h("span", { class: "tnote hot", title: "Previsión: el objetivo se decide al actuar" }, tgt));
+    head = h("div", { class: "thead" }, soulShape(soul, 30), h("b", { class: "na" }, soul.name), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(pos)}`), h("span", { class: "tnote hot", title: "Previsión: el objetivo se decide al actuar" }, tgt));
     if (fs.ko) body = h("div", { class: "opts5 msg" }, "Esta alma está KO.");
     else if (!eligibleActors(f.state, "A").includes(pos)) body = h("div", { class: "opts5 msg" }, "Aturdida: pierde este turno.");
     else {

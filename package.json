@@ -16,7 +16,8 @@
     "sim:profundidad": "node sim/depth/cli.ts",
     "sim:variantes": "node sim/variants/cli.ts",
     "sim:v04": "node sim/v04/cli.ts",
-    "build:combate": "node client/build-combate.mjs"
+    "build:combate": "node client/build-combate.mjs",
+    "build:galeria": "node client/viewer/galeria-v3.ts"
   },
   "devDependencies": {
     "typescript": "^6.0.0"

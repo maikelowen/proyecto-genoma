@@ -106,9 +106,9 @@ details.help .log{border:0;margin:4px 0;padding:0}
 .float{top:auto;bottom:calc(100% + 58px);-webkit-text-stroke:3px #0b0d13;paint-order:stroke fill;text-shadow:none}
 .float svg{width:30px;height:30px;display:block;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 2px #000) drop-shadow(0 1px 1px #000)}
 /* halo: sin disco, brillo pegado a la silueta */
-.unit .ico svg>circle:first-child{display:none}
-.ico svg{filter:drop-shadow(0 0 2px var(--fam)) drop-shadow(0 0 9px color-mix(in srgb,var(--fam) 55%,transparent))}
-.unit.acting .ico svg{filter:drop-shadow(0 0 2px var(--fam)) drop-shadow(0 0 18px var(--fam)) brightness(1.15)}
+/* arte v3: el halo va dentro del SVG (sin filtros por alma, más ligero en móvil) */
+.ico svg{filter:none}
+.unit.acting .ico svg{filter:brightness(1.18)}
 /* vida: barra grande, inclinada segun bando */
 .bar{position:relative;width:84px;height:8px;background:#05060c;border:1px solid #000;border-radius:2px;overflow:hidden}
 .unit.mine .bar{transform:skewX(-18deg)}.unit.foe .bar{transform:skewX(18deg)}

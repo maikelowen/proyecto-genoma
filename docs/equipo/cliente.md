@@ -8,7 +8,7 @@
 ## Convenciones
 - Solo API pública de `packages/core` (`../../packages/core/src/index.ts`) y `client/art/palette.ts` para colores. Sintaxis TS borrable e imports con `.ts`.
 - `Math.random` solo en `newSeed()` y en el equipo aleatorio; las ofertas y el rival salen de `createRng("oferta|"+semilla)` / `"rival|"`, y el combate de `seedPrefix + semilla`. Se pueden reproducir con `?oferta=X&combate=Y` en la URL.
-- UI sin framework: `h(tag, attrs, ...hijos)` y re-render completo de `#app` en cada cambio. `innerHTML` solo para los SVG estáticos de `souls.ts` (extraídos de `docs/arte/referencia-almas.svg`).
+- UI sin framework: `h(tag, attrs, ...hijos)` y re-render completo de `#app` en cada cambio. `innerHTML` solo para SVG generados por nuestro código (arte v3 de `client/art/soul.ts`).
 - Marcador en `localStorage` dentro de try/catch (en file:// puede fallar); si falla queda en memoria.
 
 ## Lecciones
@@ -28,3 +28,4 @@
 - Bandeja (v0.3): `#app.battle` es una columna `100dvh` (turnbar, energía, escena `flex:1`, bandeja); nombre/vida van en una capa `.iw` hermana por encima de todos los iconos (arregla que una delantera tape a una trasera); `Turno anterior`/`Ayuda` son overlays con scroll propio. Descanso: `aria-disabled` (no `disabled`, que no dispara hover) con `restingMoves`; la energía del rival ni se pinta ni sale en el registro.
 - Flujo: golpe básico por defecto cada turno; mover de un solo objetivo "arma" la selección y se toca el alma en el campo; al acabar la animación, `chainTimer` llama a `beginPlanning`. Playwright: clic en almas con `evaluate(e => e.click())` (se solapan).
 - v0.4: `Fight.mine/rival` son arrays por casilla (1–4) con `null` en la vacía; el foco/pronóstico solo con `eligibleActors` (`forecastTargets` revienta con casilla vacía). Pronóstico = líneas SVG `.fx` (% del escenario) y nunca "B"/números de ranura.
+- Arte v3 (`client/art/soul.ts`): `lookOf(creature)` (genes → descriptor) y `renderSoulLook` (SVG en texto, sin DOM). Los ojos de los 5 estados van en el SVG y la clase `m-idle|atk|hurt|low|ko` del `<svg>` elige cuál se ve (`SOUL_CSS`, inyectado por `main.ts`). `anim.ts`: `paintUnit` guarda el estado base en `data-mood`; ataque/golpe/KO son reacciones pasajeras (`data-react`). Galería: `npm run build:galeria` → `docs/arte/galeria-v3.html`.

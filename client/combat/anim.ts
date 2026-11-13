@@ -28,6 +28,29 @@ export interface Player {
 const idx = (s: SideId): 0 | 1 => (s === "A" ? 0 : 1);
 export const reducedMotion = (): boolean => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/** Estado de los ojos del alma (arte v3): reposo, ataque, golpe, poca vida o caída. */
+type Mood = "idle" | "atk" | "hurt" | "low" | "ko";
+/** Aplica `m` (o el estado base guardado por paintUnit) a la clase `m-*` del SVG del alma. */
+export function setMood(u: UnitEls, m?: Mood): void {
+  const svg = u.ico.querySelector("svg.soul3");
+  if (!svg) return;
+  const t = m ?? ((u.unit.dataset["mood"] as Mood | undefined) ?? "idle");
+  for (const c of Array.from(svg.classList)) if (c.startsWith("m-")) svg.classList.remove(c);
+  svg.classList.add("m-" + t);
+}
+/** Reacción pasajera (ataque, golpe): se mantiene hasta `endReaction` o `ms`. */
+function react(u: UnitEls, m: Mood, ms?: number): void {
+  u.unit.dataset["react"] = m;
+  setMood(u, m);
+  if (ms !== undefined) setTimeout(() => {
+    if (u.unit.dataset["react"] === m) endReaction(u);
+  }, ms);
+}
+function endReaction(u: UnitEls): void {
+  delete u.unit.dataset["react"];
+  setMood(u);
+}
+
 interface View {
   hp: number;
   ko: boolean;
@@ -76,6 +99,9 @@ export function paintUnit(u: UnitEls, v: View, pop: boolean): void {
   u.hp.textContent = v.ko ? "KO" : `${Math.max(0, v.hp)}/${u.maxHp}${v.statuses.length ? " · " + v.statuses.map(chipText).join(", ") : ""}`;
   u.unit.classList.toggle("ko", v.ko);
   u.iw?.classList.toggle("ko", v.ko);
+  u.unit.dataset["mood"] = v.ko ? "ko" : v.hp / u.maxHp < 0.3 ? "low" : "idle";
+  if (v.ko) delete u.unit.dataset["react"];
+  if (!u.unit.dataset["react"]) setMood(u);
   const old = new Set(Array.from(u.chips.children).map((c) => (c as HTMLElement).dataset["s"]));
   u.chips.replaceChildren();
   for (const s of v.statuses) {
@@ -203,6 +229,7 @@ export function playTurn(field: Field, before: BattleState, after: BattleState, 
     const u = unitOf(side, pos);
     if (!u || !fx()) return;
     const d = dur(strong ? 340 : 300);
+    react(u, "hurt", Math.max(d, dur(520)));
     if (!reduced) {
       const k = strong ? 14 : 11;
       u.ico.animate([{ transform: "none" }, { transform: `translate(${dir.x * k}px,${dir.y * k}px) scale(1.12,.88)`, offset: 0.3 }, { transform: "translateX(-7px)", offset: 0.5 }, { transform: "translateX(6px)", offset: 0.7 }, { transform: "translateX(-3px)", offset: 0.85 }, { transform: "none" }], { duration: d });
@@ -291,7 +318,10 @@ export function playTurn(field: Field, before: BattleState, after: BattleState, 
     let curColor = "#fff";
     let acting: UnitEls | null = null;
     const clearActing = (): void => {
-      if (acting) acting.unit.classList.remove("acting");
+      if (acting) {
+        acting.unit.classList.remove("acting");
+        if (acting.unit.dataset["react"] === "atk") endReaction(acting);
+      }
       acting = null;
     };
     for (let i = 0; i < events.length; i++) {
@@ -313,7 +343,10 @@ export function playTurn(field: Field, before: BattleState, after: BattleState, 
           const mvName = m ? m.name : "golpe básico";
           say(e.targets.length === 0 ? `${who(names, e.side, e.actor)} usa ${mvName}, pero ya no queda objetivo.` : `${who(names, e.side, e.actor)} usa ${mvName} sobre ${e.targets.map((t) => who(names, e.targetSide, t)).join(" y ")}.`);
           const u = unitOf(e.side, e.actor);
-          if (u) (acting = u).unit.classList.add("acting");
+          if (u) {
+            (acting = u).unit.classList.add("acting");
+            react(u, "atk");
+          }
           const sb = bonus[e.side][e.actor - 1] ?? 0;
           if (m && sb > 0) floater(e.side, e.actor, `Sinergia +${Math.round(sb * 100)} %`, "syn");
           const buff = e.targetSide === e.side;
@@ -425,6 +458,10 @@ export function playTurn(field: Field, before: BattleState, after: BattleState, 
           v.hp = 0;
           say(`${who(names, e.side, e.pos)} cae KO.`);
           const u = unitOf(e.side, e.pos);
+          if (u) {
+            u.unit.dataset["mood"] = "ko";
+            react(u, "ko");
+          }
           if (u && fx() && !reduced) {
             // destello, parada, el alma se encoge y sube como un hilo de humo
             u.ico.animate(
@@ -483,7 +520,10 @@ export function playTurn(field: Field, before: BattleState, after: BattleState, 
       }
       paintEnergy(field.energy[side], after.energy[idx(side)]);
     }
-    for (const u of field.units.values()) u.unit.classList.remove("acting");
+    for (const u of field.units.values()) {
+      u.unit.classList.remove("acting");
+      endReaction(u);
+    }
     field.el.querySelectorAll(".float,.ring,.proj").forEach((n) => n.remove());
   }
 
