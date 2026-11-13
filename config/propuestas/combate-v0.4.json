@@ -1,0 +1,108 @@
+{
+  "_titulo": "Propuesta combate v0.4 (D-043): equipos de 3 en cuadrícula 2×2, movimiento gratis, objetivo automático con prioridad de fila",
+  "_doc": "Parche por ruta sobre config/combate.v0.2.json y config/movimientos.v0.2.json CON el balance v0.2.1 ya aplicado (config/propuestas/combate-balance-v0.2.1.json). No modifica los ficheros. Specs: docs/spec/combate-v0.4.md y docs/spec/movimientos-v0.4.md. '_nuevas' lista las claves que el núcleo debe crear (parser incluido, rechazando claves desconocidas: Q-03). Tiradas sin cambios: 24 por turno y 8 por movimiento.",
+  "combate": {
+    "equipo.tamano": 3,
+    "equipo.casillas": 4,
+    "equipo.colocaciones": ["2+1", "1+2"],
+    "energia.inicial": 4,
+    "energia.por_turno": 4,
+    "energia.maximo": 10,
+    "estadisticas.vida.base": 290,
+    "sinergia.bonus_por_n": { "2": 0.1, "3": 0.25 },
+    "sinergia.cuenta_gratis": false,
+    "dano.golpe_basico.activo": false,
+    "estados.escudo.renovar": "si_aporte_mayor_o_igual",
+    "variantes.golpe_basico_efecto.activo": false,
+    "variantes.descanso.activo": true,
+    "variantes.descanso.turnos": 1,
+    "variantes.descanso.gratis_descansa": false,
+    "variantes.objetivo_automatico.activo": true,
+    "variantes.objetivo_automatico.prioridad_fila": true,
+    "variantes.objetivo_automatico.escudo_fila_expuesta": true,
+    "variantes.objetivo_automatico.escudo_provocar_al_usuario": true,
+    "variantes.objetivo_automatico.cura_si_todos_llenos": "usuario",
+    "variantes.provocar.duracion": 1,
+    "variantes.provocar.valor_ia": 20,
+    "variantes.provocar.ia_exige_aguante": true,
+    "ia.colocacion": { "regla": "mas_vida_delante", "umbral_1_2": 1.15 },
+    "criterios_sim.v04": {
+      "profundidad_min": 0.6,
+      "primer_ko_max": 0.65,
+      "lider_t3_max": 0.65,
+      "turnos_media_min": 6,
+      "turnos_media_max": 10,
+      "turnos_p90_max": 14,
+      "empates_max": 0.03,
+      "gratis_frac_max": 0.5,
+      "pagos_distintos_por_alma_min": 2,
+      "pagos_distintos_min_acciones": 4,
+      "colocacion_wr_max": 0.6,
+      "tanque_turnos_media_max": 10,
+      "familias_min": 0.43,
+      "familias_max": 0.57,
+      "provocar_por_partida_inf": 0.3
+    },
+    "barridos_sim.energia.por_turno": [4, 5],
+    "barridos_sim.estadisticas.vida.base": [260, 290, 320],
+    "barridos_sim.ia.colocacion.umbral_1_2": [1.0, 1.15, 1.3],
+    "barridos_sim.desgaste.desde_turno": [8, 10]
+  },
+  "movimientos": {
+    "presupuesto_por_coste.1": 7,
+    "modificadores.alcance.coste": 1,
+    "gratis": {
+      "locus": "extremidades",
+      "presupuesto": 3,
+      "arquetipos": ["golpe", "golpe_estado", "proteccion", "curacion"],
+      "reasignar": { "maldicion": "golpe_estado", "tactico": "golpe" },
+      "coste_max_estado": 1,
+      "modificadores": ["alcance", "drenaje"],
+      "permite_provocar": false
+    },
+    "garantia_alcance": {
+      "locus": "cola",
+      "arquetipos_prohibidos": ["proteccion", "curacion"],
+      "modificador_forzado": "alcance",
+      "salvo_si": ["area_forzada", "area"]
+    },
+    "provocar.activo": true,
+    "provocar.coste": 3,
+    "provocar.arquetipos": ["proteccion", "tactico"],
+    "provocar.loci": ["cabeza", "cuerpo"],
+    "provocar.sorteo": "probabilidad",
+    "provocar.probabilidad_familia": { "llama": 0, "marea": 0.4, "brote": 0.25, "roca": 0.7, "voltio": 0, "sombra": 0 },
+    "provocar.hibridas": "max",
+    "provocar.fraccion_minima_escudo": 0.5,
+    "criterios_sim.cuotas_catalogo.genes_pago": 9,
+    "criterios_sim.cuotas_catalogo.apoyo_min": 1,
+    "criterios_sim.cuotas_catalogo.apoyo_max": 3,
+    "criterios_sim.cuotas_catalogo.gratis_ofensivos_min": 1,
+    "criterios_sim.cuotas_catalogo.provocar": { "total_min": 4, "total_max": 6, "roca_min": 2, "marea_min": 1, "brote_min": 1 }
+  },
+  "eliminar": {
+    "_doc": "Claves que dejan de aplicarse en v0.4.",
+    "combate": ["sinergia.bonus_por_n.4"],
+    "movimientos": ["provocar.pesos_familia", "overrides_catalogo.sales (genes de extremidades y cola: anuladas, hay que repetir la búsqueda)"]
+  },
+  "_nuevas": {
+    "combate": [
+      "equipo.casillas", "equipo.colocaciones", "sinergia.cuenta_gratis", "dano.golpe_basico.activo",
+      "estados.escudo.renovar", "variantes.descanso.gratis_descansa",
+      "variantes.objetivo_automatico.prioridad_fila", "variantes.objetivo_automatico.escudo_fila_expuesta",
+      "variantes.objetivo_automatico.cura_si_todos_llenos", "variantes.provocar.ia_exige_aguante",
+      "ia.colocacion", "criterios_sim.v04"
+    ],
+    "movimientos": [
+      "gratis", "garantia_alcance", "provocar.loci", "provocar.sorteo", "provocar.probabilidad_familia",
+      "provocar.hibridas", "provocar.fraccion_minima_escudo",
+      "criterios_sim.cuotas_catalogo.genes_pago", "criterios_sim.cuotas_catalogo.gratis_ofensivos_min",
+      "criterios_sim.cuotas_catalogo.provocar"
+    ],
+    "valor_cambiado_con_validacion_nueva": [
+      "equipo.tamano (3; el parser debe exigir tamano < casillas)",
+      "provocar.arquetipos (aceptar 'tactico')",
+      "presupuesto_por_coste.1 (sigue creciente: 7 < 15)"
+    ]
+  }
+}
