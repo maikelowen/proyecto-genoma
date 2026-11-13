@@ -1,32 +1,29 @@
 # ESTADO — Proyecto Genoma
 
-Actualizado: 2026-11-13 (tarde). Fuente de verdad: este fichero (el repositorio).
+Actualizado: 2026-11-13 (noche). Fuente de verdad: este fichero (el repositorio).
 
 ## Situación
-**Combate v0.4 terminado; reglas congeladas** hasta tener feedback de los amigos (D-043, D-045). **Publicado en GitHub Pages** (13 nov). Siguiente: prueba con 3–5 amigos (`docs/proyecto/prueba-amigos.md`).
+- **Fase 1 (prototipo de combate) en prueba.** Combate v0.4 publicado en https://maikelowen.github.io/proyecto-genoma/ y con **reglas congeladas** hasta el feedback de los amigos (D-045).
+- **Arte v3 terminado y congelado** en la rama `arte-v3` (D-050); se fusiona tras la prueba.
+- **Desde hoy se desarrolla en Claude Code** (D-051); los chats del proyecto de Claude son para decisiones.
 
-## Hecho (último commit con el juego: cc7915d; 225 tests)
-- Genética v0.2 validada (Fase 0, semanas 1–2).
-- Combate jugable en el navegador: escena de batalla, almas flotando, IA Normal y Difícil (IA de búsqueda), bandeja de órdenes sin scroll, pulido visual (revisión de diseño en `docs/revisiones/diseno-escena-v0.1.md`).
-- **Combate v0.4:** 3 almas en cuadrícula 2×2 con colocación a ciegas; 4 botones por alma (1 gratis desde el gen de extremidades + 3 de pago); objetivo automático por fila y carril; provocar; descanso de un turno; energía rival oculta; descripciones cortas y glosario.
-- Resultado v0.4: profundidad 82 %; 7,3 turnos; gratis 48,9 %; colocaciones 54,6 %; tanque 8 turnos; 13/13 familias en 47,9–53,0 %. Aceptado para la prueba (D-044): bola de nieve (~72 % gana quien hace el primer KO) y variedad justa (1,96 de 3 movimientos de pago por alma).
-- Página de Pages: `docs/index.html` → `jugable/combate.html`.
-
-## En curso (13 nov, noche)
-- **Arte v3 terminado (2 iteraciones)** en la rama `arte-v3` (commit 848fa3b; 225 tests; coste 218 k + 218 k). Un gen = una zona (cabeza: cara y boca; cuerpo: silueta y núcleo; extremidades: rasgo; cola: lo de debajo); 18 siluetas; 8 bocas (6 de 18 genes de cabeza sin boca); Llama redibujada; asimetría solo en desquiciado; 4 complementos de muestra fuera de los genes. Galería `docs/arte/galeria-v3.html` con prueba de herencia (7 tríos).
-- **Veredicto de Miguel (D-050):** no está mal, mejorable; se deja así por ahora. La silueta sigue saliendo del gen de cuerpo (~30 % de salvajes con silueta de otra familia).
-- **No fusionar en `main` hasta que contesten los amigos.** Flojo conocido: mueca altiva y boca cosida justas a 48 px; ojos de Sombra con poco contraste; grietas/fuego de Llama raros sobre cuerpos de otro color; galería de 955 KB; quizá la cara deba verse más grande en combate.
-- Nombre: **Ánimas** (D-046). Falta aplicarlo a los textos del juego.
+## Hecho
+- **Fase 0:** genética v0.2 validada; gramática de movimientos, motor de combate, IA normal y de búsqueda, simuladores.
+- **Combate v0.4** (último commit de reglas: cc7915d): 3 ánimas en cuadrícula 2×2 con colocación a ciegas; 4 botones por ánima (1 gratis + 3 de pago); objetivo automático por fila y carril; provocar; descanso; energía rival oculta. Medido: profundidad 82 %, 7,3 turnos, gratis 48,9 %, 13/13 familias en banda. Aceptado con bola de nieve (~72 % gana el primer KO, D-044).
+- **13 nov:**
+  - GitHub Pages activo; mensaje y preguntas para la prueba (`prueba-amigos.md`).
+  - Nombre **Ánimas** (D-046).
+  - Arte v3 en dos iteraciones (commit 848fa3b en `arte-v3`; 436 k): un gen = una zona, 18 siluetas, 8 bocas, Llama redibujada, 4 complementos de muestra. Galería `docs/arte/galeria-v3.html` (en la rama).
+  - **Arreglo:** la escena dibujaba al rival girado 180°, así que el objetivo automático por carril parecía atacar al ánima del lado opuesto. Ahora se dibuja en espejo (d2ebf98, en `main` y publicado).
+  - Medida con **energía 3 por turno** (semillas nuevas `miguelE3`, sin adoptar): menos bola de nieve pero más golpes gratis; ver P-00.
+  - Preparación para Claude Code: `CLAUDE.md`, subagentes en `.claude/agents/`, comandos `/empezar`, `/cerrar`, `/preguntas`, `/decision`; `plan-diseno.md`, `HOJA-DE-RUTA.md`, `PREGUNTAS.md`, `vocabulario.md` y `DECISIONES.md` completo en el repositorio.
 
 ## Siguiente paso
-1. Hecho: GitHub Pages activo en `https://maikelowen.github.io/proyecto-genoma/`.
-2. **Miguel envía el juego a 3–5 amigos** con el mensaje y las preguntas de `docs/proyecto/prueba-amigos.md` y trae las respuestas.
-3. Con su feedback: si notan bola de nieve, primera candidata la mecánica "Brasa" (+energía al caer un alma propia).
-4. Después: arte de almas v3 (`docs/arte/direccion-visual.md` §v3; dos iteraciones como máximo, prueba ciega a 48 px); Fase 2 (zonas, captura, resonancia, progresión, habilidades enseñables, guardado local); hoja de ruta con coste en cuota.
+1. **Miguel decide P-00** (energía 3 o 4) antes de mandar el juego a los amigos.
+2. **Miguel envía el juego a 3–5 amigos** (`prueba-amigos.md`) y trae las respuestas.
+3. Con el feedback (P-01): cerrar la Fase 1 o iterar reglas; fusionar `arte-v3` (al fusionar, hay conflicto esperado en `client/combat/main.ts` y en `docs/jugable/combate.html`: conservar el SPOT en espejo de `main` y regenerar con `npm run build:combate`); aplicar el nombre Ánimas a los textos.
+4. Fase 2 según `HOJA-DE-RUTA.md`, cuando Miguel confirme su alcance (P-02).
 
 ## Pendientes menores
 - QA R-01 (claves desconocidas en bloques antiguos de config) y R-02 (la IA de referencia no ve el provocar del turno); `placement.ts:61` con un 3 fijo; tests de provocador que cae a mitad de turno.
-- Vocabulario de las Ánimas: revisar `coherencia-almas.md` (doc del proyecto de Claude) con el nombre nuevo.
-
-## Forma de trabajar
-Ver `CLAUDE.md`. Empezar una conversación nueva en cada sesión para ahorrar cuota.
+- Arte (si se retoma): mueca altiva y boca cosida justas a 48 px; ojos de Sombra con poco contraste; grietas de Llama raras sobre cuerpos de otro color; cara quizá pequeña en combate; galería de 955 KB.

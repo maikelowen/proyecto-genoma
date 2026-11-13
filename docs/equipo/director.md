@@ -31,3 +31,9 @@ Lecciones y convenciones de dirección. Se lee al empezar cada sesión y se ampl
 - Él decide diseño de fondo, alcance, monetización y lo irreversible: pregunta concreta, opciones y recomendación.
 - Ajustes numéricos dentro del diseño los decide el director y los registra en DECISIONES.md.
 - Avisar pronto y con claridad de lo que va mal o va lento.
+
+## Claude Code (desde el 13 nov, D-051)
+- Subagentes reales en `.claude/agents/` (disenador, analista, nucleo, cliente, revisor); el modelo por defecto va en su cabecera y se puede cambiar por encargo.
+- Lo que decide Miguel va a `PREGUNTAS.md`; él lo lleva al chat de decisiones (`/preguntas`) y vuelve con `/decision`.
+- Antes de diagnosticar una queja de juego como problema de reglas, mira la pantalla: "ataca al del lado opuesto" era la escena del rival girada 180°, no el objetivo automático.
+- Una medida rápida de una palanca (p. ej. energía) se hace en una copia en `/tmp` del repo con `--out /tmp/...` y semillas nuevas: el simulador v0.4 tarda ~1 min con 4 hilos.

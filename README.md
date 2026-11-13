@@ -1,9 +1,13 @@
 # Proyecto Genoma
 
-Juego web de coleccionar criaturas con breeding genético, PvP y mercado interno.
+Juego web de **Ánimas** coleccionables con cría genética, combate por turnos y PvP.
 Este repositorio contiene el **núcleo** (librería TypeScript pura y determinista,
-compartida por cliente y servidor), los **simuladores** de balance y, más adelante,
-el **cliente**.
+compartida por cliente y servidor), los **simuladores** de balance y el **cliente**
+jugable en el navegador.
+
+- **Jugar:** https://maikelowen.github.io/proyecto-genoma/
+- **Trabajar en el proyecto con Claude Code:** lee `CLAUDE.md` (empieza con `/empezar`).
+- **Estado y plan:** `docs/proyecto/` (ESTADO, BACKLOG, HOJA-DE-RUTA, DECISIONES, PREGUNTAS).
 
 ## Requisitos
 
@@ -26,7 +30,11 @@ npm run check       # ambos
 packages/core/src/   núcleo determinista (RNG con semilla, genetics/, moves/, combat/)
 packages/core/test/  tests del núcleo (*.test.ts)
 sim/                 simuladores de balance (salidas en sim/out/, ignorado por git)
-docs/spec/           especificaciones de diseño
+client/              juego en el navegador (combate, arte de las ánimas, galería)
+docs/proyecto/       estado, plan, decisiones y preguntas pendientes
+docs/spec/           especificaciones de diseño (mandan sobre el plan)
+docs/jugable/        juego publicado con GitHub Pages
+.claude/             subagentes y comandos de Claude Code
 config/              datos de configuración del juego
 types/               shim mínimo de tipos de Node (ver más abajo)
 ```
