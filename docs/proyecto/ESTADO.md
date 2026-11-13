@@ -3,7 +3,7 @@
 Actualizado: 2026-11-13 (tarde). Fuente de verdad: este fichero (el repositorio).
 
 ## Situación
-**Combate v0.4 terminado; reglas congeladas** hasta tener feedback de los amigos (D-043, D-045). Siguiente: **publicar en GitHub Pages** y pasarlo a 3–5 amigos.
+**Combate v0.4 terminado; reglas congeladas** hasta tener feedback de los amigos (D-043, D-045). **Publicado en GitHub Pages** (13 nov). Siguiente: prueba con 3–5 amigos (`docs/proyecto/prueba-amigos.md`).
 
 ## Hecho (último commit con el juego: cc7915d; 225 tests)
 - Genética v0.2 validada (Fase 0, semanas 1–2).
@@ -13,8 +13,8 @@ Actualizado: 2026-11-13 (tarde). Fuente de verdad: este fichero (el repositorio)
 - Página de Pages: `docs/index.html` → `jugable/combate.html`.
 
 ## Siguiente paso
-1. **Miguel activa GitHub Pages**: Settings → Pages → Deploy from a branch → `main`, carpeta `/docs`. URL: `https://maikelowen.github.io/proyecto-genoma/`.
-2. Prueba con 3–5 amigos; el director prepara una encuesta corta. Observar: bola de nieve, comprensión de colocación y objetivo automático, ganas de repetir.
+1. Hecho: GitHub Pages activo en `https://maikelowen.github.io/proyecto-genoma/`.
+2. **Miguel envía el juego a 3–5 amigos** con el mensaje y las preguntas de `docs/proyecto/prueba-amigos.md` y trae las respuestas.
 3. Con su feedback: si notan bola de nieve, primera candidata la mecánica "Brasa" (+energía al caer un alma propia).
 4. Después: arte de almas v3 (`docs/arte/direccion-visual.md` §v3; dos iteraciones como máximo, prueba ciega a 48 px); Fase 2 (zonas, captura, resonancia, progresión, habilidades enseñables, guardado local); hoja de ruta con coste en cuota.
 

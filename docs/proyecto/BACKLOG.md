@@ -5,9 +5,9 @@ Planificado por cuota (D-032). Coste de referencia: un encargo típico de agente
 ## Ahora
 | # | Tarea | Quién | Coste |
 | --- | --- | --- | --- |
-| 1 | Activar GitHub Pages y probar en el móvil | Miguel | — |
-| 2 | Encuesta corta para los amigos y qué observar | Director | bajo |
-| 3 | Prueba con 3–5 amigos | Miguel | — |
+| 1 | Prueba con 3–5 amigos (`prueba-amigos.md`); traer las respuestas | Miguel | — |
+
+Hecho el 13 nov: GitHub Pages activo; mensaje y preguntas para los amigos.
 
 ## Después del feedback de los amigos
 | # | Tarea | Agente (modelo) | Coste est. |
