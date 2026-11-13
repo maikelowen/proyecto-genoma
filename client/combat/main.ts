@@ -112,7 +112,9 @@ function energyBar(have: number, spent: number): HTMLElement {
 
 /** Posiciones (% del escenario, centro del icono) por bando y posición. Rival arriba a la derecha, tuyo abajo a la izquierda; la trasera, más lejos y más pequeña. */
 const SPOT: Record<SideId, [number, number][]> = {
-  B: [[46, 36], [70, 46], [64, 15], [86, 23]],
+  // El rival se dibuja en espejo (no girado 180°): cada carril queda enfrente del mismo carril propio,
+  // así el objetivo automático por carril (spec combate v0.4 §3) ataca al alma que se ve delante.
+  B: [[70, 46], [46, 36], [86, 23], [64, 15]],
   A: [[54, 64], [30, 54], [36, 85], [14, 77]],
 };
 /** Runas abstractas propias (no son un alfabeto real) en un anillo elíptico; brillan con el color de cada bando. */
