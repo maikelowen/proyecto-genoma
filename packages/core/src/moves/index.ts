@@ -1,4 +1,4 @@
-/** API pública de movimientos v0.2. */
+/** API pública de movimientos v0.4 (también carga configs v0.2). */
 export {
   ARCHETYPE_IDS,
   CONDITION_IDS,
@@ -19,5 +19,5 @@ export type {
   PositiveStatusId,
   ScalableId,
 } from "./config.ts";
-export { describeMove, generateMove, generateMoveForKey, parseGeneKey, validateMove, weightedPick } from "./generate.ts";
+export { describeMove, describeMoveShort, generateMove, isFreeMove, generateMoveForKey, parseGeneKey, validateMove, weightedPick } from "./generate.ts";
 export type { Move } from "./generate.ts";

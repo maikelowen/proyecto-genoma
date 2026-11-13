@@ -7,14 +7,17 @@ import type { Creature } from "../genetics/types.ts";
 import type { Move } from "../moves/generate.ts";
 import { buildCombatant, type BattleConfig, type Combatant } from "./combatant.ts";
 import type { AiStatusId } from "./config.ts";
+import type { Placement } from "./placement.ts";
 import {
   actionMove,
   autoTargetPosition,
   basicEffectOf,
   battleHash,
+  actionPriority,
   createBattle,
   damageAmount,
   eligibleActors,
+  freeMoveSlot,
   planSynergy,
   resolveTurn,
   rowOf,
@@ -95,16 +98,25 @@ export function energyPrice(state: BattleState, side: SideId, cfg: BattleConfig,
   let bestRate = -Infinity;
   let targetCost = 0;
   state.teams[s].forEach((c, i) => {
-    if ((state.fighters[s][i] as FighterState).ko) return;
+    if (c === null || (state.fighters[s][i] as FighterState).ko) return;
     const fx = basicEffectOf(c, cfg);
     const basicFx = !fx ? 0 : fx.kind === "estado" ? fx.chance * A.statusValue[fx.status] : fx.kind === "cura" ? fx.amount * A.healFactorEstimate : fx.kind === "escudo" ? Math.min(fx.amount, A.maxShieldValue) : 0;
-    for (const m of c.moves) {
+    const vHat = (m: Move): number => {
       const k = m.area ? A.areaTargetsEstimate : 1;
       let v = m.scalable === "dano" ? Math.min(m.power * c.attack, H) * k : m.scalable === "cura" ? m.power * A.healFactorEstimate * k : Math.min(m.power, A.maxShieldValue) * k;
       if (m.condition) v *= 1 + M.conditions.bonus * A.conditionProbEstimate;
-      // rendimiento neto por energía: descuenta el golpe básico al que sustituye
+      return v;
+    };
+    // acción de coste 0 a la que sustituye un movimiento de pago: golpe básico (v0.2) o,
+    // combate v0.4 §2, el gratis del alma: r(m) = (v̂(m) − v̂(gratis)) / coste
+    const freeSlot = C.damage.basicActive ? 0 : freeMoveSlot(c);
+    const baseline = C.damage.basicActive ? C.damage.basicPower * c.attack + basicFx : freeSlot > 0 ? vHat(c.moves[freeSlot - 1] as Move) : 0;
+    for (const m of c.moves) {
+      if (m.cost === 0) continue; // el gratis no tiene precio por energía
+      const v = vHat(m);
+      // rendimiento neto por energía: descuenta la acción gratuita a la que sustituye
       // (variantes v0.3 V1: también el valor estimado de su efecto; 0 con la variante desactivada)
-      const r = (v - C.damage.basicPower * c.attack - basicFx) / m.cost;
+      const r = (v - baseline) / m.cost;
       if (r > bestRate) {
         bestRate = r;
         targetCost = m.cost;
@@ -139,6 +151,14 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
   const enemyTaunting = state.fighters[o].map((f) => !f.ko && (f.taunt ?? 0) > 0);
   const noTaunt = [false, false, false, false];
   const resting = (pos: number, slot: number): boolean => C.variants.rest.active && (((state.fighters[s][pos - 1] as FighterState).rest ?? [])[slot - 1] ?? 0) > 0;
+  // combate v0.4 §2: la acción "por defecto" de cada alma (golpe básico en v0.2; gratis en v0.4)
+  const baseMove = actors.map((pos) => (C.damage.basicActive ? 0 : freeMoveSlot(team[pos - 1] as Combatant)));
+  // combate v0.4 §8: simular en orden de iniciativa estimada (prioridad, iniciativa sin jitter con prisa/ralentizar, casilla)
+  const rowRules = C.variants.autoTarget.rowPriority;
+  const estIni = actors.map((pos) => {
+    const f = state.fighters[s][pos - 1] as FighterState;
+    return (team[pos - 1] as Combatant).initiative + (hasStatus(f, "prisa") ? C.statuses.prisa.value : 0) + (hasStatus(f, "ralentizar") ? C.statuses.ralentizar.value : 0);
+  });
 
   // combate §10.3 — evalúa una combinación (índices de movimiento por actor). Devuelve valor y objetivos.
   const evaluate = (combo: readonly number[], withSynergy: boolean): { value: number; targets: number[] } => {
@@ -159,12 +179,30 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
     const afterPay = e - cost;
     // [v0.2] valor de lo que se guarda: λ · min(e − Σcoste, c*, máx − por_turno); − penalización (desempate)
     let value = price.lambda * Math.min(afterPay, saveCap) - A.costPenalty * cost;
-    const targets: number[] = [];
 
-    actors.forEach((pos, i) => {
+
+    const order = actors.map((_, i) => i);
+    if (rowRules) {
+      const pri = actors.map((pos, i) => actionPriority(actionMove(team[pos - 1] as Combatant, combo[i] as number), C));
+      order.sort((a, b) => (pri[b] as number) - (pri[a] as number) || (estIni[b] as number) - (estIni[a] as number) || a - b);
+    }
+    const targets: number[] = actors.map(() => 1);
+    order.forEach((i) => {
+      const pos = actors[i] as number;
       const idx = pos - 1;
       const c = team[idx] as Combatant;
       const m = actionMove(c, combo[i] as number);
+      const push = (t: number): void => { targets[i] = t; };
+      // combate v0.4 §8: provocar vale `valor_ia` solo si el usuario aguanta (se evalúa tras el movimiento)
+      const tauntValue = (): number => {
+        if (!m || !m.taunt) return 0;
+        if (!C.variants.taunt.aiRequiresEndurance) return C.variants.taunt.aiValue;
+        const others = actors.length > 0 ? [1, 2, 3, 4].filter((p) => p !== pos && (sim.hp[s][p - 1] as number) > 0) : [];
+        if (others.length === 0) return C.variants.taunt.aiValue;
+        let sum = 0;
+        for (const p of others) sum += (sim.hp[s][p - 1] as number) + (sim.shield[p - 1] as number);
+        return (sim.hp[s][idx] as number) + (sim.shield[idx] as number) >= sum / others.length ? C.variants.taunt.aiValue : 0;
+      };
       sim.acted[s][idx] = true;
       const synMult = m ? 1 + (syn.bonus[idx] as number) : 1;
       const cond = (m: Move | null, tSide: 0 | 1, tIdx: number): boolean => {
@@ -187,15 +225,15 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
       const affectedOf = (tSide: 0 | 1, tPos: number): number[] =>
         (m && m.area ? rowOf(tPos, C) : [tPos]).filter((p) => (sim.hp[tSide][p - 1] as number) > 0);
       if (m && m.extraEnergy) value += price.lambda * M.extraEnergy.amount; // [v0.2] λ por energía extra
-      if (m && m.taunt) value += C.variants.taunt.aiValue; // variantes v0.3 V4 [variantes.provocar.valor_ia]
 
       if (!m || m.scalable === "dano") {
+        value += tauntValue(); // táctico con provocar (su daño no cambia la vida ni el escudo propios)
         // candidatos válidos AHORA (combate §3.2); la simulación solo puntúa
         // variantes v0.3 V4: un único candidato, el que daría la regla de carriles tras las acciones anteriores del plan
         const autoPos = auto ? autoTargetPosition(m, pos, enemyTeam, { alive: sim.hp[o].map((h) => h > 0), hp: sim.hp[o], taunting: enemyTaunting }, C) : undefined;
         const cands = auto ? (autoPos === undefined ? [] : [autoPos]) : validTargetPositions(m, state.fighters[o].map((f) => !f.ko), C);
         if (cands.length === 0) {
-          targets.push(1);
+          push(1);
           return;
         }
         const dmgTo = (p: number): number =>
@@ -217,7 +255,7 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
             bestV = v;
           }
         }
-        targets.push(best);
+        push(best);
         for (const q of affectedOf(o, best)) {
           const hp = sim.hp[o][q - 1] as number;
           const d = dmgTo(q);
@@ -252,7 +290,7 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
       const alive = sim.hp[s].map((h) => h > 0);
       let best = -1;
       if (auto) {
-        best = autoTargetPosition(m, pos, team, { alive, hp: sim.hp[s], taunting: noTaunt }, C) ?? -1;
+        best = autoTargetPosition(m, pos, team, { alive, hp: sim.hp[s], taunting: noTaunt, shield: sim.shield }, C) ?? -1;
       } else if (m.scalable === "cura") {
         let bestR = Infinity;
         for (const p of validTargetPositions(m, alive, C)) {
@@ -275,10 +313,10 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
         }
       }
       if (best < 0) {
-        targets.push(pos);
+        push(pos);
         return;
       }
-      targets.push(best);
+      push(best);
       for (const q of affectedOf(s, best)) {
         const amount = Math.round(pot(s, q - 1));
         const maxHp = (team[q - 1] as Combatant).maxHp;
@@ -295,6 +333,7 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
         // [v0.2] regenerar: min(valor, vida que falta tras la cura + holgura)
         if (m.status === "regenerar") value += Math.min(A.statusValue.regenerar, maxHp - (sim.hp[s][q - 1] as number) + A.regenSlack);
       }
+      value += tauntValue(); // variantes v0.3 V4 [variantes.provocar.valor_ia]; v0.4 §8: tras su escudo
       if (m.status === "prisa") value += A.statusValue.prisa;
     });
     return { value, targets };
@@ -332,24 +371,23 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
       return c.moves.some((m, k) => m.cost <= e && !resting(pos, k + 1) && m.scalable === "dano" && moveCanKo(c, pos, m));
     });
     if (!canKo) {
-      const zeros = actors.map(() => 0);
-      return toPlan(zeros, evaluate(zeros, false).targets);
+      return toPlan(baseMove, evaluate(baseMove, false).targets);
     }
   }
 
   // combate §10.3 — enumeración lexicográfica (golpe = 0, movimientos 1–4), Σcoste ≤ e
   const options = actors.map((pos) => {
     const c = team[pos - 1] as Combatant;
-    const list = [0];
+    const list = C.damage.basicActive ? [0] : [];
     c.moves.forEach((m, k) => {
       if (m.cost <= e && !resting(pos, k + 1)) list.push(k + 1);
     });
     return list;
   });
   let bestValue = -Infinity;
-  let bestCombo: number[] = actors.map(() => 0);
+  let bestCombo: number[] = baseMove.slice();
   let bestTargets: number[] = [];
-  const combo: number[] = actors.map(() => 0);
+  const combo: number[] = baseMove.slice();
   const rec = (i: number, spent: number): void => {
     if (i === actors.length) {
       const r = evaluate(combo, true);
@@ -367,7 +405,7 @@ function referencePlan(state: BattleState, side: SideId, cfg: BattleConfig, rese
       combo[i] = k;
       rec(i + 1, spent + cost);
     }
-    combo[i] = 0;
+    combo[i] = baseMove[i] as number;
   };
   rec(0, 0);
   return toPlan(bestCombo, bestTargets);
@@ -395,8 +433,17 @@ function toCombatants(team: TeamInput, cfg: BattleConfig): Combatant[] {
  * Juega una partida completa: rng = createRng(semilla.prefijo + seed)
  * (combate §11) y planes de `aiA`/`aiB` (por defecto, la IA de referencia).
  */
-export function runBattle(teamA: TeamInput, teamB: TeamInput, seed: string | number, cfg: BattleConfig, aiA: Ai = createReferenceAi(), aiB: Ai = createReferenceAi()): BattleRecord {
-  let state = createBattle(toCombatants(teamA, cfg), toCombatants(teamB, cfg), cfg);
+export function runBattle(
+  teamA: TeamInput,
+  teamB: TeamInput,
+  seed: string | number,
+  cfg: BattleConfig,
+  aiA: Ai = createReferenceAi(),
+  aiB: Ai = createReferenceAi(),
+  /** combate v0.4 §1: colocación de cada bando (si falta o no es válida, `referencePlacement`). */
+  placements: { readonly A?: Placement; readonly B?: Placement } = {},
+): BattleRecord {
+  let state = createBattle(toCombatants(teamA, cfg), toCombatants(teamB, cfg), cfg, placements.A, placements.B);
   const rng = createRng(cfg.combat.seedPrefix + String(seed));
   const log: (readonly BattleEvent[])[] = [];
   while (state.result === null) {
@@ -410,6 +457,7 @@ export function runBattle(teamA: TeamInput, teamB: TeamInput, seed: string | num
 }
 
 /**
+ * @deprecated combate v0.4 §7 la sustituye por `referencePlacement` (colocación con casilla vacía).
  * variantes v0.3 V4 — formación de referencia (determinista, sin tiradas): las
  * almas que llevan "provocar" y, después, las de más vida máxima van delante
  * (posiciones 1 y 2); el resto, detrás. Empates: orden de entrada. Con V4 la

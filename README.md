@@ -53,6 +53,29 @@ geneKey(r.child.genome.cabeza.D);  // "familia|locus|firma"
 
 Otras: `createWildCreature(rng, cfg, {id, family?, pure?, birth?})`, `breedingBlocker`, `creatureFamily(genome, cfg)`, `creatureQuality`, `qualityPercent`, `checkInvariants`, `expressedGenes`, `allGenes`, `locusKeys`, `isCatalogKey`, `distribute` (repartir §1.5), `makeGene`. Cada gen lleva `quality` (Σanchor = Σvalues = quality) y está congelado.
 
+## API de combate v0.4 (vigente)
+
+Specs: `docs/spec/combate-v0.4.md`, `docs/spec/movimientos-v0.4.md`, `docs/spec/glosario-v0.4.md` · notas: `docs/spec/notas-implementacion-combate-v0.4.md`.
+**Config vigente: `config/combate.v0.4.json` + `config/movimientos.v0.4.json`.** Las v0.2 se siguen cargando (solo para regresión).
+
+```ts
+const cfg = { combat: parseCombatConfig(rawC04), moves: parseMovesConfig(rawM04, gcfg) };
+// equipos de 3; colocación = casilla (1–4) de cada alma, elegida a ciegas y a la vez
+validatePlacement([1, 3, 4], cfg.combat);         // null | motivo ("1+2"/"2+1"; 24 válidas: allPlacements)
+referencePlacement(team, cfg.combat);             // regla de la IA (combate §7)
+const s = createBattle(teamA, teamB, cfg, [1, 2, 3], [1, 3, 4]); // inválida o ausente ⇒ regla de la IA
+s.teams[0][3];                                    // null = casilla vacía (su FighterState: ko, vida 0)
+placementOf(s, "B", cfg);                         // { positions: [1, 3, 4], shape: "1+2" }
+attackable(s, "B", cfg);                          // { row, back, taunting }: fila atacable, lo que alcanza "atrás", provocadores
+forecastTargets(s, "A", actor, move, cfg);        // { side, positions } a quien iría AHORA (se decide al ejecutar)
+restingMoves(s, "A", actor);                      // huecos en descanso (el gratis nunca)
+freeMoveSlot(combatant);                          // hueco del gratis (extremidades = 3)
+describeMoveShort(mv, cfg.moves);                 // "35 · Quema · ×1,5 en combo" (≤ 3 fragmentos); larga: describeMove
+runBattle(teamA, teamB, seed, cfg, aiA, aiB, { A: [1, 2, 3], B: [1, 3, 4] });
+```
+Acción: `{ actor: casilla, move: 1–4, target: 0 }` (no hay golpe básico: `move: 0` es inválido; plan inválido ⇒ todas usan el gratis).
+**24 tiradas por turno** (las de la casilla vacía se descartan) y **8 por movimiento**, como antes.
+
 ## API de combate y movimientos (v0.2)
 
 Specs: `docs/spec/combate-v0.2.md`, `docs/spec/movimientos-v0.2.md` · notas: `docs/spec/notas-implementacion-combate-v0.2.md` (y las de v0.1, que siguen vigentes). El núcleo solo carga las configs v0.2.

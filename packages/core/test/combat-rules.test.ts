@@ -322,7 +322,7 @@ describe("condiciones (movimientos §2.5)", () => {
     let s: BattleState = { ...createBattle(A, B, FLAT), energy: [10, 10] };
     let r = play(s, lead(1, 1), basics());
     assert.equal(evs(r, "damage").find((e) => e.side === "B")?.amount, 150); // aún no ha actuado
-    r = play({ ...s, teams: [s.teams[0], s.teams[1].map((c) => ({ ...c, initiative: 200 }))] }, lead(1, 1), basics());
+    r = play({ ...s, teams: [s.teams[0], s.teams[1].map((c) => ({ ...(c as Combatant), initiative: 200 }))] }, lead(1, 1), basics());
     assert.equal(evs(r, "damage").find((e) => e.side === "B" && e.amount > 0)?.amount, 100); // ya actuó
     r = play(s, lead(2, 1), basics());
     assert.equal(evs(r, "damage").find((e) => e.side === "B")?.amount, 100);

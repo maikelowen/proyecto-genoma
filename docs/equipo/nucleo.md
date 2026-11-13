@@ -26,7 +26,7 @@
 - En los estadísticos, la tolerancia es de 5 errores estándar (`tol5`) con semilla fija: sin inestabilidad y sensibles a errores de ~1 punto.
 - Además de las frecuencias, probar las invariantes tras muchas generaciones con mutación alta, los casos borde construidos a mano (`makeCreature`, `hybridGene`) y llamadas directas a funciones internas para los respaldos.
 - Los tests de QA (`qa-genetica.test.ts`) no se debilitan: si hay que adaptarlos, solo se cambia lo que exige la API nueva.
-- `npm run check` debe tardar menos de 10 s (ahora mismo, ~6,2 s con combate v0.2).
+- `npm run check` debe tardar menos de 25 s (ahora, ~11 s con combate v0.4).
 
 ## Lecciones
 - Una spec con "suma fija" necesita una función común de reparto (`distribute`) con un ajuste de redondeo explícito, no soluciones distintas en cada sitio.
@@ -47,3 +47,6 @@
 - Azar nuevo sin tiradas nuevas: usar una tirada fija que la acción no gasta (la 2.ª de varianza en un golpe de un objetivo) mantiene las 24 por turno y los barridos pareados.
 - Una pieza nueva de la gramática se sortea en la cola de una tirada existente (`u ≥ T/(T + w)`): por debajo del umbral el catálogo no cambia, y el cambio al activarla es mínimo y enumerable.
 - Reglas de objetivo en una sola función sobre una "vista" (vivos, vida, provocar): la usan el motor al ejecutar, la previsión de la interfaz y la simulación de la IA; en tests de planes, cuidado con Σcoste > energía (el plan inválido se vuelve golpes y el test mide otra cosa).
+- v0.4: un cambio de reglas va en configs nuevas (`*.v0.4.json`) con claves obligatorias, y el parser sigue cargando la versión anterior con valores que la reproducen: los dorados viejos prueban la regresión y los nuevos fijan las reglas nuevas.
+- Casilla vacía = `null` en `teams` y `FighterState` en KO: todo lo que ya filtraba KO funciona solo. Índices de tiradas por casilla (`slots`), nunca por `tamano`.
+- Las garantías de la gramática ("toda cola con alcance o área") se prueban con miles de claves mutadas, no con el catálogo: el respaldo puede quitar lo que garantizaba.

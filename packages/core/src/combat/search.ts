@@ -63,7 +63,7 @@ function shieldOf(f: FighterState): number {
 
 /** Huella del estado dinámico (lo que cambia durante la partida); los equipos se identifican por id. */
 export function searchStateKey(state: BattleState): string {
-  const ids = state.teams.map((t) => t.map((c) => c.id).join(","));
+  const ids = state.teams.map((t) => t.map((c) => (c ? c.id : "")).join(","));
   return cyrb128(JSON.stringify([state.turn, state.energy, ids, state.fighters]))
     .map((w) => w.toString(16).padStart(8, "0"))
     .join("");
@@ -120,6 +120,7 @@ function actionOptions(state: BattleState, s: 0 | 1, pos: number, cfg: BattleCon
   const out: Option[] = [];
   const moves: (Move | null)[] = [null, ...c.moves];
   moves.forEach((m, k) => {
+    if (!m && !C.damage.basicActive) return; // combate v0.4 §2: sin golpe básico
     const cost = m ? m.cost : C.damage.basicCost;
     if (cost > e) return;
     // variantes v0.3 V2: un movimiento en descanso no es una opción
@@ -232,8 +233,8 @@ export function createSearchAi(options: SearchAiOptions = {}): Ai {
     const opts = actors.map((pos) => {
       const all = actionOptions(state, s, pos, cfg, lambda);
       const top = all.slice(0, topK);
-      // siempre hay un golpe básico (coste mínimo) para que existan combinaciones asequibles
-      const basic = all.find((x) => x.move === 0);
+      // siempre hay una acción de coste 0 (golpe básico o, v0.4, el gratis) para que existan combinaciones asequibles
+      const basic = all.find((x) => x.cost === 0);
       if (basic && !top.includes(basic)) top.push(basic);
       return top;
     });

@@ -327,7 +327,7 @@ function beginPlanning(): void {
 }
 
 function moveOf(f: Fight, pos: number, move: number): Move | null {
-  return move === 0 ? null : (f.state.teams[0][pos - 1] as BattleState["teams"][0][0]).moves[move - 1] ?? null;
+  return move === 0 ? null : f.state.teams[0][pos - 1]?.moves[move - 1] ?? null;
 }
 
 function targetsFor(f: Fight, m: Move | null): { side: SideId; valid: number[] } {

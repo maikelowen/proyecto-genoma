@@ -83,3 +83,32 @@ export function planOf(actors: number[], move: number, target: number): Action[]
   return actors.map((actor) => ({ actor, move, target }));
 }
 export const ALL = [1, 2, 3, 4];
+
+// ---------------------------------------------------------------- combate v0.4 (config vigente)
+import rawCombat04 from "../../../config/combate.v0.4.json" with { type: "json" };
+import rawMoves04 from "../../../config/movimientos.v0.4.json" with { type: "json" };
+export const rawCombat04Clone = (): any => structuredClone(rawCombat04);
+export const rawMoves04Clone = (): any => structuredClone(rawMoves04);
+/** Configs v0.4 (vigentes); los `patch` modifican una copia del JSON crudo antes de validar. */
+export function loadBattleConfig04(patchCombat?: (raw: any) => void, patchMoves?: (raw: any) => void): BattleConfig {
+  const c = rawCombat04Clone();
+  const m = rawMoves04Clone();
+  if (patchCombat) patchCombat(c);
+  if (patchMoves) patchMoves(m);
+  return { combat: parseCombatConfig(c), moves: parseMovesConfig(m, GCFG) };
+}
+export const BCFG04 = loadBattleConfig04();
+/** v0.4 sin azar en el orden ni en el daño, sin desgaste: daño = potencia (stats equilibradas, llama vs llama). */
+export const FLAT04 = loadBattleConfig04((r) => {
+  r.dano.varianza = 0;
+  r.orden.jitter = 0;
+  r.desgaste.desde_turno = 99;
+});
+/** Movimiento gratis hecho a mano (coste 0, locus extremidades). */
+export function mkFree(over: Partial<Move> = {}): Move {
+  return mkMove({ id: "mov:gratis", locus: "extremidades", cost: 0, power: 15, budget: 3, points: 3, scalablePoints: 3, ...over });
+}
+/** Alma v0.4: [m1, m2, gratis, m4] (por defecto, golpes de 50 de coste 1 y gratis de 15). */
+export function mk04(id: string, moves: Partial<Record<1 | 2 | 3 | 4, Move>> = {}, over: Partial<Combatant> = {}, cfg: BattleConfig = FLAT04): Combatant {
+  return mkFighter(id, "llama", [moves[1] ?? mkMove(), moves[2] ?? mkMove(), moves[3] ?? mkFree(), moves[4] ?? mkMove()], over, cfg);
+}

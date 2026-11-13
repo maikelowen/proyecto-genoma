@@ -1,5 +1,6 @@
 /**
- * Motor de combate v0.2 (spec docs/spec/combate-v0.2.md).
+ * Motor de combate v0.4 (spec docs/spec/combate-v0.4.md sobre combate-v0.2.md
+ * y variantes v0.3). Con una config v0.2 reproduce v0.2.1 + variantes v0.3.
  *
  * Estado inmutable: `resolveTurn` no modifica el estado de entrada y
  * devuelve uno nuevo más el registro de eventos del turno. Consume
@@ -10,6 +11,7 @@ import { cyrb128, type Rng } from "../rng.ts";
 import type { Move } from "../moves/generate.ts";
 import { STATUS_IDS, type BasicEffect, type CombatConfig, type StatusId } from "./config.ts";
 import type { BattleConfig, Combatant } from "./combatant.ts";
+import { referencePlacement, validatePlacement, type Placement } from "./placement.ts";
 
 export type SideId = "A" | "B";
 export const SIDE_IDS = ["A", "B"] as const;
@@ -46,7 +48,12 @@ export interface BattleState {
   readonly turn: number;
   /** Energía disponible de cada bando para el turno `turn` (A, B). */
   readonly energy: readonly [number, number];
-  readonly teams: readonly [readonly Combatant[], readonly Combatant[]];
+  /**
+   * Casillas 1–4 de cada bando (índice = casilla − 1). combate v0.4 §1: con equipos
+   * de 3, una casilla es `null` (vacía); su `FighterState` es `ko: true` con vida 0
+   * y nunca emite eventos.
+   */
+  readonly teams: readonly [readonly (Combatant | null)[], readonly (Combatant | null)[]];
   readonly fighters: readonly [readonly FighterState[], readonly FighterState[]];
   readonly result: BattleResult | null;
 }
@@ -106,6 +113,11 @@ export interface TurnResult {
 export function sideIndex(side: SideId): 0 | 1 {
   if (side !== "A" && side !== "B") throw new RangeError(`bando inválido '${String(side)}'`);
   return side === "A" ? 0 : 1;
+}
+
+/** combate v0.4 §2 — hueco (1–4) del movimiento gratis (coste 0) de un alma, o 0 si no tiene. */
+export function freeMoveSlot(c: Combatant): number {
+  return c.moves.findIndex((m) => m.cost === 0) + 1;
 }
 
 /** Movimiento de la acción (null = golpe básico). */
@@ -195,28 +207,63 @@ export interface TargetView {
   readonly hp: readonly number[];
   /** Criaturas que están provocando (solo cuenta para ataques enemigos de un objetivo). */
   readonly taunting: readonly boolean[];
+  /** [v0.4] escudo actual (para el escudo automático a la fila expuesta); 0 si falta. */
+  readonly shield?: readonly number[];
+}
+
+/** combate v0.4 §3 `filaAtacable`: casillas vivas de la delantera; si no hay, de la trasera. */
+export function exposedRow(alive: readonly boolean[], cfg: CombatConfig): number[] {
+  const front = cfg.frontRow.filter((p) => alive[p - 1]);
+  return front.length > 0 ? front : cfg.backRow.filter((p) => alive[p - 1]);
+}
+/** combate v0.4 §3 `filaTrasera` (para `alcance`): casillas vivas de la trasera; si no hay, de la delantera. */
+export function backRowFirst(alive: readonly boolean[], cfg: CombatConfig): number[] {
+  const back = cfg.backRow.filter((p) => alive[p - 1]);
+  return back.length > 0 ? back : cfg.frontRow.filter((p) => alive[p - 1]);
+}
+/** combate v0.4 §3 `elegirEn`: la del carril del actor; si no hay, la de menor casilla. */
+function pickByLane(candidates: readonly number[], actorPos: number): number | undefined {
+  return candidates.find((p) => laneOf(p) === laneOf(actorPos)) ?? candidates[0];
 }
 
 /**
- * variantes v0.3 V4 — objetivo automático (posición 1–4, o undefined si no hay
- * ninguno) del movimiento `m` (null = golpe básico) usado por `actorPos`.
- * `targetTeam`/`view` son del bando objetivo (el propio en movimientos de aliado).
- * - Enemigo: `laneOrder`; si es de un solo objetivo y hay enemigos provocando, solo entre ellos.
- * - Cura: aliado con menor vida/máx. Escudo: delantero con menos vida; sin delanteros,
- *   el aliado con menos vida. Empates: menor posición. Con provocar y
- *   `escudo_provocar_al_usuario`, el escudo va al usuario.
+ * Objetivo automático (variantes v0.3 V4 y combate v0.4 §3): casilla 1–4, o
+ * undefined si no hay ninguno, del movimiento `m` (null = golpe básico) usado
+ * por `actorPos`. `targetTeam`/`view` son del bando objetivo (el propio en
+ * movimientos de aliado). En área, la casilla devuelta es el "ancla": la acción
+ * afecta a las vivas de su fila (`rowOf`).
+ * - Enemigo, v0.4 (`prioridad_fila`): provocadores (carril del actor; si no, menor
+ *   casilla) salvo en área; si no, `elegirEnFila` en la fila atacable (o la trasera
+ *   con `alcance`). v0.3: `laneOrder`.
+ * - Cura: menor vida/máx (sin dividir); si todos están llenos y
+ *   `cura_si_todos_llenos` = usuario, el usuario. Escudo: con `escudo_fila_expuesta`,
+ *   la fila propia expuesta con menos vida + escudo; si no (v0.3), delantero con
+ *   menos vida. Empates: menor casilla. Escudo con provocar: el usuario.
+ *   v0.4: cura y escudo de área van a la fila propia expuesta.
  */
-export function autoTargetPosition(m: Move | null, actorPos: number, targetTeam: readonly Combatant[], view: TargetView, cfg: CombatConfig): number | undefined {
+export function autoTargetPosition(m: Move | null, actorPos: number, targetTeam: readonly (Combatant | null)[], view: TargetView, cfg: CombatConfig): number | undefined {
   const alive = [1, 2, 3, 4].filter((p) => view.alive[p - 1]);
   if (alive.length === 0) return undefined;
+  const AT = cfg.variants.autoTarget;
   if (m && m.target === "aliado") {
-    if (m.taunt && m.scalable === "escudo" && cfg.variants.autoTarget.tauntShieldsSelf && view.alive[actorPos - 1]) return actorPos;
+    if (m.taunt && m.scalable === "escudo" && AT.tauntShieldsSelf && view.alive[actorPos - 1]) return actorPos;
+    if (m.area && AT.rowPriority) return exposedRow(view.alive, cfg)[0]; // combate v0.4 §3.1: área a la fila expuesta
     if (m.scalable === "cura") {
       let best = alive[0] as number;
       for (const p of alive) {
         // vida/máx sin dividir: hp_p · máx_best < hp_best · máx_p
         if ((view.hp[p - 1] as number) * (targetTeam[best - 1] as Combatant).maxHp < (view.hp[best - 1] as number) * (targetTeam[p - 1] as Combatant).maxHp) best = p;
       }
+      // combate v0.4 §3.1: si nadie la necesita, va al usuario (y no cura)
+      if (AT.healIfAllFull === "usuario" && (view.hp[best - 1] as number) >= (targetTeam[best - 1] as Combatant).maxHp && view.alive[actorPos - 1]) return actorPos;
+      return best;
+    }
+    if (AT.shieldExposedRow) {
+      // combate v0.4 §3.1: fila propia expuesta, menor vida + escudo
+      const total = (p: number): number => (view.hp[p - 1] as number) + (view.shield ? (view.shield[p - 1] as number) : 0);
+      const pool = exposedRow(view.alive, cfg);
+      let best = pool[0] as number;
+      for (const p of pool) if (total(p) < total(best)) best = p;
       return best;
     }
     const front = cfg.frontRow.filter((p) => view.alive[p - 1]);
@@ -225,12 +272,30 @@ export function autoTargetPosition(m: Move | null, actorPos: number, targetTeam:
     for (const p of pool) if ((view.hp[p - 1] as number) < (view.hp[best - 1] as number)) best = p;
     return best;
   }
-  const order = laneOrder(actorPos, m !== null && m.modifier === "alcance", cfg);
+  const reach = m !== null && m.modifier === "alcance";
+  if (AT.rowPriority) {
+    // combate v0.4 §3 objetivoUnico / objetivoArea
+    if (!(m && m.area)) {
+      const taunters = alive.filter((p) => view.taunting[p - 1]);
+      if (taunters.length > 0) return pickByLane(taunters, actorPos);
+    }
+    return pickByLane(reach ? backRowFirst(view.alive, cfg) : exposedRow(view.alive, cfg), actorPos);
+  }
+  const order = laneOrder(actorPos, reach, cfg);
   if (!(m && m.area)) {
     const taunter = order.find((p) => view.alive[p - 1] && view.taunting[p - 1]);
     if (taunter !== undefined) return taunter;
   }
   return order.find((p) => view.alive[p - 1]);
+}
+
+function viewOf(fs: readonly FighterState[]): TargetView {
+  return {
+    alive: aliveMask(fs),
+    hp: fs.map((f) => f.hp),
+    taunting: fs.map((f) => !f.ko && (f.taunt ?? 0) > 0),
+    shield: fs.map((f) => f.statuses.find((x) => x.id === "escudo")?.value ?? 0),
+  };
 }
 
 /**
@@ -242,16 +307,52 @@ export function autoTarget(state: BattleState, side: SideId, actor: number, move
   const s = sideIndex(side);
   const m = actionMove(state.teams[s][actor - 1] as Combatant, move);
   const tSide = m && m.target === "aliado" ? s : ((1 - s) as 0 | 1);
-  const fs = state.fighters[tSide];
-  return autoTargetPosition(m, actor, state.teams[tSide], { alive: aliveMask(fs), hp: fs.map((f) => f.hp), taunting: fs.map((f) => !f.ko && (f.taunt ?? 0) > 0) }, cfg.combat) ?? null;
+  return autoTargetPosition(m, actor, state.teams[tSide], viewOf(state.fighters[tSide]), cfg.combat) ?? null;
+}
+
+/**
+ * combate v0.4 §3 — previsión para la interfaz: a quién iría AHORA la acción
+ * (bando y casillas; en área, todas las vivas de la fila). El motor lo decide al
+ * ejecutar: puede cambiar si alguien cae antes o un enemigo provoca. null si no hay objetivo.
+ */
+export function forecastTargets(state: BattleState, side: SideId, actor: number, move: number, cfg: BattleConfig): { readonly side: SideId; readonly positions: readonly number[] } | null {
+  const s = sideIndex(side);
+  const m = actionMove(state.teams[s][actor - 1] as Combatant, move);
+  const tSide = m && m.target === "aliado" ? s : ((1 - s) as 0 | 1);
+  const anchor = autoTarget(state, side, actor, move, cfg);
+  if (anchor === null) return null;
+  const alive = aliveMask(state.fighters[tSide]);
+  return { side: SIDE_IDS[tSide], positions: m && m.area ? rowOf(anchor, cfg.combat).filter((p) => alive[p - 1]) : [anchor] };
+}
+
+/**
+ * combate v0.4 §3 — quién es atacable en el bando `side` ahora mismo:
+ * `row` = fila atacable (golpes normales), `back` = lo que alcanza `alcance`,
+ * `taunting` = almas que provocan (reciben todos los ataques de un objetivo).
+ */
+export function attackable(state: BattleState, side: SideId, cfg: BattleConfig): { readonly row: readonly number[]; readonly back: readonly number[]; readonly taunting: readonly number[] } {
+  const v = viewOf(state.fighters[sideIndex(side)]);
+  return {
+    row: exposedRow(v.alive, cfg.combat),
+    back: backRowFirst(v.alive, cfg.combat),
+    taunting: [1, 2, 3, 4].filter((p) => v.taunting[p - 1]),
+  };
+}
+
+/** combate v0.4 §1 — casillas ocupadas (1–4, ascendentes) y forma ("2+1" / "1+2") de un bando. */
+export function placementOf(state: BattleState, side: SideId, cfg: BattleConfig): { readonly positions: readonly number[]; readonly shape: string } {
+  const positions = [1, 2, 3, 4].filter((p) => state.teams[sideIndex(side)][p - 1] != null);
+  const front = positions.filter((p) => cfg.combat.frontRow.includes(p)).length;
+  return { positions, shape: `${front}+${positions.length - front}` };
 }
 
 /**
  * combate §7 — bonus de sinergia por posición (0 para quien usa golpe o no
  * actúa) y si cada criatura tiene compañero de grupo (condición combo_familia).
  */
-export function planSynergy(team: readonly Combatant[], plan: Plan, cfg: CombatConfig): { bonus: number[]; combo: boolean[] } {
-  const users = plan.filter((a) => a.move !== 0);
+export function planSynergy(team: readonly (Combatant | null)[], plan: Plan, cfg: CombatConfig): { bonus: number[]; combo: boolean[] } {
+  // combate v0.4 §5: el gratis ni cuenta ni recibe bonus (`sinergia.cuenta_gratis` = false)
+  const users = plan.filter((a) => a.move !== 0 && (cfg.synergy.countsFree || ((team[a.actor - 1] as Combatant).moves[a.move - 1] as Move).cost !== 0));
   const count = new Map<string, number>();
   for (const a of users) for (const g of (team[a.actor - 1] as Combatant).groups) count.set(g, (count.get(g) ?? 0) + 1);
   const bonus = [0, 0, 0, 0];
@@ -288,7 +389,8 @@ export function validatePlan(state: BattleState, side: SideId, plan: Plan, cfg: 
     seen.add(actor);
     if (!eligible.includes(actor)) return `la criatura ${actor} no puede actuar (KO o aturdida)`;
     const c = team[actor - 1] as Combatant;
-    if (!Number.isInteger(move) || move < 0 || move > c.moves.length) return `movimiento inválido ${move} (actor ${actor})`;
+    // combate v0.4 §2: sin golpe básico, el movimiento 0 no existe
+    if (!Number.isInteger(move) || move < (cfg.combat.damage.basicActive ? 0 : 1) || move > c.moves.length) return `movimiento inválido ${move} (actor ${actor})`;
     const m = actionMove(c, move);
     const tSide = m && m.target === "aliado" ? s : ((1 - s) as 0 | 1);
     if (!cfg.combat.variants.autoTarget.active) {
@@ -306,25 +408,57 @@ export function validatePlan(state: BattleState, side: SideId, plan: Plan, cfg: 
   return null;
 }
 
-/** combate §3.2 — plan de respaldo: golpe básico contra el primer objetivo válido. */
+/**
+ * combate §3.2 — plan de respaldo: golpe básico contra el primer objetivo válido.
+ * combate v0.4 §2: sin golpe básico, todas usan su movimiento gratis.
+ */
 export function fallbackPlan(state: BattleState, side: SideId, cfg: CombatConfig): Action[] {
   const s = sideIndex(side);
+  if (!cfg.damage.basicActive) {
+    return eligibleActors(state, side).map((actor) => {
+      const c = state.teams[s][actor - 1] as Combatant;
+      const move = freeMoveSlot(c);
+      if (cfg.variants.autoTarget.active) return { actor, move, target: 0 };
+      const m = actionMove(c, move);
+      const tSide = m && m.target === "aliado" ? s : 1 - s;
+      return { actor, move, target: validTargetPositions(m, aliveMask(state.fighters[tSide] as readonly FighterState[]), cfg)[0] ?? 1 };
+    });
+  }
   // variantes v0.3 V4: sin objetivo (0)
   if (cfg.variants.autoTarget.active) return eligibleActors(state, side).map((actor) => ({ actor, move: 0, target: 0 }));
   const valid = validTargetPositions(null, aliveMask(state.fighters[1 - s] as readonly FighterState[]), cfg);
   return eligibleActors(state, side).map((actor) => ({ actor, move: 0, target: valid[0] ?? 1 }));
 }
 
-/** Estado inicial (turno 1, energía inicial, vida al máximo). */
-export function createBattle(teamA: readonly Combatant[], teamB: readonly Combatant[], cfg: BattleConfig): BattleState {
-  const n = cfg.combat.teamSize;
+/**
+ * Estado inicial (turno 1, energía inicial, vida al máximo).
+ * combate v0.4 §1: `placementA/B` = casilla de cada alma (elegidas a ciegas y a la
+ * vez; se revelan aquí). Si falta o no es válida (`validatePlacement`), se aplica
+ * la regla de la IA (`referencePlacement`), sin tiradas. Con equipos llenos (v0.2), el orden del equipo.
+ */
+export function createBattle(teamA: readonly Combatant[], teamB: readonly Combatant[], cfg: BattleConfig, placementA?: Placement, placementB?: Placement): BattleState {
+  const C = cfg.combat;
+  const n = C.teamSize;
   if (teamA.length !== n || teamB.length !== n) throw new RangeError(`createBattle: cada equipo debe tener ${n} criaturas`);
-  const fresh = (c: Combatant): FighterState => ({ hp: c.maxHp, ko: false, statuses: [], skipTurn: 0, stunImmuneUntil: 0 });
+  if (!C.damage.basicActive) {
+    // combate v0.4 §2: cada alma necesita su movimiento gratis (coste 0)
+    for (const c of [...teamA, ...teamB]) if (freeMoveSlot(c) === 0) throw new RangeError(`createBattle: '${c.id}' no tiene movimiento gratis (coste 0) y no hay golpe básico`);
+  }
+  const place = (team: readonly Combatant[], p: Placement | undefined): (Combatant | null)[] => {
+    const pl = p !== undefined && validatePlacement(p, C) === null ? p : referencePlacement(team, C);
+    const slots: (Combatant | null)[] = [];
+    for (let i = 0; i < C.slots; i++) slots.push(null);
+    team.forEach((c, i) => { slots[(pl[i] as number) - 1] = c; });
+    return slots;
+  };
+  const fresh = (c: Combatant | null): FighterState => (c ? { hp: c.maxHp, ko: false, statuses: [], skipTurn: 0, stunImmuneUntil: 0 } : { hp: 0, ko: true, statuses: [], skipTurn: 0, stunImmuneUntil: 0 });
+  const tA = place(teamA, placementA);
+  const tB = place(teamB, placementB);
   return {
     turn: 1,
-    energy: [cfg.combat.energy.initial, cfg.combat.energy.initial], // combate §3.1: t = 1 → inicial
-    teams: [Object.freeze(teamA.slice()), Object.freeze(teamB.slice())],
-    fighters: [teamA.map(fresh), teamB.map(fresh)],
+    energy: [C.energy.initial, C.energy.initial], // combate §3.1: t = 1 → inicial
+    teams: [Object.freeze(tA), Object.freeze(tB)],
+    fighters: [tA.map(fresh), tB.map(fresh)],
     result: null,
   };
 }
@@ -438,7 +572,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
       acted: false,
       stunnedNow: false,
       hasAction: false,
-      rest: (state.teams[s as 0 | 1][i] as Combatant).moves.map((_, k) => (f.rest ? (f.rest[k] ?? 0) : 0)),
+      rest: (state.teams[s as 0 | 1][i]?.moves ?? []).map((_, k) => (f.rest ? (f.rest[k] ?? 0) : 0)),
       taunt: f.taunt ?? 0,
       usedSlot: 0,
     })),
@@ -462,11 +596,12 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
     events.push({ type: "plan", side, valid: reason === null, reason, actions: plan, cost, energy: energy[s], synergy: (synergy[s] as { bonus: number[] }).bonus.slice() });
   }
 
-  // 4. tiradas del turno (combate §11): 8 de jitter y 16 de varianza, por posición
+  // 4. tiradas del turno (combate §11): 8 de jitter y 16 de varianza, por casilla
+  // (combate v0.4 §1: las de una casilla vacía se consumen y se descartan)
   const jitterU: number[] = [];
   for (let i = 0; i < C.draws.jitterPerTurn; i++) jitterU.push(rng.next());
   const varU: number[] = [];
-  for (let i = 0; i < 2 * C.teamSize * C.draws.variancePerAction; i++) varU.push(rng.next());
+  for (let i = 0; i < 2 * C.slots * C.draws.variancePerAction; i++) varU.push(rng.next());
 
   // 5. orden (combate §4)
   const entries: Entry[] = [];
@@ -482,7 +617,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
       const sl = getStatus(w, "ralentizar");
       if (pr) ini += C.statuses.prisa.value;
       if (sl) ini += C.statuses.ralentizar.value;
-      ini += C.order.jitter * (2 * (jitterU[s * C.teamSize + idx] as number) - 1);
+      ini += C.order.jitter * (2 * (jitterU[s * C.slots + idx] as number) - 1);
       entries.push({
         side: s,
         idx,
@@ -512,6 +647,21 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
     w.statuses = [];
     w.taunt = 0;
     events.push({ type: "ko", side: SIDE_IDS[s], pos: i + 1 });
+  };
+
+  /**
+   * combate §8 escudo (suma, tope `maximo`). combate v0.4 §3.4 (Q-01, todos los escudos):
+   * con "si_aporte_mayor_o_igual" la duración se renueva a max(restante, duración) solo
+   * si el aporte ≥ el escudo actual; si no, conserva la que le quedaba. Devuelve el total.
+   */
+  const addShield = (w: Work, amount: number): number => {
+    const cur = getStatus(w, "escudo");
+    const actual = cur ? cur.value : 0;
+    const total = Math.min(C.statuses.escudo.value, actual + amount);
+    const dur = C.statuses.escudo.duration;
+    const turns = C.shieldRenew === "siempre" ? dur : !cur || amount >= actual ? Math.max(cur ? cur.turns : 0, dur) : cur.turns;
+    putStatus(w, "escudo", turns, total);
+    return total;
   };
 
   const applyStatus = (s: 0 | 1, i: number, id: StatusId): void => {
@@ -572,13 +722,15 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
     }
     me.acted = true;
     const m = e.move;
-    if (m) me.usedSlot = e.action.move; // variantes v0.3 V2: ejecutado (aunque se pierda) ⇒ descansa
+    // variantes v0.3 V2: ejecutado (aunque se pierda) ⇒ descansa; combate v0.4 §2: el gratis no descansa
+    if (m && (V.rest.freeRests || m.cost !== 0)) me.usedSlot = e.action.move;
     const tSide: 0 | 1 = m && m.target === "aliado" ? e.side : ((1 - e.side) as 0 | 1);
     const taunting = W[tSide].map((w) => !w.ko && w.taunt > 0);
     let tPos: number | undefined;
     if (V.autoTarget.active) {
       // variantes v0.3 V4: objetivo automático, decidido al ejecutar
-      tPos = autoTargetPosition(m, e.idx + 1, state.teams[tSide], { alive: aliveMask(W[tSide]), hp: W[tSide].map((w) => w.hp), taunting }, C);
+      // combate v0.4 §3: todo se decide al ejecutar, con el estado de ese momento (KO a mitad de turno incluidos)
+      tPos = autoTargetPosition(m, e.idx + 1, state.teams[tSide], { alive: aliveMask(W[tSide]), hp: W[tSide].map((w) => w.hp), taunting, shield: W[tSide].map((w) => getStatus(w, "escudo")?.value ?? 0) }, C);
     } else {
       // combate §2: reobjetivo a la primera válida por posición ascendente
       const valid = validTargetPositions(m, aliveMask(W[tSide]), C);
@@ -613,7 +765,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
         const { pot, met } = potFor(p - 1);
         // combate §5/§11: tiradas de varianza de la posición del actor; en área, por orden de posición en la fila
         const k = m && m.area ? row.indexOf(p) : 0;
-        const u = varU[(e.side * C.teamSize + e.idx) * C.draws.variancePerAction + k] as number;
+        const u = varU[(e.side * C.slots + e.idx) * C.draws.variancePerAction + k] as number;
         const variance = 1 - C.damage.variance + 2 * C.damage.variance * u;
         const dmg = damageAmount(pot, c.attack, m ? m.family : c.family, tc.family, !!getStatus(tw, "marca"), !!getStatus(me, "debilitar"), variance, t, C);
         let rest = dmg;
@@ -642,7 +794,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
       const fx = basicEffectOf(c, cfg);
       if (fx && fx.kind === "estado") {
         // probabilidad con la 2.ª tirada de varianza de la posición (el golpe solo gasta la 1.ª)
-        const u = varU[(e.side * C.teamSize + e.idx) * C.draws.variancePerAction + 1] as number;
+        const u = varU[(e.side * C.slots + e.idx) * C.draws.variancePerAction + 1] as number;
         if (u < fx.chance) {
           if (fx.status === "prisa" || fx.status === "regenerar") applyStatus(e.side, e.idx, fx.status);
           else if (!(W[tSide][tPos - 1] as Work).ko) applyStatus(tSide, tPos - 1, fx.status);
@@ -652,9 +804,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
         me.hp += heal;
         events.push({ type: "heal", side, pos: e.idx + 1, amount: heal, hp: me.hp, condition: false });
       } else if (fx && fx.kind === "escudo") {
-        const cur = getStatus(me, "escudo");
-        const total = Math.min(C.statuses.escudo.value, (cur ? cur.value : 0) + fx.amount);
-        putStatus(me, "escudo", C.statuses.escudo.duration, total);
+        const total = addShield(me, fx.amount);
         events.push({ type: "shield", side, pos: e.idx + 1, amount: fx.amount, total, condition: false });
       }
       continue;
@@ -678,9 +828,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
           tw.hp += heal;
           events.push({ type: "heal", side: SIDE_IDS[tSide], pos: p, amount: heal, hp: tw.hp, condition: met });
         } else {
-          const cur = getStatus(tw, "escudo");
-          const total = Math.min(C.statuses.escudo.value, (cur ? cur.value : 0) + amount);
-          putStatus(tw, "escudo", C.statuses.escudo.duration, total);
+          const total = addShield(tw, amount);
           events.push({ type: "shield", side: SIDE_IDS[tSide], pos: p, amount, total, condition: met });
         }
       }
@@ -699,7 +847,7 @@ export function resolveTurn(state: BattleState, planA: Plan, planB: Plan, rng: R
 
   // 6. fin de turno: A1…A4, B1…B4 — quemadura, regeneración, KO, duración −1
   for (const s of [0, 1] as const) {
-    for (let i = 0; i < C.teamSize; i++) {
+    for (let i = 0; i < C.slots; i++) {
       const w = W[s][i] as Work;
       if (w.ko) continue;
       const c = state.teams[s][i] as Combatant;

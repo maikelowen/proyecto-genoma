@@ -86,7 +86,7 @@ describe("parsers de config (combate y movimientos)", () => {
       ["estados", (r) => delete r.estados.prisa],
       ["energia.inicial", (r) => (r.energia.inicial = 11)],
       ["sinergia.bonus_por_n.3", (r) => (r.sinergia.bonus_por_n["3"] = 0.05)],
-      ["equipo.tamano", (r) => (r.equipo.tamano = 3)],
+      ["equipo.tamano", (r) => (r.equipo.tamano = 5)], // v0.4: 3 es válido (con casilla vacía); > casillas no
     ];
     for (const [path, patch] of bad) {
       const raw = rawCombatClone();

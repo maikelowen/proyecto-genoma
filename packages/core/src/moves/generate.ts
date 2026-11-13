@@ -33,7 +33,7 @@ export interface Move {
   readonly family: FamilyId;
   readonly locus: LocusId;
   readonly name: string;
-  /** Coste de energía c ∈ 1..5. */
+  /** Coste de energía c ∈ 1..5; 0 = movimiento gratis (movimientos v0.4 §2, locus `gratis.locus`). */
   readonly cost: number;
   readonly archetype: ArchetypeId;
   readonly scalable: ScalableId;
@@ -132,9 +132,13 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
   const [u1, u2, u3, u4, u5, u6, u7, u8] = u as [number, number, number, number, number, number, number, number];
   const [size, elong, angular, ornament] = shape as [number, number, number, number];
 
+  // movimientos v0.4 §2–3: locus del gratis y locus con alcance garantizado
+  const free = mcfg.free && locus === mcfg.free.locus ? mcfg.free : null;
+  const tail = mcfg.tailGuarantee && locus === mcfg.tailGuarantee.locus ? mcfg.tailGuarantee : null;
   // §4 coste [v0.2]: c = clamp(1 + floor(desplazamiento + forma[0]·escala_tamano + u1·escala_azar), 1, 5)
+  // [v0.4] el gratis cuesta 0 (u1 se consume y no se usa)
   const cc = mcfg.cost;
-  const c = Math.min(cc.max, Math.max(cc.min, 1 + Math.floor(cc.offset + size * cc.sizeScale + u1 * cc.randomScale)));
+  const c = free ? 0 : Math.min(cc.max, Math.max(cc.min, 1 + Math.floor(cc.offset + size * cc.sizeScale + u1 * cc.randomScale)));
 
   // §4 arquetipo: familia + locus + forma[2] (ofensivo/defensivo)
   const wA = familyWeights("arquetipo", family, mcfg);
@@ -145,10 +149,29 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
     if (a === "proteccion" || a === "curacion") w += mcfg.shapeWeights.defensive * (1 - angular);
     wA[i] = w;
   });
-  let archetype = ARCHETYPE_IDS[weightedPick(wA, u2)] as ArchetypeId;
-  // §4 [v0.2] coste_min (maldición: c ≥ 2); si no llega, golpe_estado, sin tiradas
-  if (c < mcfg.archetypes[archetype].minCost) archetype = "golpe_estado";
+  if (free) {
+    // movimientos v0.4 §2: reasignar (maldición → golpe_estado, táctico → golpe) y 0 en los no permitidos
+    ARCHETYPE_IDS.forEach((a, i) => {
+      const to = free.reassign[a];
+      if (to !== undefined) {
+        wA[ARCHETYPE_IDS.indexOf(to)] = (wA[ARCHETYPE_IDS.indexOf(to)] as number) + (wA[i] as number);
+        wA[i] = 0;
+      }
+    });
+    ARCHETYPE_IDS.forEach((a, i) => { if (!free.archetypes.includes(a)) wA[i] = 0; });
+  }
+  // movimientos v0.4 §3: la cola es siempre ofensiva
+  if (tail) ARCHETYPE_IDS.forEach((a, i) => { if (tail.forbiddenArchetypes.includes(a)) wA[i] = 0; });
+  const ai = weightedPick(wA, u2);
+  // respaldo determinista si todos los pesos quedan a 0 (no ocurre con la config vigente)
+  let archetype = (ai < 0 ? "golpe" : ARCHETYPE_IDS[ai]) as ArchetypeId;
+  // §4 [v0.2] coste_min (maldición: c ≥ 2); si no llega, golpe_estado, sin tiradas ([v0.4] no aplica al gratis)
+  if (!free && c < mcfg.archetypes[archetype].minCost) archetype = "golpe_estado";
   const rule = mcfg.archetypes[archetype];
+  // movimientos v0.4 §4: ¿puede llevar provocar este movimiento?
+  const T = mcfg.taunt;
+  const tauntOk = !free && T.active && T.archetypes.includes(archetype) && (T.loci === null || T.loci.includes(locus));
+  const pTaunt = tauntOk && T.draw === "probabilidad" ? tauntProb(family, mcfg) : 0;
 
   // §4 estado (u3)
   let status: MoveStatusId | null = null;
@@ -157,22 +180,31 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
   if (rule.energyIfMinCost) {
     // táctico: prisa; con c ≥ 3, energía extra en su lugar (u3 no se usa)
     if (c >= mcfg.extraEnergy.minCost) extraEnergy = 1;
+    else if (pTaunt > 0 && u3 < pTaunt) taunt = true; // movimientos v0.4 §4: provocar ocupa el hueco de prisa ("Desafío")
     else status = (rule.statusPool as readonly string[])[0] as MoveStatusId;
   } else if (rule.statusPool === "ofensivos") {
     const w = familyWeights("estado_ofensivo", family, mcfg);
     if (c < mcfg.stunMinCost) w[OFFENSIVE_STATUS_IDS.indexOf("aturdir")] = 0; // §2.2 aturdir solo con c ≥ 3
+    // movimientos v0.4 §2: en el gratis, solo estados de coste ≤ coste_max_estado
+    if (free) OFFENSIVE_STATUS_IDS.forEach((id, k) => { if (mcfg.statusCost[id] > free.maxStatusCost) w[k] = 0; });
     const i = weightedPick(w, u3);
     status = i < 0 ? null : (OFFENSIVE_STATUS_IDS[i] as MoveStatusId);
+  } else if (free) {
+    status = null; // movimientos v0.4 §2: positivos del gratis → "ninguno" (u3 no se usa)
+  } else if (pTaunt > 0 && u3 < pTaunt) {
+    taunt = true; // movimientos v0.4 §4: u3 < p_fam → provocar en el hueco del estado
   } else {
     const all = familyWeights("estado_positivo", family, mcfg);
     const pool = rule.statusPool === "positivos" ? POSITIVE_STATUS_IDS : rule.statusPool;
     const w = pool.map((s) => all[POSITIVE_STATUS_IDS.indexOf(s)] as number);
-    const i = weightedPick(w, u3);
+    // movimientos v0.4 §4: si no sale provocar, el estado se sortea con u3' = (u3 − p)/(1 − p) (sin tiradas extra)
+    const uS = pTaunt > 0 ? (u3 - pTaunt) / (1 - pTaunt) : u3;
+    const i = weightedPick(w, uS);
     const s = i < 0 ? "ninguno" : (pool[i] as string);
     status = s === "ninguno" ? null : (s as MoveStatusId);
     // variantes v0.3 §2 V4 — provocar ocupa el hueco del estado con la misma u3 (sin tiradas
     // extra): si u3 ≥ T/(T + w) sustituye al estado sorteado; por debajo, nada cambia.
-    if (mcfg.taunt.active && mcfg.taunt.archetypes.includes(archetype)) {
+    if (tauntOk && T.draw === "umbral") {
       const wp = tauntWeight(family, mcfg);
       let total = 0;
       for (const x of w) total += x;
@@ -187,7 +219,9 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
   const pr = mcfg.probabilities;
   let modifier: ModifierId | null = null;
   if (u4 < pr.modBase + pr.modScale * elong) {
-    const w = familyWeights("modificador", family, mcfg).map((x, i) => (rule.modifiers.includes(MODIFIER_IDS[i] as ModifierId) ? x : 0));
+    const w = familyWeights("modificador", family, mcfg).map((x, i) =>
+      rule.modifiers.includes(MODIFIER_IDS[i] as ModifierId) && (!free || free.modifiers.includes(MODIFIER_IDS[i] as ModifierId)) ? x : 0,
+    );
     const i = weightedPick(w, u5);
     modifier = i < 0 ? null : (MODIFIER_IDS[i] as ModifierId);
   }
@@ -198,10 +232,16 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
     condition = i < 0 ? null : (CONDITION_IDS[i] as ConditionId);
   }
   const rootIdx = Math.floor(u8 * 4);
+  // movimientos v0.4 §3: cola con alcance salvo que ya tenga área (sustituye al modificador sorteado o al null)
+  let forcedMod = false;
+  if (tail && !((tail.unless.includes("area_forzada") && rule.forcedArea) || (tail.unless.includes("area") && modifier === "area"))) {
+    modifier = tail.forcedModifier;
+    forcedMod = true;
+  }
 
   // §4.1 [v0.2] ensamblado con respaldo (sin tiradas extra)
   const md = mcfg.modifiers;
-  const budget = mcfg.budget[c] as number;
+  const budget = free ? free.budget : (mcfg.budget[c] as number);
   let fallback: 0 | 1 | 2 | 3 | 4 = 0;
   let area = false;
   let fac = 1;
@@ -219,12 +259,19 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
     const L = budget - fixed - fac * extra;
     pts = L > 0 ? Math.floor(L / (fac * fEsc)) : 0;
     // §2.1 [v0.2]: pts ≥ mínimo y el escalable se lleva ≥ fraccion_minima del presupuesto
-    if (pts >= mcfg.scalables.minPoints && fac * fEsc * pts >= mcfg.scalables.minFraction * budget) break;
+    // movimientos v0.4 §4: una protección con provocar exige además escudo ≥ fraccion_minima_escudo·presupuesto
+    const tauntShield = taunt && ar.scalable === "escudo" ? fac * fEsc * pts >= mcfg.taunt.minShieldFraction * budget : true;
+    if (pts >= mcfg.scalables.minPoints && fac * fEsc * pts >= mcfg.scalables.minFraction * budget && tauntShield) break;
     if (condition) {
       condition = null; // 1.º se quita la condición
       fallback = 1;
-    } else if (modifier) {
-      modifier = null; // 2.º se quita el modificador
+    } else if (modifier && !forcedMod) {
+      // [v0.4] el modificador forzado de la cola no se quita: se pasa al paso 3
+      // 2.º se quita el modificador. [v0.4] En la cola, si el que se quita es el área que la
+      // eximía, se pone el forzado (la garantía de alcance o área no se pierde nunca)
+      const tailArea = tail !== null && modifier === "area" && !mcfg.archetypes[archetype].forcedArea;
+      modifier = tailArea ? tail.forcedModifier : null;
+      forcedMod = tailArea;
       fallback = 2;
     } else if (status || extraEnergy || taunt) {
       status = null; // 3.º [v0.2] se quitan estado y energía (conserva el arquetipo); [v0.3] y provocar
@@ -241,7 +288,8 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
   const points = fixed + fac * extra + fac * fEsc * pts;
   const roots = mcfg.names.roots[family] as readonly string[];
   // Nombre con el arquetipo final (tras el respaldo); ver notas de implementación.
-  const name = `${mcfg.names.core[archetype]} de ${roots[rootIdx] as string}`;
+  // movimientos v0.4 §4: un táctico con provocar se llama "Desafío de …"
+  const name = `${taunt && archetype === "tactico" ? mcfg.taunt.tacticName : mcfg.names.core[archetype]} de ${roots[rootIdx] as string}`;
 
   return Object.freeze({
     id: moveId,
@@ -267,6 +315,21 @@ export function generateMoveForKey(key: string, mcfg: MovesConfig, id?: string):
   });
 }
 
+/** movimientos v0.4 §4: probabilidad de provocar de una familia (híbridas: máximo o suma de sus 2 componentes, ≤ 1). */
+function tauntProb(family: FamilyId, mcfg: MovesConfig): number {
+  const t = mcfg.taunt.familyProb;
+  const h = mcfg.genetics.hybridById.get(family);
+  if (!h) return t[family] ?? 0;
+  const a = t[h.components[0]] ?? 0;
+  const b = t[h.components[1]] ?? 0;
+  return mcfg.taunt.hybrids === "max" ? Math.max(a, b) : Math.min(1, a + b);
+}
+
+/** ¿Es el movimiento gratis? (movimientos v0.4 §2: coste 0, solo en el locus del gratis) */
+export function isFreeMove(m: Pick<Move, "cost">): boolean {
+  return m.cost === 0;
+}
+
 /** variantes v0.3 §2 V4: peso de provocar de una familia (híbrida = suma de sus 2 componentes). */
 function tauntWeight(family: FamilyId, mcfg: MovesConfig): number {
   const t = mcfg.taunt.familyWeights;
@@ -288,15 +351,31 @@ function scalableCap(s: ScalableId, area: boolean, mcfg: MovesConfig): number {
 export function validateMove(m: Move, mcfg: MovesConfig): string[] {
   const errs: string[] = [];
   const eps = 1e-9;
-  // 1. coste, presupuesto, escalable
-  if (!Number.isInteger(m.cost) || m.cost < mcfg.cost.min || m.cost > mcfg.cost.max) errs.push(`coste ${m.cost} fuera de rango`);
-  const budget = mcfg.budget[m.cost];
+  // 1. coste, presupuesto, escalable ([v0.4] coste 0 solo en el locus del gratis, con su presupuesto)
+  const free = mcfg.free && m.locus === mcfg.free.locus ? mcfg.free : null;
+  if (free) {
+    if (m.cost !== 0) errs.push(`el gratis debe costar 0 (coste ${m.cost})`);
+  } else if (!Number.isInteger(m.cost) || m.cost < mcfg.cost.min || m.cost > mcfg.cost.max) errs.push(`coste ${m.cost} fuera de rango`);
+  const budget = free ? free.budget : mcfg.budget[m.cost];
   if (budget === undefined || m.budget !== budget) errs.push(`presupuesto ${m.budget} ≠ ${budget}`);
   else if (m.points > budget + eps) errs.push(`puntos ${m.points} > presupuesto ${budget}`);
   if (!Number.isInteger(m.scalablePoints) || m.scalablePoints < mcfg.scalables.minPoints) errs.push(`escalable con ${m.scalablePoints} puntos`);
   const rule = mcfg.archetypes[m.archetype];
   if (!rule) return [...errs, `arquetipo desconocido '${m.archetype}'`];
-  if (m.cost < rule.minCost) errs.push(`${m.archetype} con coste ${m.cost} < mínimo ${rule.minCost}`); // §3.3 [v0.2]
+  if (!free && m.cost < rule.minCost) errs.push(`${m.archetype} con coste ${m.cost} < mínimo ${rule.minCost}`); // §3.3 [v0.2]
+  // movimientos v0.4 §2: piezas del gratis
+  if (free) {
+    if (!free.archetypes.includes(m.archetype)) errs.push(`arquetipo '${m.archetype}' no permitido en el gratis`);
+    if (m.modifier !== null && !free.modifiers.includes(m.modifier)) errs.push(`modificador '${m.modifier}' no permitido en el gratis`);
+    if (m.status !== null && (rule.statusPool !== "ofensivos" || mcfg.statusCost[m.status] > free.maxStatusCost)) errs.push(`estado '${m.status}' no permitido en el gratis`);
+    if (m.taunt || m.extraEnergy) errs.push("el gratis no lleva provocar ni energía");
+  }
+  // movimientos v0.4 §3: cola siempre ofensiva y con alcance o área
+  const tail = mcfg.tailGuarantee && m.locus === mcfg.tailGuarantee.locus ? mcfg.tailGuarantee : null;
+  if (tail) {
+    if (tail.forbiddenArchetypes.includes(m.archetype)) errs.push(`arquetipo '${m.archetype}' prohibido en ${m.locus}`);
+    if (!m.area && m.modifier !== tail.forcedModifier) errs.push(`${m.locus} sin ${tail.forcedModifier} ni área`);
+  }
   if (m.scalable !== rule.scalable || m.target !== rule.target) errs.push("escalable u objetivo no corresponden al arquetipo");
   const cap = scalableCap(m.scalable, m.area, mcfg);
   if (!(m.power > 0) || m.power > cap || m.power > m.scalablePoints * scalablePerPoint(m.scalable, mcfg) + eps) errs.push(`potencia ${m.power} inválida (tope ${cap})`);
@@ -320,8 +399,14 @@ export function validateMove(m: Move, mcfg: MovesConfig): string[] {
   }
   // variantes v0.3 §2 V4: provocar solo con la variante activa, en sus arquetipos y en el hueco del estado
   if (m.taunt !== undefined) {
-    if (m.taunt !== true || !mcfg.taunt.active || !mcfg.taunt.archetypes.includes(m.archetype)) errs.push("provocar no permitido");
-    if (m.status !== null) errs.push("provocar y estado a la vez");
+    if (m.taunt !== true || !mcfg.taunt.active || !mcfg.taunt.archetypes.includes(m.archetype) || (mcfg.taunt.loci !== null && !mcfg.taunt.loci.includes(m.locus))) errs.push("provocar no permitido");
+    if (m.status !== null || m.extraEnergy) errs.push("provocar y estado (o energía) a la vez");
+    // movimientos v0.4 §4: escudo mínimo de una protección con provocar
+    if (m.scalable === "escudo" && budget !== undefined) {
+      const fac = m.area ? mcfg.modifiers.areaFactor : 1;
+      const fEsc = m.condition ? 1 + mcfg.conditions.bonus * mcfg.conditions.factor[m.condition] : 1;
+      if (fac * fEsc * m.scalablePoints < mcfg.taunt.minShieldFraction * budget - 1e-9) errs.push("escudo de provocar por debajo del mínimo");
+    }
   }
   if (m.modifier !== null && !rule.modifiers.includes(m.modifier)) errs.push(`modificador '${m.modifier}' no permitido en ${m.archetype}`);
   if (m.condition !== null && !(CONDITION_IDS as readonly string[]).includes(m.condition)) errs.push(`condición '${m.condition}' desconocida`);
@@ -349,20 +434,42 @@ const STATUS_TEXT: Record<MoveStatusId, string> = {
   regenerar: "regenerar",
 };
 
-/** Descripción corta en español (cliente y depuración). */
+/**
+ * Descripción larga en español (ficha ampliada del cliente y depuración).
+ * Con la config v0.4 usa la semántica de combate v0.4 §3 (fila atacable, "atrás", fila propia expuesta).
+ */
 export function describeMove(m: Move, mcfg: MovesConfig): string {
   const pct = (x: number): string => `${Math.round(x * 100)} %`;
   const enemy = m.target === "enemigo";
+  const v04 = mcfg.version === "0.4";
   const anyRow = m.modifier === "alcance" || !enemy;
-  const who = m.area
-    ? `a ${anyRow ? "una fila" : "la fila delantera"} ${enemy ? "enemiga" : "aliada"}`
-    : enemy
-      ? anyRow
-        ? "a cualquier enemigo"
-        : "a un enemigo"
-      : "a un aliado";
+  let who: string;
+  if (v04) {
+    const back = m.modifier === "alcance";
+    who = m.area
+      ? enemy
+        ? `a toda la fila ${back ? "trasera" : "atacable"} enemiga`
+        : "a toda tu fila expuesta"
+      : enemy
+        ? back
+          ? "a un enemigo de la fila trasera (si no hay, de la delantera)"
+          : "a un enemigo de la fila atacable"
+        : m.taunt && m.scalable === "escudo"
+          ? "a sí misma"
+          : m.scalable === "cura"
+            ? "al aliado más herido"
+            : "al aliado de la fila expuesta con menos vida + escudo";
+  } else {
+    who = m.area
+      ? `a ${anyRow ? "una fila" : "la fila delantera"} ${enemy ? "enemiga" : "aliada"}`
+      : enemy
+        ? anyRow
+          ? "a cualquier enemigo"
+          : "a un enemigo"
+        : "a un aliado";
+  }
   const main = m.scalable === "dano" ? `${m.power} de daño ${who}` : m.scalable === "cura" ? `cura ${m.power} ${who}` : `escudo de ${m.power} ${who}`;
-  const parts = [`${m.name} (coste ${m.cost}): ${main}`];
+  const parts = [`${m.name} (${m.cost === 0 && v04 ? "gratis" : `coste ${m.cost}`}): ${main}`];
   if (m.status) parts.push(`+ ${STATUS_TEXT[m.status]}`);
   if (m.extraEnergy) parts.push(`+ ${mcfg.extraEnergy.amount} de energía al bando`);
   if (m.taunt) parts.push("+ provocar (los ataques enemigos de un objetivo van al usuario)");
@@ -383,4 +490,53 @@ export function describeMove(m: Move, mcfg: MovesConfig): string {
   }
   if (notes.length > 0) text += `; ${notes.join("; ")}`;
   return text;
+}
+
+/** glosario v0.4 §1 — palabra del estado (F2). */
+const SHORT_STATUS: Record<MoveStatusId, string> = {
+  quemadura: "Quema",
+  ralentizar: "Ralentiza",
+  aturdir: "Aturde",
+  marca: "Marca",
+  debilitar: "Debilita",
+  prisa: "Prisa",
+  regenerar: "Regenera",
+};
+/** glosario v0.4 §1 — texto de la condición (F3), tras "×1,5". */
+const SHORT_CONDITION: Record<ConditionId, string> = {
+  combo_familia: "en combo",
+  objetivo_con_estado: "si está afectado",
+  vida_baja: "si herido",
+  antes_que_objetivo: "si va antes",
+  reserva: "con reserva",
+};
+/** Número con coma decimal española (sin separador de miles). */
+function esNumber(x: number): string {
+  return String(Math.round(x * 100) / 100).replace(".", ",");
+}
+
+/**
+ * glosario v0.4 §2 — descripción corta del botón (≤ 3 fragmentos separados por " · "):
+ * F1 número principal (+ " a la fila" / " atrás" / " primero"), F2 efecto, F3 condición.
+ * El coste ("Gratis") va en la esquina del botón, no aquí. Potencia base, sin estadísticas.
+ */
+export function describeMoveShort(m: Move, mcfg: MovesConfig): string {
+  const n = esNumber(m.power);
+  let f1 = m.scalable === "dano" ? n : m.scalable === "cura" ? `Cura ${n}` : `Escudo ${n}`;
+  if (m.area) f1 += " a la fila";
+  if (m.modifier === "alcance") f1 += " atrás";
+  if (m.modifier === "prioridad") f1 += " primero";
+  const f2 = m.status
+    ? SHORT_STATUS[m.status]
+    : m.taunt
+      ? "Provoca"
+      : m.extraEnergy
+        ? `+${mcfg.extraEnergy.amount} energía`
+        : m.modifier === "drenaje"
+          ? "Drena"
+          : m.modifier === "perforar"
+            ? "Perfora"
+            : "";
+  const f3 = m.condition ? `×${esNumber(1 + mcfg.conditions.bonus)} ${SHORT_CONDITION[m.condition]}` : "";
+  return [f1, f2, f3].filter((x) => x.length > 0).join(" · ");
 }

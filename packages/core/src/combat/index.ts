@@ -1,6 +1,6 @@
-/** API pública de combate v0.2 (+ variantes v0.3, desactivadas por defecto). */
+/** API pública de combate v0.4 (también carga configs v0.2, con variantes v0.3). */
 export { AI_STATUS_IDS, BASIC_EFFECT_STATUS_IDS, parseCombatConfig, STATUS_IDS } from "./config.ts";
-export type { AiStatusId, BasicEffect, BasicEffectStatusId, CombatVariants, CombatConfig, DerivedStatRule, StatusId, StatusKind, StatusRule, Stacking } from "./config.ts";
+export type { AiStatusId, PlacementRule, BasicEffect, BasicEffectStatusId, CombatVariants, CombatConfig, DerivedStatRule, StatusId, StatusKind, StatusRule, Stacking } from "./config.ts";
 export { buildBattleConfig, patchRawConfig } from "./patch.ts";
 export type { ConfigChanges } from "./patch.ts";
 export { buildCombatant, deriveStats, synergyGroups, withMove } from "./combatant.ts";
@@ -9,7 +9,9 @@ export {
   actionCost,
   actionMove,
   actionPriority,
+  attackable,
   autoTarget,
+  backRowFirst,
   autoTargetPosition,
   basicEffectOf,
   battleHash,
@@ -17,9 +19,13 @@ export {
   createBattle,
   damageAmount,
   eligibleActors,
+  exposedRow,
   fallbackPlan,
+  forecastTargets,
+  freeMoveSlot,
   laneOf,
   laneOrder,
+  placementOf,
   planSynergy,
   resolveTurn,
   restingMoves,
@@ -34,3 +40,5 @@ export { createReferenceAi, energyPrice, runBattle, suggestFormation } from "./a
 export type { Ai, BattleRecord, EnergyPrice, ReferenceAiOptions, TeamInput } from "./ai.ts";
 export { createSearchAi, evaluateState, searchStateKey } from "./search.ts";
 export type { SearchAiOptions } from "./search.ts";
+export { allPlacements, placementShape, referencePlacement, validatePlacement } from "./placement.ts";
+export type { Placement } from "./placement.ts";

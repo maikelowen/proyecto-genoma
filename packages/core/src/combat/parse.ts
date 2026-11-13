@@ -50,3 +50,10 @@ export function checkId(id: string, path: string): void {
 export function dataKeys(o: Obj): string[] {
   return Object.keys(o).filter((k) => !k.startsWith("_"));
 }
+/**
+ * Q-03 — rechaza claves de datos desconocidas en un bloque (las de `_…` se ignoran).
+ * Así una errata en un parche de forma larga (que puede crear claves) falla en vez de pasar en silencio.
+ */
+export function onlyKeys(o: Obj, allowed: readonly string[], path: string): void {
+  for (const k of dataKeys(o)) if (!allowed.includes(k)) fail(`${path}.${k}`, `clave desconocida (admitidas: ${allowed.join(", ")})`);
+}

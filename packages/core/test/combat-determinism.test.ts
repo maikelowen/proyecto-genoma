@@ -14,6 +14,7 @@ import {
   runBattle,
   validatePlan,
   type BattleEvent,
+  type Combatant,
   type Creature,
   type BattleState,
   type FighterState,
@@ -189,7 +190,7 @@ describe("IA v0.2: precio de la energía, ahorro, remate y valor de estados (com
     assert.equal(createReferenceAi()({ ...s, energy: [5, 5] }, "A", Q)[0]?.move, 2);
     // si el caro no rinde más por energía que el barato (rendimiento casi lineal), gasta
     const flatBig = mkMove({ power: 95, cost: 5 }); // r = 17 ⇒ λ = 15,3: 60 > 10 + 45,9
-    const t = { ...s, teams: [s.teams[0].map((c) => ({ ...c, moves: [cheap, flatBig, flatBig, flatBig] })), s.teams[1]] as const };
+    const t = { ...s, teams: [s.teams[0].map((c) => ({ ...(c as Combatant), moves: [cheap, flatBig, flatBig, flatBig] })), s.teams[1]] as const };
     assert.equal(createReferenceAi()(t, "A", Q)[0]?.move, 1);
   });
 
@@ -199,7 +200,7 @@ describe("IA v0.2: precio de la energía, ahorro, remate y valor de estados (com
     const one = { ...s, fighters: [s.fighters[0].map((f, i) => (i === 0 ? f : { ...f, ko: true, hp: 0 })), s.fighters[1]] as const };
     // táctico de coste 3 con +1 energía y daño 50: 50 + λ·(1 + min(e−3, 5, 7)) frente a golpe 10 + λ·min(e, 5, 7)
     const tac = mkMove({ archetype: "tactico", power: 50, cost: 3, extraEnergy: 1 });
-    const t = { ...one, energy: [8, 8] as const, teams: [one.teams[0].map((c) => ({ ...c, moves: [tac, mkMove({ power: 10, cost: 9 }), mkMove({ power: 10, cost: 9 }), mkMove({ power: 10, cost: 9 })] })), one.teams[1]] as const };
+    const t = { ...one, energy: [8, 8] as const, teams: [one.teams[0].map((c) => ({ ...(c as Combatant), moves: [tac, mkMove({ power: 10, cost: 9 }), mkMove({ power: 10, cost: 9 }), mkMove({ power: 10, cost: 9 })] })), one.teams[1]] as const };
     const p = energyPrice(t, "A", Q);
     assert.equal(p.targetCost, 3); // solo cuenta el táctico (r = 40/3)
     // golpe: 10 + λ·3; táctico: 50 + λ·(1 + 3) ⇒ elige el táctico

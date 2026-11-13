@@ -7,7 +7,7 @@
  * que la generación necesita) y devuelve una `MovesConfig` inmutable.
  */
 import { LOCUS_IDS, type FamilyId, type GeneticsConfig, type LocusId } from "../genetics/types.ts";
-import { arr, bool, checkId, dataKeys, fail, int, num, obj, sameList, str } from "../combat/parse.ts";
+import { arr, bool, checkId, dataKeys, fail, int, num, obj, onlyKeys, sameList, str } from "../combat/parse.ts";
 
 /** movimientos §2.6 — orden fijo (`orden_arquetipos`). */
 export const ARCHETYPE_IDS = ["golpe", "golpe_estado", "maldicion", "proteccion", "curacion", "tactico"] as const;
@@ -100,8 +100,39 @@ export interface MovesConfig {
     readonly active: boolean;
     readonly cost: number;
     readonly archetypes: readonly ArchetypeId[];
+    /** v0.3: pesos con umbral sobre u3 (`sorteo` "umbral"). */
     readonly familyWeights: Readonly<Record<FamilyId, number>>;
+    /** [v0.4] "umbral" (v0.3) | "probabilidad" (u3 < p_fam). */
+    readonly draw: "umbral" | "probabilidad";
+    /** [v0.4] loci donde puede salir (null = todos). */
+    readonly loci: readonly LocusId[] | null;
+    /** [v0.4] probabilidad por familia base. */
+    readonly familyProb: Readonly<Record<FamilyId, number>>;
+    /** [v0.4] híbridas: "suma" de componentes (v0.3) o "max". */
+    readonly hybrids: "suma" | "max";
+    /** [v0.4] protección con provocar: fac·fEsc·pts ≥ esta fracción del presupuesto (0 = sin mínimo). */
+    readonly minShieldFraction: number;
+    /** [v0.4] núcleo del nombre de un táctico con provocar ("Desafío"). */
+    readonly tacticName: string;
   };
+  /** movimientos v0.4 §2 — movimiento gratis (null en v0.2). */
+  readonly free: {
+    readonly locus: LocusId;
+    readonly budget: number;
+    readonly archetypes: readonly ArchetypeId[];
+    /** arquetipo no permitido → arquetipo al que suma su peso. */
+    readonly reassign: Readonly<Partial<Record<ArchetypeId, ArchetypeId>>>;
+    readonly maxStatusCost: number;
+    readonly modifiers: readonly ModifierId[];
+  } | null;
+  /** movimientos v0.4 §3 — garantía de alcance/área (null en v0.2). */
+  readonly tailGuarantee: {
+    readonly locus: LocusId;
+    readonly forbiddenArchetypes: readonly ArchetypeId[];
+    readonly forcedModifier: ModifierId;
+    /** "area_forzada" (arquetipo con área forzada) y/o "area" (modificador área sorteado). */
+    readonly unless: readonly ("area_forzada" | "area")[];
+  } | null;
   /** overrides_catalogo.sales: id de gen del catálogo → sal. */
   readonly salts: Readonly<Record<string, string>>;
   /** Genética validada (familias, híbridas, rejilla, catálogo). */
@@ -127,7 +158,19 @@ function weights(v: unknown, path: string, len: number, needPositive: boolean): 
 export function parseMovesConfig(raw: unknown, genetics: GeneticsConfig): MovesConfig {
   const r = obj(raw, "config");
   const version = str(r["version"], "version");
-  if (version !== "0.2") fail("version", `solo se admite la config de movimientos v0.2 (recibida '${version}')`);
+  if (version !== "0.2" && version !== "0.4") fail("version", `solo se admiten las configs de movimientos v0.2 y v0.4 (recibida '${version}')`);
+  const is04 = version === "0.4";
+  // Q-03: claves desconocidas en la raíz
+  onlyKeys(
+    r,
+    [
+      "version", "semilla", "tiradas_por_movimiento", "presupuesto_por_coste", "coste_energia", "escalables", "estados", "energia_extra",
+      "modificadores", "condiciones", "provocar", "probabilidades", "arquetipos", "orden_arquetipos", "orden_estados_ofensivos",
+      "orden_estados_positivos", "orden_modificadores", "orden_condiciones", "pesos_familia", "pesos_locus_arquetipo", "pesos_forma_arquetipo",
+      "nombres", "overrides_catalogo", "criterios_sim", "gratis", "garantia_alcance",
+    ],
+    "config",
+  );
   const seedPrefix = str(obj(r["semilla"], "semilla")["prefijo"], "semilla.prefijo");
   // movimientos §3: 8 tiradas por movimiento (u1..u8)
   const drawsPerMove = int(r["tiradas_por_movimiento"], "tiradas_por_movimiento", 8, 8);
@@ -320,23 +363,146 @@ export function parseMovesConfig(raw: unknown, genetics: GeneticsConfig): MovesC
     roots[f] = Object.freeze(list);
   }
 
-  // variantes v0.3 §2 V4 — pieza provocar (bloque opcional; ausente = desactivada)
+  // variantes v0.3 §2 V4 / movimientos v0.4 §4 — pieza provocar (bloque opcional en v0.2; ausente = desactivada)
   const tauntWeights: Record<FamilyId, number> = {};
-  for (const f of genetics.baseFamilies) tauntWeights[f] = 0;
-  let taunt = { active: false, cost: 0, archetypes: [] as ArchetypeId[], familyWeights: tauntWeights };
+  const tauntProb: Record<FamilyId, number> = {};
+  for (const f of genetics.baseFamilies) {
+    tauntWeights[f] = 0;
+    tauntProb[f] = 0;
+  }
+  let taunt: MovesConfig["taunt"] = {
+    active: false, cost: 0, archetypes: [], familyWeights: tauntWeights, draw: "umbral", loci: null, familyProb: tauntProb, hybrids: "suma", minShieldFraction: 0, tacticName: "",
+  };
+  if (r["provocar"] === undefined && is04) fail("provocar", "obligatoria en la config v0.4");
   if (r["provocar"] !== undefined) {
     const pv = obj(r["provocar"], "provocar");
-    const pw = obj(pv["pesos_familia"], "provocar.pesos_familia");
-    if (dataKeys(pw).length !== genetics.baseFamilies.length) fail("provocar.pesos_familia", "debe tener exactamente las familias base");
-    for (const f of genetics.baseFamilies) tauntWeights[f] = num(pw[f], `provocar.pesos_familia.${f}`, 0);
+    onlyKeys(pv, ["activo", "coste", "arquetipos", "pesos_familia", "sorteo", "loci", "probabilidad_familia", "hibridas", "fraccion_minima_escudo", "nombre_tactico"], "provocar");
+    const draw = pv["sorteo"] === undefined && !is04 ? "umbral" : str(pv["sorteo"], "provocar.sorteo");
+    if (draw !== "umbral" && draw !== "probabilidad") fail("provocar.sorteo", "debe ser umbral|probabilidad");
+    if (draw === "umbral") {
+      const pw = obj(pv["pesos_familia"], "provocar.pesos_familia");
+      if (dataKeys(pw).length !== genetics.baseFamilies.length) fail("provocar.pesos_familia", "debe tener exactamente las familias base");
+      for (const f of genetics.baseFamilies) tauntWeights[f] = num(pw[f], `provocar.pesos_familia.${f}`, 0);
+    } else {
+      if (pv["pesos_familia"] !== undefined) fail("provocar.pesos_familia", "solo con sorteo 'umbral'");
+      const pp = obj(pv["probabilidad_familia"], "provocar.probabilidad_familia");
+      if (dataKeys(pp).length !== genetics.baseFamilies.length) fail("provocar.probabilidad_familia", "debe tener exactamente las familias base");
+      for (const f of genetics.baseFamilies) tauntProb[f] = num(pp[f], `provocar.probabilidad_familia.${f}`, 0, 1);
+    }
     const list = arr(pv["arquetipos"], "provocar.arquetipos").map((x, i) => str(x, `provocar.arquetipos[${i}]`));
     for (const a of list) {
       const rule = (archetypes as Record<string, ArchetypeRule | undefined>)[a];
-      // solo arquetipos de aliado que sortean su estado (no el táctico): el hueco que ocupa provocar
-      if (!rule || rule.target !== "aliado" || rule.energyIfMinCost) fail("provocar.arquetipos", `'${a}' no es un arquetipo de aliado`);
+      // de aliado que sortean su estado (hueco del estado) o, con sorteo por probabilidad, el táctico (hueco de prisa)
+      const ok = rule && ((rule.target === "aliado" && !rule.energyIfMinCost) || (draw === "probabilidad" && rule.energyIfMinCost));
+      if (!ok) fail("provocar.arquetipos", `'${a}' no admite provocar`);
     }
     if (new Set(list).size !== list.length) fail("provocar.arquetipos", "arquetipos repetidos");
-    taunt = { active: bool(pv["activo"], "provocar.activo"), cost: num(pv["coste"], "provocar.coste", 0), archetypes: list as ArchetypeId[], familyWeights: tauntWeights };
+    const loci =
+      pv["loci"] === undefined && !is04
+        ? null
+        : arr(pv["loci"], "provocar.loci").map((x, i) => {
+            const L = str(x, `provocar.loci[${i}]`);
+            if (!(LOCUS_IDS as readonly string[]).includes(L)) fail(`provocar.loci[${i}]`, `locus desconocido '${L}'`);
+            return L as LocusId;
+          });
+    const hybrids = pv["hibridas"] === undefined && !is04 ? "suma" : str(pv["hibridas"], "provocar.hibridas");
+    if (hybrids !== "suma" && hybrids !== "max") fail("provocar.hibridas", "debe ser suma|max");
+    const minShieldFraction = pv["fraccion_minima_escudo"] === undefined && !is04 ? 0 : num(pv["fraccion_minima_escudo"], "provocar.fraccion_minima_escudo", 0, 1);
+    const tacticName = list.includes("tactico") ? str(pv["nombre_tactico"], "provocar.nombre_tactico") : pv["nombre_tactico"] === undefined ? "" : str(pv["nombre_tactico"], "provocar.nombre_tactico");
+    taunt = {
+      active: bool(pv["activo"], "provocar.activo"),
+      cost: num(pv["coste"], "provocar.coste", 0),
+      archetypes: list as ArchetypeId[],
+      familyWeights: tauntWeights,
+      draw,
+      loci: loci ? Object.freeze(loci) : null,
+      familyProb: tauntProb,
+      hybrids,
+      minShieldFraction,
+      tacticName,
+    };
+  }
+
+  // movimientos v0.4 §2 — movimiento gratis
+  let free: MovesConfig["free"] = null;
+  if (r["gratis"] === undefined && is04) fail("gratis", "obligatoria en la config v0.4");
+  if (r["gratis"] !== undefined) {
+    const P = "gratis";
+    const g = obj(r["gratis"], P);
+    onlyKeys(g, ["locus", "presupuesto", "arquetipos", "reasignar", "coste_max_estado", "modificadores", "permite_provocar"], P);
+    const locus = str(g["locus"], `${P}.locus`);
+    if (!(LOCUS_IDS as readonly string[]).includes(locus)) fail(`${P}.locus`, `locus desconocido '${locus}'`);
+    const budgetFree = num(g["presupuesto"], `${P}.presupuesto`, Number.MIN_VALUE);
+    const archs = arr(g["arquetipos"], `${P}.arquetipos`).map((x, i) => str(x, `${P}.arquetipos[${i}]`));
+    for (const a of archs) if (!(ARCHETYPE_IDS as readonly string[]).includes(a)) fail(`${P}.arquetipos`, `arquetipo desconocido '${a}'`);
+    if (archs.length === 0 || new Set(archs).size !== archs.length) fail(`${P}.arquetipos`, "lista no vacía y sin repetidos");
+    const ra = obj(g["reasignar"], `${P}.reasignar`);
+    const reassign: Partial<Record<ArchetypeId, ArchetypeId>> = {};
+    for (const k of dataKeys(ra)) {
+      const to = str(ra[k], `${P}.reasignar.${k}`);
+      if (!(ARCHETYPE_IDS as readonly string[]).includes(k) || archs.includes(k)) fail(`${P}.reasignar.${k}`, "debe ser un arquetipo no permitido en el gratis");
+      if (!archs.includes(to)) fail(`${P}.reasignar.${k}`, `'${to}' no es un arquetipo del gratis`);
+      reassign[k as ArchetypeId] = to as ArchetypeId;
+    }
+    const mods = arr(g["modificadores"], `${P}.modificadores`).map((x, i) => str(x, `${P}.modificadores[${i}]`));
+    for (const m of mods) if (!(MODIFIER_IDS as readonly string[]).includes(m)) fail(`${P}.modificadores`, `modificador desconocido '${m}'`);
+    // movimientos v0.4 §2: área y prioridad no caben en el gratis
+    if (mods.includes("area")) fail(`${P}.modificadores`, "el gratis no admite área");
+    for (const a of archs) if (archetypes[a as ArchetypeId].forcedArea || archetypes[a as ArchetypeId].energyIfMinCost) fail(`${P}.arquetipos`, `'${a}' (área forzada o energía) no cabe en el gratis`);
+    if (bool(g["permite_provocar"], `${P}.permite_provocar`)) fail(`${P}.permite_provocar`, "el gratis no descansa: provocar sería permanente (movimientos v0.4 §2)");
+    // movimientos v0.4 §2 — el respaldo termina: P ≥ mínimo y fraccion_minima·P ≤ P − máx(coste fijo de modificador permitido)
+    if (budgetFree < scalables.minPoints) fail(`${P}.presupuesto`, "debe ser ≥ escalables.minimo_puntos");
+    let maxFixed = 0;
+    for (const m of mods) if (m === "alcance" || m === "prioridad" || m === "perforar") maxFixed = Math.max(maxFixed, modifiers[m]);
+    if (scalables.minFraction * budgetFree > budgetFree - maxFixed) fail(`${P}.presupuesto`, "fraccion_minima·presupuesto > presupuesto − coste del modificador (respaldo sin salida)");
+    free = Object.freeze({
+      locus: locus as LocusId,
+      budget: budgetFree,
+      archetypes: Object.freeze(archs) as readonly ArchetypeId[],
+      reassign: Object.freeze(reassign),
+      maxStatusCost: num(g["coste_max_estado"], `${P}.coste_max_estado`, 0),
+      modifiers: Object.freeze(mods) as readonly ModifierId[],
+    });
+  }
+
+  // movimientos v0.4 §3 — garantía de alcance/área
+  let tailGuarantee: MovesConfig["tailGuarantee"] = null;
+  if (r["garantia_alcance"] === undefined && is04) fail("garantia_alcance", "obligatoria en la config v0.4");
+  if (r["garantia_alcance"] !== undefined) {
+    const P = "garantia_alcance";
+    const g = obj(r["garantia_alcance"], P);
+    onlyKeys(g, ["locus", "arquetipos_prohibidos", "modificador_forzado", "salvo_si"], P);
+    const locus = str(g["locus"], `${P}.locus`);
+    if (!(LOCUS_IDS as readonly string[]).includes(locus)) fail(`${P}.locus`, `locus desconocido '${locus}'`);
+    if (free && free.locus === locus) fail(`${P}.locus`, "no puede ser el locus del gratis");
+    const forb = arr(g["arquetipos_prohibidos"], `${P}.arquetipos_prohibidos`).map((x, i) => str(x, `${P}.arquetipos_prohibidos[${i}]`));
+    for (const a of forb) if (!(ARCHETYPE_IDS as readonly string[]).includes(a)) fail(`${P}.arquetipos_prohibidos`, `arquetipo desconocido '${a}'`);
+    if (forb.includes("golpe")) fail(`${P}.arquetipos_prohibidos`, "no puede prohibir golpe (respaldo)");
+    const forced = str(g["modificador_forzado"], `${P}.modificador_forzado`);
+    if (forced !== "alcance" && forced !== "prioridad" && forced !== "perforar") fail(`${P}.modificador_forzado`, "debe ser un modificador de coste fijo");
+    const unless = arr(g["salvo_si"], `${P}.salvo_si`).map((x, i) => {
+      const u = str(x, `${P}.salvo_si[${i}]`);
+      if (u !== "area_forzada" && u !== "area") fail(`${P}.salvo_si[${i}]`, "debe ser area_forzada|area");
+      return u;
+    });
+    // el modificador forzado debe estar permitido en todo arquetipo que pueda llevarlo
+    for (const a of ARCHETYPE_IDS) {
+      const rule = archetypes[a];
+      if (forb.includes(a) || (rule.forcedArea && unless.includes("area_forzada"))) continue;
+      if (!rule.modifiers.includes(forced as ModifierId)) fail(`${P}.modificador_forzado`, `'${forced}' no está permitido en ${a}`);
+    }
+    // el respaldo (que no quita el forzado) termina: presupuesto[c] − coste ≥ mínimo y ≥ fraccion_minima·presupuesto[c]
+    const fc = modifiers[forced as "alcance"];
+    for (let c = 1; c <= cost.max; c++) {
+      const b = budget[c] as number;
+      if (Math.floor(b - fc) < scalables.minPoints || Math.floor(b - fc) < scalables.minFraction * b) fail(`presupuesto_por_coste.${c}`, `no deja sitio al modificador forzado de ${P} (respaldo sin salida)`);
+    }
+    tailGuarantee = Object.freeze({
+      locus: locus as LocusId,
+      forbiddenArchetypes: Object.freeze(forb) as readonly ArchetypeId[],
+      forcedModifier: forced as ModifierId,
+      unless: Object.freeze(unless) as readonly ("area_forzada" | "area")[],
+    });
   }
 
   // movimientos §5 — sales de revisión (solo genes del catálogo)
@@ -367,7 +533,9 @@ export function parseMovesConfig(raw: unknown, genetics: GeneticsConfig): MovesC
     locusWeights: Object.freeze(locusWeights),
     shapeWeights: Object.freeze(shapeWeights),
     names: Object.freeze({ core: Object.freeze(core), roots: Object.freeze(roots) }),
-    taunt: Object.freeze({ ...taunt, archetypes: Object.freeze(taunt.archetypes), familyWeights: Object.freeze(tauntWeights) }),
+    taunt: Object.freeze({ ...taunt, archetypes: Object.freeze(taunt.archetypes), familyWeights: Object.freeze(tauntWeights), familyProb: Object.freeze(tauntProb) }),
+    free,
+    tailGuarantee,
     salts: Object.freeze(salts),
     genetics,
   });
