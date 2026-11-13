@@ -1,5 +1,5 @@
 /** Interfaz del combate jugable (DOM sin dependencias). Estados: team → plan ⇄ report. */
-import { describeMove, validTargetPositions, eligibleActors, restingMoves, type Action, type BattleEvent, type BattleState, type Move, type SideId } from "../../packages/core/src/index.ts";
+import { attackable, describeMove, describeMoveShort, eligibleActors, forecastTargets, freeMoveSlot, restingMoves, validatePlacement, type Action, type BattleEvent, type BattleState, type Move, type SideId } from "../../packages/core/src/index.ts";
 import { cfg, familyLabel, gcfg, palette } from "./data.ts";
 import { SOUL_ART } from "./souls.ts";
 import { chooseOpponentAi, newSeed, playTurn, rollOffer, rollRival, startFight, type Dificultad, type Fight, type Soul } from "./game.ts";
@@ -43,17 +43,17 @@ function saveScore(): void {
 }
 
 // ------------------------------------------------------------------ estado de la aplicación
-type Phase = "team" | "plan" | "report";
+type Phase = "team" | "place" | "plan" | "report";
 interface Pick {
   move: number;
-  target: number;
 }
 const params = new URLSearchParams(typeof location !== "undefined" ? location.search : "");
 let offerSeed = params.get("oferta") ?? newSeed();
 let pendingFightSeed: string | null = params.get("combate");
 let offer: Soul[] = rollOffer(offerSeed);
-let front: number[] = [];
-let back: number[] = [];
+let picked: number[] = []; // índices de la oferta, en orden de elección (3)
+let slots: (number | null)[] = [0, 1, 2, null]; // casilla 1–4 → alma del equipo (0–2) o vacía
+let selSoul: number | null = null;
 let phase: Phase = "team";
 let fight: Fight | null = null;
 let picks: Pick[] = [];
@@ -133,19 +133,26 @@ interface Sel {
   actor: number | null;
   tgts: { side: SideId; pos: number }[];
   onPick?: (side: SideId, pos: number) => void;
-  /** Orden actual de cada alma propia (posición → texto del indicador y título). */
+  /** Almas propias con un movimiento de pago asignado (posición → coste y nombre). */
   orders?: Record<number, { txt: string; title: string }>;
+  /** Rival: casillas atacables ahora y las que provocan. */
+  atk?: readonly number[];
+  taunt?: readonly number[];
+  /** Previsión de objetivos de cada orden (líneas finas). */
+  lines?: { from: number; side: SideId; to: readonly number[]; focus: boolean; pay: boolean }[];
 }
 
 /** Escena de batalla: almas flotando sobre plataformas, sin cartas. Devuelve los elementos para animarlos.
- *  El nombre y la vida de cada alma van en una capa propia (`.iw`) por encima de todos los iconos: así una delantera no tapa la trasera. */
+ *  El nombre y la vida de cada alma van en una capa propia (`.iw`) por encima de todos los iconos: así una delantera no tapa la trasera.
+ *  Las casillas vacías no pintan nada. */
 function buildField(f: Fight, st: BattleState, sel?: Sel): Field {
   const units = new Map<string, UnitEls>();
   const energy = { A: h("span", { class: "en" }), B: h("span", { class: "en" }) } as Record<SideId, HTMLElement>;
   const layer: HTMLElement[] = [];
-  const unit = (side: SideId, pos: number): HTMLElement => {
+  const unit = (side: SideId, pos: number): HTMLElement | null => {
     const i = SIDE[side];
-    const soul = (i === 0 ? f.mine : f.rival)[pos - 1] as Soul;
+    const soul = (i === 0 ? f.mine : f.rival)[pos - 1];
+    if (!soul) return null;
     const c = soul.combatant;
     const [x, y] = SPOT[side][pos - 1] as [number, number];
     const front = cfg.combat.frontRow.includes(pos);
@@ -155,8 +162,9 @@ function buildField(f: Fight, st: BattleState, sel?: Sel): Field {
     const chips = h("div", { class: "chips" });
     const o = side === "A" ? sel?.orders?.[pos] : undefined;
     const base = [side === "A" ? "mine" : "foe", front ? "front" : "back"];
+    if (side === "B" && sel?.atk?.includes(pos)) base.push("atk");
     const vars = `--fam:${palette(c.family).main};--x:${x}%;--y:${y}%`;
-    const iw = h("div", { class: "iw " + base.join(" "), style: vars }, h("div", { class: "info" }, h("div", { class: "uname" }, soul.name), h("div", { class: "bar" }, bar), chips, hp), o ? h("span", { class: "ord", title: o.title }, o.txt) : null);
+    const iw = h("div", { class: "iw " + base.join(" "), style: vars }, h("div", { class: "info" }, h("div", { class: "uname" }, soul.name), h("div", { class: "bar" }, bar), chips, hp, side === "B" && sel?.taunt?.includes(pos) ? h("span", { class: "tau" }, "Provoca") : null), o ? h("span", { class: "ord", title: o.title }, o.txt) : null);
     const cls = ["unit", ...base];
     if (sel && side === "A" && sel.actor === pos) cls.push("sel-actor");
     if (sel && sel.tgts.some((t) => t.side === side && t.pos === pos)) cls.push(side === "A" ? "sel-ally" : "sel-foe");
@@ -176,23 +184,75 @@ function buildField(f: Fight, st: BattleState, sel?: Sel): Field {
   paintEnergy(energy.A, st.energy[0]);
   paintEnergy(energy.B, st.energy[1]); // fuera de la escena: la energía del rival no se muestra
   const all: HTMLElement[] = [];
-  for (const side of ["B", "A"] as SideId[]) for (let p = 1; p <= 4; p++) all.push(unit(side, p));
-  const el = h("div", { class: "stage" }, h("div", { class: "bg" }, h("div", { class: "stars" }), h("div", { class: "floor" })), plat("pf"), plat("pm"), h("div", { class: "tag t2" }, "Tú · ", energy.A), ...all, ...layer);
+  for (const side of ["B", "A"] as SideId[]) for (let p = 1; p <= 4; p++) {
+    const u = unit(side, p);
+    if (u) all.push(u);
+  }
+  // previsión de objetivos: líneas finas (la del alma elegida, más marcada) y un punto en cada destino
+  const fx: HTMLElement[] = [];
+  if (sel?.lines?.length) {
+    let svg = "";
+    for (const l of sel.lines) {
+      const [x1, y1] = SPOT.A[l.from - 1] as [number, number];
+      for (const t of l.to) {
+        if (l.side === "A" && t === l.from) continue;
+        const [x2, y2] = SPOT[l.side][t - 1] as [number, number];
+        svg += `<line class="l${l.focus ? " f" : ""}${l.pay ? " p" : ""}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+        fx.push(h("i", { class: "dot" + (l.focus ? " f" : "") + (l.pay ? " p" : ""), style: `left:${x2}%;top:${y2}%` }));
+      }
+    }
+    const box = h("div", { class: "fx" });
+    box.innerHTML = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${svg}</svg>`;
+    fx.unshift(box);
+  }
+  const tag1 = sel?.atk ? h("div", { class: "tag t1" }, "Atacable: " + (sel.atk.map((p) => (f.rival[p - 1] as Soul).name).join(", ") || "—")) : null;
+  const el = h("div", { class: "stage" }, h("div", { class: "bg" }, h("div", { class: "stars" }), h("div", { class: "floor" })), plat("pf"), plat("pm"), tag1, h("div", { class: "tag t2" }, "Tú · ", energy.A), ...fx, ...all, ...layer);
   return { el, units, energy };
 }
 
-const HELP: [string, string][] = [
-  ["Energía", "Todo tu bando comparte una reserva: 3 al empezar y +3 cada turno (máximo 10). Cada movimiento cuesta 1–5; el golpe básico es gratis. Lo que no gastas se guarda, pero no pasa de 10."],
-  ["Turnos simultáneos", "Tú y el rival elegís a la vez, sin ver el plan del otro. Cada alma viva actúa una vez por turno (si no está aturdida). Desde el turno 11 el daño sube un 25 % por turno; en el 20 sin ganador hay empate."],
-  ["Filas", "Delantera (posiciones 1–2) y trasera (3–4). Los ataques normales solo alcanzan la fila delantera enemiga; si no queda nadie vivo ahí, la trasera. Con alcance se puede apuntar a cualquiera. Los de área golpean a toda una fila."],
-  ["Iniciativa", "Decide quién actúa antes dentro del turno (con algo de azar). Prisa suma y ralentizar resta. Los movimientos de curación y protección, y los que tienen prioridad, actúan primero."],
-  ["Estados", "Quemadura: 12 de daño por pila al final del turno (hasta 3 pilas). Ralentizar: -30 de iniciativa. Aturdir: pierde su próxima acción. Marca: recibe x1,2. Debilitar: inflige x0,8. Escudo: absorbe daño. Prisa: +30 de iniciativa. Regenerar: +15 de vida por turno."],
-  ["Familias", "Anillo base: Marea > Llama > Brote > Roca > Voltio > Sombra > Marea (cada una gana a la siguiente: x1,25, y pierde contra la anterior: x0,8). Las híbridas tienen su propio anillo: Vapor > Magma > Espora > Liquen > Plasma > Tormenta > Abismo > Vapor."],
-  ["Sinergia", "Si 2, 3 o 4 de tus almas usan movimientos de la misma familia en el mismo turno, esos movimientos ganan +10 %, +20 % o +30 % de potencia. El golpe básico no cuenta."],
+const GLOSARIO: [string, string][] = [
+  ["Gratis", "No gasta energía ni descansa; todas las almas tienen uno."],
+  ["Descansa", "No se puede usar el turno siguiente al usarlo."],
+  ["a la fila", "Afecta a todas las almas de una fila (la delantera enemiga, o la tuya expuesta si es de apoyo)."],
+  ["atrás", "Salta la fila delantera y golpea a la trasera (si no hay nadie detrás, a la delantera)."],
+  ["Provoca", "Este turno, todos los ataques enemigos a un solo objetivo van a esta alma."],
+  ["Escudo", "Absorbe daño antes que la vida durante 2 turnos."],
+  ["Cura", "Recupera vida al aliado más herido."],
+  ["Drena", "Recupera el 30 % del daño hecho."],
+  ["Quema", "Pierde 12 de vida por pila al final de cada turno (3 turnos, hasta 3 pilas)."],
+  ["Aturde", "Pierde su próxima acción."],
+  ["Marca", "Recibe un 20 % más de daño."],
+  ["Debilita", "Hace un 20 % menos de daño."],
+  ["Ralentiza / Prisa", "Actúa más tarde / antes."],
+  ["Regenera", "Recupera 15 de vida al final de cada turno durante 3 turnos."],
+  ["Primero", "Actúa antes que los movimientos normales."],
+  ["Perfora", "Ignora el escudo."],
+  ["+1 energía", "Devuelve 1 de energía al bando."],
+  ["×1,5 en combo", "Otra alma de su familia usa un movimiento de pago este turno."],
+  ["×1,5 si está afectado", "El objetivo tiene un estado negativo."],
+  ["×1,5 si herido", "El usuario está por debajo del 50 % de vida."],
+  ["×1,5 si va antes", "El objetivo aún no ha actuado."],
+  ["×1,5 con reserva", "Quedan 3 o más de energía tras pagar."],
 ];
 
+const E = cfg.combat.energy;
+const HELP: [string, string][] = [
+  ["Energía", `Todo tu bando comparte una reserva: ${E.initial} al empezar y +${E.perTurn} cada turno (máximo ${E.max}). Cada alma tiene un movimiento gratis y tres de pago (coste 1–5). Lo que no gastas se guarda.`],
+  ["Turnos simultáneos", "Tú y el rival elegís a la vez, sin ver el plan del otro. Cada alma viva actúa una vez por turno (si no está aturdida); todas empiezan con su movimiento gratis. Desde el turno 11 el daño sube un 25 % por turno; en el 20 sin ganador hay empate."],
+  ["Filas y colocación", "La cuadrícula es de 2×2: fila delantera y trasera, y dos carriles. Tus 3 almas ocupan 3 casillas y una queda vacía (2 delante + 1 detrás, o 1 delante + 2 detrás). La delantera recibe los ataques mientras quede alguien vivo en ella; la trasera solo recibe los «atrás» hasta que caiga. El rival coloca a ciegas."],
+  ["Objetivo automático", "No eliges objetivo: se decide al actuar. Cada atacante prefiere el alma de su carril en la fila atacable; Provoca desvía los ataques de un solo objetivo. Las líneas finas del campo muestran a quién iría cada orden ahora."],
+  ["Descanso", "Un movimiento de pago que usas descansa el turno siguiente. El gratis nunca descansa."],
+  ["Iniciativa", "Decide quién actúa antes dentro del turno (con algo de azar). Prisa suma y ralentizar resta. Curación, protección y «primero» actúan antes."],
+  ["Familias", "Anillo base: Marea > Llama > Brote > Roca > Voltio > Sombra > Marea (cada una gana a la siguiente: x1,25, y pierde contra la anterior: x0,8). Las híbridas tienen su propio anillo: Vapor > Magma > Espora > Liquen > Plasma > Tormenta > Abismo > Vapor."],
+  ["Sinergia", "Si 2 o 3 de tus almas usan movimientos de pago de la misma familia en el mismo turno, esos movimientos ganan +10 % o +25 % de potencia. El gratis no cuenta."],
+];
+
+function glossaryNodes(): HTMLElement[] {
+  return [h("p", null, h("b", null, "Glosario")), h("dl", { class: "glos" }, ...GLOSARIO.flatMap(([w, d]) => [h("dt", null, w), h("dd", null, d)]))];
+}
+
 function helpBox(): HTMLElement {
-  return h("details", { class: "help" }, h("summary", null, "Ayuda: cómo se juega"), ...HELP.map(([t, x]) => h("p", null, h("b", null, t + ". "), x)));
+  return h("details", { class: "help" }, h("summary", null, "Ayuda: cómo se juega"), ...HELP.map(([t, x]) => h("p", null, h("b", null, t + ". "), x)), ...glossaryNodes());
 }
 
 function topBar(): HTMLElement {
@@ -201,24 +261,11 @@ function topBar(): HTMLElement {
 
 // ------------------------------------------------------------------ pantalla de equipo
 function toggleSoul(i: number): void {
-  const fi = front.indexOf(i);
-  const bi = back.indexOf(i);
+  const k = picked.indexOf(i);
   hint = "";
-  if (fi >= 0) front.splice(fi, 1);
-  else if (bi >= 0) back.splice(bi, 1);
-  else if (front.length < 2) front.push(i);
-  else if (back.length < 2) back.push(i);
-  else hint = "Ya tienes 4 almas: quita una antes de elegir otra.";
-  render();
-}
-function setRow(i: number, toFront: boolean): void {
-  const from = toFront ? back : front;
-  const to = toFront ? front : back;
-  const fi = from.indexOf(i);
-  if (fi < 0) return;
-  from.splice(fi, 1);
-  if (to.length >= 2) from.push(to.shift() as number);
-  to.push(i);
+  if (k >= 0) picked.splice(k, 1);
+  else if (picked.length < 3) picked.push(i);
+  else hint = "Ya tienes 3 almas: quita una antes de elegir otra.";
   render();
 }
 function randomTeam(): void {
@@ -227,117 +274,183 @@ function randomTeam(): void {
     const j = Math.floor(Math.random() * (i + 1));
     [idxs[i], idxs[j]] = [idxs[j] as number, idxs[i] as number];
   }
-  front = idxs.slice(0, 2);
-  back = idxs.slice(2, 4);
+  picked = idxs.slice(0, 3);
   hint = "";
   render();
 }
 function newOffer(): void {
   offerSeed = newSeed();
   offer = rollOffer(offerSeed);
-  front = [];
-  back = [];
+  picked = [];
   hint = "";
   render();
+}
+
+/** Movimientos de un combatiente con el gratis primero. */
+function orderedMoves(c: Soul["combatant"]): { m: Move; slot: number }[] {
+  const fs = freeMoveSlot(c);
+  const all = c.moves.map((m, k) => ({ m, slot: k + 1 }));
+  return [...all.filter((x) => x.slot === fs), ...all.filter((x) => x.slot !== fs)];
 }
 
 function soulCard(i: number): HTMLElement {
   const s = offer[i] as Soul;
   const c = s.combatant;
-  const inF = front.indexOf(i) >= 0;
-  const inB = back.indexOf(i) >= 0;
+  const k = picked.indexOf(i);
   const pal = palette(c.family);
-  const moves = c.moves.map((m: Move) => {
-    const d = describeMove(m, cfg.moves);
-    return h("li", null, h("b", null, m.name), h("span", { class: "cost" }, ` ${m.cost}⚡`), h("div", { class: "mdesc" }, d.slice(d.indexOf("): ") + 3)));
-  });
+  const moves = orderedMoves(c).map(({ m }) => h("li", null, h("b", null, m.name), h("span", { class: "cost" }, m.cost === 0 ? " gratis" : ` ${m.cost}⚡`), h("div", { class: "mdesc" }, describeMoveShort(m, cfg.moves))));
   return h(
     "div",
-    { class: `scard${inF || inB ? " picked" : ""}`, style: `--fam:${pal.main}`, role: "button", tabindex: 0, onclick: () => toggleSoul(i), onkeydown: ((e: KeyboardEvent) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggleSoul(i))) as EventListener },
-    h("div", { class: "fhead" }, soulShape(c.family, 64), h("div", { class: "fname" }, h("b", null, s.name), h("small", null, familyLabel(c.family)))),
+    { class: `scard${k >= 0 ? " picked" : ""}`, style: `--fam:${pal.main}`, role: "button", tabindex: 0, onclick: () => toggleSoul(i), onkeydown: ((e: KeyboardEvent) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggleSoul(i))) as EventListener },
+    h("div", { class: "fhead" }, soulShape(c.family, 64), h("div", { class: "fname" }, h("b", null, s.name), h("small", null, familyLabel(c.family))), k >= 0 ? h("span", { class: "pk" }, String(k + 1)) : null),
     h("div", { class: "stats" }, h("span", null, `Vida ${c.maxHp}`), h("span", null, `Ataque ${c.attack.toFixed(2)}`), h("span", null, `Iniciativa ${Math.round(c.initiative)}`)),
     h("ul", { class: "moves" }, ...moves),
-    inF || inB
-      ? h(
-          "div",
-          { class: "rowpick" },
-          h("button", { class: inF ? "on" : "", onclick: ((e: Event) => (e.stopPropagation(), setRow(i, true))) as EventListener }, "Delantera"),
-          h("button", { class: inB ? "on" : "", onclick: ((e: Event) => (e.stopPropagation(), setRow(i, false))) as EventListener }, "Trasera"),
-        )
-      : null,
   );
 }
 
-function startBattle(): void {
-  const mineIdx = [...front, ...back];
-  const mine = mineIdx.map((i) => offer[i] as Soul);
-  const seed = pendingFightSeed ?? newSeed();
-  pendingFightSeed = null;
-  fight = startFight(mine, rollRival(seed), seed, chooseOpponentAi(difficulty));
-  report = null;
-  overlay = null;
-  focus = 1;
-  beginPlanning();
+function goPlace(): void {
+  slots = [0, 1, 2, null]; // por defecto: 2 delante + 1 detrás
+  selSoul = null;
+  phase = "place";
+  render();
 }
 
 function renderTeam(): void {
-  const ready = front.length === 2 && back.length === 2;
+  const ready = picked.length === 3;
   const name = (i: number): string => (offer[i] as Soul).name;
   app.replaceChildren(
     topBar(),
-    h("p", { class: "intro" }, "Elige 4 almas y su fila (2 delanteras y 2 traseras). Toca una carta para elegirla."),
+    h("p", { class: "intro" }, "Elige 3 almas entre las 8 ofrecidas. Después las colocarás en la cuadrícula."),
     helpBox(),
     h(
       "div",
       { class: "actions" },
       h("button", { class: "btn", onclick: () => randomTeam() }, "Equipo aleatorio"),
       h("button", { class: "btn", onclick: () => newOffer() }, "Nuevas almas"),
-      h("button", { class: "btn primary", disabled: !ready, onclick: () => ready && startBattle() }, "¡Combatir!"),
+      h("button", { class: "btn primary", disabled: !ready, onclick: () => ready && goPlace() }, "Colocar equipo"),
     ),
     h("div", { class: "diff" }, h("span", { class: "lbl" }, "Dificultad del rival"), h("button", { class: "btn" + (difficulty === "normal" ? " on" : ""), onclick: () => ((difficulty = "normal"), render()) }, "Normal"), h("button", { class: "btn" + (difficulty === "dificil" ? " on" : ""), onclick: () => ((difficulty = "dificil"), render()) }, "Difícil")),
-    h("p", { class: "sel" }, `Delantera: ${front.map(name).join(", ") || "—"} · Trasera: ${back.map(name).join(", ") || "—"}`, hint ? h("span", { class: "warn" }, " " + hint) : null),
+    h("p", { class: "sel" }, `Equipo (${picked.length}/3): ${picked.map(name).join(", ") || "—"}`, hint ? h("span", { class: "warn" }, " " + hint) : null),
     h("div", { class: "grid" }, ...offer.map((_, i) => soulCard(i))),
     h("p", { class: "seed" }, `semilla de las almas: ${offerSeed}`),
   );
   window.scrollTo(0, 0);
 }
 
+// ------------------------------------------------------------------ colocación (cuadrícula 2×2, una casilla vacía)
+function putIn(slot: number, si: number): void {
+  const occ = slots[slot - 1] ?? null;
+  const old = slots.indexOf(si);
+  if (old >= 0) slots[old] = occ; // intercambio (o la casilla queda vacía)
+  slots[slot - 1] = si;
+  selSoul = null;
+  render();
+}
+function clickCell(slot: number): void {
+  const occ = slots[slot - 1] ?? null;
+  if (selSoul !== null) {
+    if (occ === selSoul) selSoul = null;
+    else return putIn(slot, selSoul);
+  } else if (occ !== null) selSoul = occ;
+  render();
+}
+function clickChip(si: number): void {
+  selSoul = selSoul === si ? null : si;
+  render();
+}
+function shapeLabel(): string {
+  const front = [1, 2].filter((p) => slots[p - 1] !== null).length;
+  return front === 2 ? "2 delante + 1 detrás" : front === 1 ? "1 delante + 2 detrás" : "—";
+}
+
+function renderPlace(): void {
+  const team = picked.map((i) => offer[i] as Soul);
+  let dragging: number | null = null;
+  const cell = (slot: number): HTMLElement => {
+    const si = slots[slot - 1] ?? null;
+    const soul = si === null ? null : (team[si] as Soul);
+    const b = h(
+      "button",
+      {
+        class: "pcell" + (soul ? " full" : "") + (si !== null && si === selSoul ? " sel" : "") + (si === null && selSoul !== null ? " ready" : ""),
+        "data-slot": slot,
+        draggable: soul ? "true" : undefined,
+        style: soul ? `--fam:${palette(soul.combatant.family).main}` : undefined,
+        onclick: () => clickCell(slot),
+        ondragstart: (() => (dragging = si)) as EventListener,
+        ondragover: ((e: Event) => e.preventDefault()) as EventListener,
+        ondrop: ((e: Event) => { e.preventDefault(); if (dragging !== null) putIn(slot, dragging); }) as EventListener,
+      },
+      soul ? soulShape(soul.combatant.family, 38) : null,
+      soul ? h("span", { class: "pn" }, soul.name) : h("span", { class: "pe" }, selSoul !== null ? "Colocar aquí" : "Vacía"),
+      soul ? h("small", null, familyLabel(soul.combatant.family)) : null,
+    );
+    return b;
+  };
+  const pool = team.map((s, si) => ({ s, si })).filter((x) => !slots.includes(x.si));
+  const chip = ({ s, si }: { s: Soul; si: number }): HTMLElement =>
+    h("button", { class: "pchip" + (si === selSoul ? " sel" : ""), "data-soul": si, draggable: "true", style: `--fam:${palette(s.combatant.family).main}`, onclick: () => clickChip(si), ondragstart: (() => (dragging = si)) as EventListener }, soulShape(s.combatant.family, 30), h("span", { class: "pn" }, s.name));
+  const ok = slots.filter((x) => x !== null).length === 3;
+  const placement = (): number[] => team.map((_, si) => slots.indexOf(si) + 1);
+  app.replaceChildren(
+    topBar(),
+    h("p", { class: "intro" }, "Coloca tus 3 almas: toca un alma y luego una casilla, o arrástrala. El rival coloca a ciegas; no verás su formación hasta empezar."),
+    h(
+      "div",
+      { class: "pgrid" },
+      h("div", { class: "prl" }, h("b", null, "Delantera"), h("span", null, " recibe los ataques mientras viva")),
+      h("div", { class: "prow" }, cell(1), cell(2)),
+      h("div", { class: "prl" }, h("b", null, "Trasera"), h("span", null, " a salvo mientras viva la delantera (salvo «atrás»)")),
+      h("div", { class: "prow" }, cell(3), cell(4)),
+    ),
+    h("div", { class: "ppool", ondragover: ((e: Event) => e.preventDefault()) as EventListener, ondrop: ((e: Event) => { e.preventDefault(); if (dragging !== null) { const o = slots.indexOf(dragging); if (o >= 0) slots[o] = null; render(); } }) as EventListener }, ...(pool.length ? pool.map(chip) : [h("span", { class: "dim" }, `Formación: ${shapeLabel()}`)])),
+    h(
+      "div",
+      { class: "actions" },
+      h("button", { class: "btn", "data-preset": "21", onclick: () => ((slots = [0, 1, 2, null]), (selSoul = null), render()) }, "2 delante + 1 detrás"),
+      h("button", { class: "btn", "data-preset": "12", onclick: () => ((slots = [0, null, 1, 2]), (selSoul = null), render()) }, "1 delante + 2 detrás"),
+    ),
+    h("div", { class: "actions" }, h("button", { class: "btn", onclick: () => ((phase = "team"), render()) }, "Volver"), h("button", { class: "btn primary grow", disabled: !ok || validatePlacement(placement(), cfg.combat) !== null, onclick: () => ok && startBattle(placement()) }, "¡Combatir!")),
+  );
+  window.scrollTo(0, 0);
+}
+
+function startBattle(placement: number[]): void {
+  const team = picked.map((i) => offer[i] as Soul);
+  const seed = pendingFightSeed ?? newSeed();
+  pendingFightSeed = null;
+  fight = startFight(team, placement, rollRival(seed), seed, chooseOpponentAi(difficulty));
+  report = null;
+  overlay = null;
+  focus = 1;
+  beginPlanning();
+}
+
 // ------------------------------------------------------------------ planificación del turno (bandeja de órdenes)
-let armed = false; // esperando que se toque el objetivo en el campo
 let inspect: number | null = null; // alma rival cuyos movimientos se consultan
-let note = "";
 let overlay: "prev" | "help" | null = null;
 let chainTimer = 0;
 
-function defaultFoe(f: Fight): number {
-  return validTargetPositions(null, alive(f.state, "B"), cfg.combat)[0] ?? 1;
-}
-
 function beginPlanning(): void {
   const f = fight as Fight;
-  // todas las almas empiezan el turno con el golpe básico contra la primera delantera enemiga viva
-  picks = [1, 2, 3, 4].map(() => ({ move: 0, target: defaultFoe(f) }));
-  armed = false;
+  // todas las almas empiezan el turno con su movimiento gratis
+  picks = [1, 2, 3, 4].map((p) => {
+    const c = f.state.teams[0][p - 1];
+    return { move: c ? freeMoveSlot(c) : 1 };
+  });
   inspect = null;
-  note = "";
   const el = eligibleActors(f.state, "A");
-  if (!el.includes(focus)) focus = el[0] ?? 1;
+  if (!el.includes(focus)) focus = el[0] ?? ([1, 2, 3, 4].find((p) => f.mine[p - 1] && !f.state.fighters[0][p - 1]?.ko) ?? 1);
   phase = "plan";
   render();
 }
 
 function moveOf(f: Fight, pos: number, move: number): Move | null {
-  return move === 0 ? null : f.state.teams[0][pos - 1]?.moves[move - 1] ?? null;
-}
-
-function targetsFor(f: Fight, m: Move | null): { side: SideId; valid: number[] } {
-  const side: SideId = m && m.target === "aliado" ? "A" : "B";
-  return { side, valid: validTargetPositions(m, alive(f.state, side), cfg.combat) };
+  return f.state.teams[0][pos - 1]?.moves[move - 1] ?? null;
 }
 
 function costOf(f: Fight, pos: number, move: number): number {
-  const m = moveOf(f, pos, move);
-  return m ? m.cost : cfg.combat.damage.basicCost;
+  return moveOf(f, pos, move)?.cost ?? 0;
 }
 
 function spentBy(f: Fight, except: number | null): number {
@@ -347,20 +460,9 @@ function spentBy(f: Fight, except: number | null): number {
 }
 
 function selectMove(pos: number, move: number): void {
-  const f = fight as Fight;
-  const p = picks[pos - 1] as Pick;
-  const prev = targetsFor(f, moveOf(f, pos, p.move)).side;
-  p.move = move;
+  (picks[pos - 1] as Pick).move = move;
   focus = pos;
   inspect = null;
-  note = "";
-  const m = moveOf(f, pos, move);
-  const t = targetsFor(f, m);
-  if (t.side === "A") {
-    if (prev !== "A" || !t.valid.includes(p.target)) p.target = t.valid.includes(pos) ? pos : t.valid[0] ?? pos;
-  } else if (prev !== "B" || !t.valid.includes(p.target)) p.target = t.valid.includes(defaultFoe(f)) ? defaultFoe(f) : t.valid[0] ?? 1;
-  // un movimiento de un solo objetivo con varios posibles pide tocarlo en el campo; los de área, no
-  armed = !(m && m.area) && t.valid.length > 1;
   render();
 }
 
@@ -411,90 +513,62 @@ function withTip(btn: HTMLElement, text: string): HTMLElement {
 
 const REST_ICON = `<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.4 1.6"/></svg>`;
 
-function optButton(m: Move | null, slot: number, cost: number, state: "on" | "rest" | "ro" | "", disabled: boolean, onclick?: () => void): HTMLElement {
-  const full = m ? describeMove(m, cfg.moves) : `Golpe básico (gratis): ${cfg.combat.damage.basicPower} de daño (x ataque) a un enemigo`;
-  const short = m ? full.slice(full.indexOf("): ") + 3) : `${cfg.combat.damage.basicPower} de daño a un enemigo`;
+function optButton(m: Move, slot: number, state: "on" | "rest" | "ro" | "", disabled: boolean, onclick?: () => void): HTMLElement {
+  const full = describeMove(m, cfg.moves);
   const rest = state === "rest";
   const b = h(
     "button",
-    { class: `opt ${state}`, "aria-disabled": rest || state === "ro" ? "true" : undefined, "data-slot": slot, disabled: disabled && !rest, onclick: (() => !rest && state !== "ro" && onclick?.()) as EventListener },
-    h("span", { class: "oname" }, h("span", { class: "onum" }, slot === 0 ? "B" : String(slot)), h("span", { class: "nm" }, m ? m.name : "Golpe básico"), h("span", { class: "cost" }, cost === 0 ? "gratis" : `${cost}⚡`)),
-    rest ? h("span", { class: "mdesc rest" }) : h("span", { class: "mdesc" }, short),
+    { class: `opt ${state}`, "aria-disabled": rest || state === "ro" ? "true" : undefined, "data-slot": slot, "data-free": m.cost === 0 ? "1" : undefined, disabled: disabled && !rest, onclick: (() => !rest && state !== "ro" && onclick?.()) as EventListener },
+    h("span", { class: "oname" }, h("span", { class: "nm" }, m.name), h("span", { class: "cost" }, m.cost === 0 ? "gratis" : `${m.cost}⚡`)),
+    rest ? h("span", { class: "mdesc rest" }) : h("span", { class: "mdesc" }, describeMoveShort(m, cfg.moves)),
   );
   if (rest) (b.querySelector(".mdesc") as HTMLElement).innerHTML = `${REST_ICON} descansa`;
   return withTip(b, full);
 }
 
-function trayPlan(f: Fight, cost: number): HTMLElement {
+function trayPlan(f: Fight): HTMLElement {
   const confirm = h("button", { class: "btn primary big confirm", onclick: () => confirmTurn() }, "Confirmar turno");
   let head: HTMLElement;
   let body: HTMLElement;
   if (inspect !== null) {
     const soul = f.rival[inspect - 1] as Soul;
     const fs = f.state.fighters[1][inspect - 1] as BattleState["fighters"][0][0];
-    head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "nb" }, `${soul.name} (rival)`), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(inspect)}${fs.ko ? " · KO" : ` · vida ${fs.hp}/${soul.combatant.maxHp}`}`), h("span", { class: "tnote" }, "Costes de sus movimientos"));
-    body = h("div", { class: "opts5" }, ...soul.combatant.moves.map((m, k) => optButton(m, k + 1, m.cost, "ro", false)), optButton(null, 0, cfg.combat.damage.basicCost, "ro", false));
+    head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "nb" }, `${soul.name} (rival)`), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(inspect)}${fs.ko ? " · KO" : ` · vida ${fs.hp}/${soul.combatant.maxHp}`}`), h("span", { class: "tnote" }, "Sus movimientos"));
+    body = h("div", { class: "opts5" }, ...orderedMoves(soul.combatant).map(({ m, slot }) => optButton(m, slot, "ro", false)));
   } else {
     const pos = focus;
     const soul = f.mine[pos - 1] as Soul;
     const fs = f.state.fighters[0][pos - 1] as BattleState["fighters"][0][0];
     const p = picks[pos - 1] as Pick;
-    const mv = moveOf(f, pos, p.move);
-    const t = targetsFor(f, mv);
-    const tn = (t.side === "A" ? f.mine : f.rival).map((s) => s.name);
-    const tgt = mv && mv.area ? `Área: fila ${rowName(p.target).toLowerCase()}` : t.valid.length === 0 ? "" : `Objetivo: ${tn[p.target - 1] ?? "?"}`;
-    head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "na" }, soul.name), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(pos)}`), h("span", { class: "tnote" + (armed || note ? " hot" : "") }, note || (armed ? "Toca el objetivo en el campo" : tgt)));
+    const fc = eligibleActors(f.state, "A").includes(pos) ? forecastTargets(f.state, "A", pos, p.move, cfg) : null;
+    const nm = fc ? (fc.side === "A" ? f.mine : f.rival) : [];
+    const tgt = !fc ? "" : "Irá a: " + (fc.positions.map((q) => nm[q - 1]?.name ?? "?").join(" y ") || "nadie");
+    head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "na" }, soul.name), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(pos)}`), h("span", { class: "tnote hot", title: "Previsión: el objetivo se decide al actuar" }, tgt));
     if (fs.ko) body = h("div", { class: "opts5 msg" }, "Esta alma está KO.");
     else if (!eligibleActors(f.state, "A").includes(pos)) body = h("div", { class: "opts5 msg" }, "Aturdida: pierde este turno.");
     else {
       const avail = f.state.energy[0] - spentBy(f, pos);
       const resting = restingMoves(f.state, "A", pos);
-      body = h(
-        "div",
-        { class: "opts5" },
-        ...soul.combatant.moves.map((m, k) => optButton(m, k + 1, m.cost, resting.includes(k + 1) ? "rest" : p.move === k + 1 ? "on" : "", m.cost > avail, () => selectMove(pos, k + 1))),
-        optButton(null, 0, cfg.combat.damage.basicCost, p.move === 0 ? "on" : "", false, () => selectMove(pos, 0)),
-      );
+      body = h("div", { class: "opts5" }, ...orderedMoves(soul.combatant).map(({ m, slot }) => optButton(m, slot, resting.includes(slot) ? "rest" : p.move === slot ? "on" : "", m.cost > avail, () => selectMove(pos, slot))));
     }
   }
-  void cost;
   return h("div", { class: "tray" }, head, body, confirm);
 }
 
 function currentPlan(f: Fight): { plan: Action[]; cost: number } {
-  const plan: Action[] = eligibleActors(f.state, "A").map((pos) => {
-    const p = picks[pos - 1] as Pick;
-    return { actor: pos, move: p.move, target: p.target };
-  });
+  const plan: Action[] = eligibleActors(f.state, "A").map((pos) => ({ actor: pos, move: (picks[pos - 1] as Pick).move, target: 0 }));
   return { plan, cost: plan.reduce((a, x) => a + costOf(f, x.actor, x.move), 0) };
 }
 
 function onPickPlan(side: SideId, pos: number): void {
   const f = fight as Fight;
-  const fp = picks[focus - 1] as Pick;
-  const ft = targetsFor(f, moveOf(f, focus, fp.move));
-  note = "";
-  if (armed && side === ft.side && ft.valid.includes(pos)) {
-    fp.target = pos;
-    armed = false;
-    inspect = null;
-    render();
-    return;
-  }
   if (side === "A") {
     focus = pos;
-    armed = false;
     inspect = null;
-    render();
-    return;
+  } else {
+    if ((f.state.fighters[1][pos - 1] as BattleState["fighters"][0][0]).ko) return;
+    inspect = pos;
   }
-  if (armed) {
-    note = ft.side === "B" ? "Ese rival no es alcanzable: toca otro" : "Toca un aliado";
-    render();
-    return;
-  }
-  if ((f.state.fighters[1][pos - 1] as BattleState["fighters"][0][0]).ko) return;
-  inspect = pos;
   render();
 }
 
@@ -502,7 +576,7 @@ function overlayBox(): HTMLElement | "" {
   if (overlay === null) return "";
   const f = fight as Fight;
   const close = h("button", { class: "btn", onclick: () => toggleOverlay(null) }, "Cerrar");
-  if (overlay === "help") return h("div", { class: "ov" }, h("div", { class: "ovp" }, h("div", { class: "ovh" }, h("b", null, "Ayuda"), close), ...HELP.map(([t, x]) => h("p", null, h("b", null, t + ". "), x)), h("p", { class: "seed" }, `semilla de las almas: ${offerSeed} · semilla del combate: ${f.seed}`)));
+  if (overlay === "help") return h("div", { class: "ov" }, h("div", { class: "ovp" }, h("div", { class: "ovh" }, h("b", null, "Ayuda"), close), ...HELP.map(([t, x]) => h("p", null, h("b", null, t + ". "), x)), ...glossaryNodes(), h("p", { class: "seed" }, `semilla de las almas: ${offerSeed} · semilla del combate: ${f.seed}`)));
   const r = report;
   return h("div", { class: "ov" }, h("div", { class: "ovp" }, h("div", { class: "ovh" }, h("b", null, "Turno anterior"), close), h("div", { class: "log" }, ...(r ? r.lines.map(lineNode) : [h("div", { class: "ln info" }, "Aún no se ha jugado ningún turno.")]))));
 }
@@ -528,27 +602,27 @@ function renderPlan(): void {
   const f = fight as Fight;
   const { cost } = currentPlan(f);
   const elig = eligibleActors(f.state, "A");
-  if (!elig.includes(focus) && inspect === null) focus = elig[0] ?? focus;
-  const fp = picks[focus - 1] as Pick;
-  const fm = moveOf(f, focus, fp.move);
-  const ft = targetsFor(f, fm);
+  if (!elig.includes(focus) && inspect === null) focus = elig[0] ?? ([1, 2, 3, 4].find((p) => f.mine[p - 1] && !f.state.fighters[0][p - 1]?.ko) ?? focus);
   const tgts: { side: SideId; pos: number }[] = [];
-  if (inspect === null && elig.includes(focus)) {
-    if (armed) for (const p of ft.valid) tgts.push({ side: ft.side, pos: p });
-    else if (fm && fm.area) for (const p of [1, 2, 3, 4]) { if (cfg.combat.frontRow.includes(p) === cfg.combat.frontRow.includes(fp.target) && ft.valid.length > 0) tgts.push({ side: ft.side, pos: p }); }
-    else tgts.push({ side: ft.side, pos: fp.target });
-  }
+  const lines: NonNullable<Sel["lines"]> = [];
   const orders: Record<number, { txt: string; title: string }> = {};
   for (const pos of elig) {
     const p = picks[pos - 1] as Pick;
     const m = moveOf(f, pos, p.move);
-    orders[pos] = { txt: p.move === 0 ? "B" : String(p.move), title: m ? m.name : "Golpe básico" };
+    const fc = forecastTargets(f.state, "A", pos, p.move, cfg);
+    const isF = inspect === null && pos === focus;
+    if (fc) {
+      lines.push({ from: pos, side: fc.side, to: fc.positions, focus: isF, pay: !!m && m.cost > 0 });
+      if (isF) for (const q of fc.positions) tgts.push({ side: fc.side, pos: q });
+    }
+    if (m && m.cost > 0) orders[pos] = { txt: `⚡${m.cost}`, title: `${m.name} (${m.cost} de energía)` };
   }
+  const atk = attackable(f.state, "B", cfg);
   app.replaceChildren(
     turnBar(f, `Turno ${f.state.turn}/${cfg.combat.maxTurns}`, true),
     energyBar(f.state.energy[0], cost),
-    buildField(f, f.state, { actor: inspect === null && elig.includes(focus) ? focus : null, tgts, onPick: onPickPlan, orders }).el,
-    trayPlan(f, cost),
+    buildField(f, f.state, { actor: inspect === null && elig.includes(focus) ? focus : null, tgts, onPick: onPickPlan, orders, atk: atk.row, taunt: atk.taunting, lines }).el,
+    trayPlan(f),
     overlayBox(),
   );
 }
@@ -571,7 +645,7 @@ function lineNode(l: LogLine): HTMLElement {
 function sameTeamAgain(): void {
   const f = fight as Fight;
   const seed = newSeed();
-  fight = startFight(f.mine, rollRival(seed), seed, chooseOpponentAi(difficulty));
+  fight = startFight(f.team, f.placement, rollRival(seed), seed, chooseOpponentAi(difficulty));
   report = null;
   overlay = null;
   focus = 1;
@@ -639,13 +713,14 @@ function commitScore(): void {
 function render(): void {
   clearTimeout(chainTimer);
   hideTip();
-  app.className = phase === "team" ? "" : "battle";
+  app.className = phase === "team" ? "" : phase === "place" ? "place" : "battle";
   if (player) {
     player.cancel();
     commitScore();
   }
   player = null;
   if (phase === "team") renderTeam();
+  else if (phase === "place") renderPlace();
   else if (phase === "plan") renderPlan();
   else renderReport();
 }

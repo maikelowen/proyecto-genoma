@@ -153,7 +153,7 @@ details.help .log{border:0;margin:4px 0;padding:0}
 .opts5.msg{display:flex;align-items:center;min-height:130px;color:var(--dim);padding:0 8px}
 .opts5 .opt{padding:3px 6px;min-width:0;gap:0;justify-content:center}
 .opt .oname{display:flex;align-items:center;gap:5px;min-width:0;font-size:13px}.opt .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.opt .onum{flex:none;min-width:17px;height:17px;border-radius:9px;background:var(--line);font-size:11px;line-height:17px;text-align:center;font-weight:800}
+
 .opt.on .onum{background:var(--acc);color:#0b0d13}
 .opt .mdesc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
 .opt.rest{opacity:.5;cursor:not-allowed;border-style:dashed}.opt .mdesc.rest{display:flex;align-items:center;gap:4px;color:var(--warn)}
@@ -187,3 +187,35 @@ details.help .log{border:0;margin:4px 0;padding:0}
 #app.battle .endbox .actions{margin:6px 0 0}
 #app.battle .sub{margin:0;min-height:40px;display:flex;align-items:center;justify-content:center}
 @media (max-width:480px){.iw{--s:80px}.iw.back{--s:68px}.ord{right:-6px;top:0}#app.battle .turnbar .score{display:none}#app.battle .endbox .actions .btn{flex:1 1 100%}#app.battle .stage{margin-top:26px}}
+
+/* ===== v0.4: colocación, previsión de objetivos, 4 botones ===== */
+.pk{margin-left:auto;min-width:24px;height:24px;border-radius:12px;background:var(--acc);color:#0b0d13;font-weight:800;text-align:center;line-height:24px}
+#app.place{max-width:520px;padding:8px 10px}
+#app.place .top{margin-bottom:2px}#app.place .intro{margin:4px 0 8px;font-size:13px}
+.pgrid{display:flex;flex-direction:column;gap:4px}
+.prl{font-size:12px;color:var(--dim);margin-top:2px}.prl b{color:var(--txt)}
+.prow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pcell{min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:var(--panel);border:2px dashed var(--line);border-radius:10px;padding:4px;color:var(--txt)}
+.pcell.full{border-style:solid;border-color:var(--fam);background:var(--panel2)}
+.pcell.sel,.pchip.sel{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc) inset}
+.pcell.ready{border-color:var(--acc);background:#1d2210}
+.pcell .pe{color:var(--dim);font-size:13px}.pcell small{color:var(--dim);font-size:11px}.pn{font-weight:700;font-size:14px}
+.ppool{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;min-height:46px;margin:8px 0 2px;padding:6px;border:1px dashed var(--line);border-radius:10px}
+.ppool .dim{color:var(--dim);font-size:13px}
+.pchip{display:flex;align-items:center;gap:6px;background:var(--panel2);border:2px solid var(--fam);border-radius:20px;padding:3px 10px 3px 6px}
+#app.place .actions{margin:6px 0}#app.place .actions .btn{flex:1}.grow{flex:2!important}
+dl.glos{margin:4px 0;font-size:13px}dl.glos dt{font-weight:700;color:var(--acc);margin-top:5px}dl.glos dd{margin:0;color:#cfd3e2}
+.fx{position:absolute;inset:0;pointer-events:none;z-index:2}.fx svg{width:100%;height:100%;display:block;overflow:visible}
+.fx line{stroke:#9aa1b5;stroke-opacity:.45;stroke-width:1.2;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
+.fx line.p{stroke:var(--warn);stroke-opacity:.7}
+.fx line.f{stroke:var(--acc);stroke-opacity:.95;stroke-width:2;stroke-dasharray:none}
+.dot{position:absolute;width:7px;height:7px;border-radius:50%;translate:-50% -50%;background:#9aa1b5;opacity:.6;z-index:2;pointer-events:none}
+.dot.p{background:var(--warn)}.dot.f{background:var(--acc);opacity:1;width:9px;height:9px}
+.unit.atk::before{content:"";position:absolute;left:50%;bottom:-3px;width:104%;height:28%;translate:-50% 0;border-radius:50%;border:2px solid #ff6b6b99}
+.tau{font-size:10px;font-weight:700;color:#0b0d13;background:var(--warn);border-radius:8px;padding:0 5px;line-height:14px}
+.tag.t1{max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-color:#ff6b6b88;color:#ffc9c9}
+.opt .oname .cost{flex:none}
+.opt[data-free] .cost{color:var(--good)}
+.opts5{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:760px){.opts5{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.ord{font-size:11px;padding:0 3px;white-space:nowrap}

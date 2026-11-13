@@ -4,6 +4,7 @@ import {
   createBattle,
   createReferenceAi,
   createSearchAi,
+  referencePlacement,
   createRng,
   createWildCreature,
   resolveTurn,
@@ -42,32 +43,47 @@ export function rollOffer(seed: string): Soul[] {
   return rng.shuffle(fams).map((f, i) => makeSoul(rng, `o${i + 1}`, seed, taken, f));
 }
 
-/** Equipo rival: 4 almas con familias al azar (pueden repetirse). */
+/** Equipo rival: 3 almas con familias al azar (pueden repetirse). */
 export function rollRival(seed: string): Soul[] {
   const rng = createRng("rival|" + seed);
   const taken = new Set<string>();
-  return [1, 2, 3, 4].map((i) => makeSoul(rng, `r${i}`, seed, taken, rng.pick(gcfg.baseFamilies)));
+  return [1, 2, 3].map((i) => makeSoul(rng, `r${i}`, seed, taken, rng.pick(gcfg.baseFamilies)));
 }
 
 export interface Fight {
   readonly seed: string;
-  readonly mine: readonly Soul[];
-  readonly rival: readonly Soul[];
+  /** Mi equipo en el orden en que se eligió, y la casilla (1–4) de cada alma. */
+  readonly team: readonly Soul[];
+  readonly placement: readonly number[];
+  /** Almas por casilla (índice = casilla − 1; null = casilla vacía). */
+  readonly mine: readonly (Soul | null)[];
+  readonly rival: readonly (Soul | null)[];
   state: BattleState;
   readonly rng: Rng;
   readonly names: readonly [readonly string[], readonly string[]];
   readonly ai: ReturnType<typeof createReferenceAi>;
 }
 
-/** `mine` y `rival` en orden de posición (1–2 delantera, 3–4 trasera). */
-export function startFight(mine: readonly Soul[], rival: readonly Soul[], seed: string, ai: Fight["ai"] = createReferenceAi()): Fight {
+function bySlot(souls: readonly Soul[], placement: readonly number[]): (Soul | null)[] {
+  const out: (Soul | null)[] = [null, null, null, null];
+  souls.forEach((s, i) => (out[(placement[i] as number) - 1] = s));
+  return out;
+}
+
+/** `team` y `placement` (casilla de cada alma) son los míos; el rival coloca con la regla de referencia (a ciegas). */
+export function startFight(team: readonly Soul[], placement: readonly number[], rival: readonly Soul[], seed: string, ai: Fight["ai"] = createReferenceAi()): Fight {
+  const rPl = referencePlacement(rival.map((s) => s.combatant), cfg.combat);
+  const mine = bySlot(team, placement);
+  const foe = bySlot(rival, rPl);
   return {
     seed,
+    team,
+    placement,
     mine,
-    rival,
-    state: createBattle(mine.map((s) => s.combatant), rival.map((s) => s.combatant), cfg),
+    rival: foe,
+    state: createBattle(team.map((s) => s.combatant), rival.map((s) => s.combatant), cfg, [...placement], rPl),
     rng: createRng(cfg.combat.seedPrefix + seed),
-    names: [mine.map((s) => s.name), rival.map((s) => s.name)],
+    names: [mine.map((s) => s?.name ?? ""), foe.map((s) => s?.name ?? "")],
     ai,
   };
 }

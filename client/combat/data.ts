@@ -1,7 +1,7 @@
 /** Configs del juego y utilidades de presentación (nombres, paletas). Solo usa la API pública del núcleo. */
 import rawG from "../../config/genetica.v0.2.json" with { type: "json" };
-import rawC from "../../config/combate.v0.2.json" with { type: "json" };
-import rawM from "../../config/movimientos.v0.2.json" with { type: "json" };
+import rawC from "../../config/combate.v0.4.json" with { type: "json" };
+import rawM from "../../config/movimientos.v0.4.json" with { type: "json" };
 import { parseCombatConfig, parseGeneticsConfig, parseMovesConfig, type BattleConfig, type GeneticsConfig } from "../../packages/core/src/index.ts";
 import { paletteOf, type Palette } from "../art/palette.ts";
 
