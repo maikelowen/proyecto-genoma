@@ -12,6 +12,11 @@ Actualizado: 2026-11-13 (tarde). Fuente de verdad: este fichero (el repositorio)
 - Resultado v0.4: profundidad 82 %; 7,3 turnos; gratis 48,9 %; colocaciones 54,6 %; tanque 8 turnos; 13/13 familias en 47,9–53,0 %. Aceptado para la prueba (D-044): bola de nieve (~72 % gana quien hace el primer KO) y variedad justa (1,96 de 3 movimientos de pago por alma).
 - Página de Pages: `docs/index.html` → `jugable/combate.html`.
 
+## En curso (13 nov, noche)
+- **Arte v3, 1.ª iteración** hecha en la rama `arte-v3` (commit e2a3f6a; 225 tests): almas desde los genes, 8 temperamentos, 8 rasgos, reacciones en combate, galería `docs/arte/galeria-v3.html` con prueba ciega a 48 px. **Pendiente: prueba ciega de Miguel**; con su veredicto, segunda y última iteración. No fusionar en `main` hasta que contesten los amigos.
+- Flojo conocido: altivo/aburrido/sereno se confunden a 48 px; Llama y Sombra comparten silueta; rasgos casi siempre discretos; ojos de Roca pasados a turquesa (decide Miguel).
+- Nombre: **Ánimas** (D-046). Falta aplicarlo a los textos del juego.
+
 ## Siguiente paso
 1. Hecho: GitHub Pages activo en `https://maikelowen.github.io/proyecto-genoma/`.
 2. **Miguel envía el juego a 3–5 amigos** con el mensaje y las preguntas de `docs/proyecto/prueba-amigos.md` y trae las respuestas.
@@ -20,7 +25,7 @@ Actualizado: 2026-11-13 (tarde). Fuente de verdad: este fichero (el repositorio)
 
 ## Pendientes menores
 - QA R-01 (claves desconocidas en bloques antiguos de config) y R-02 (la IA de referencia no ve el provocar del turno); `placement.ts:61` con un 3 fijo; tests de provocador que cae a mitad de turno.
-- Nombre de las almas (Fatuos recomendado) y vocabulario: `docs/proyecto/coherencia-almas.md` si se copia, o el doc del proyecto.
+- Vocabulario de las Ánimas: revisar `coherencia-almas.md` (doc del proyecto de Claude) con el nombre nuevo.
 
 ## Forma de trabajar
 Ver `CLAUDE.md`. Empezar una conversación nueva en cada sesión para ahorrar cuota.

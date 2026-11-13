@@ -33,3 +33,5 @@ Versión condensada; el detalle con motivos y alternativas está en el proyecto 
 | D-043 | Combate v0.4: 3 almas en 2×2, colocación a ciegas, gratis desde extremidades, objetivo automático por fila y carril, criterios de adopción; última ronda antes de publicar | **Miguel** + consultor |
 | D-044 | Bola de nieve aceptada para la prueba (umbral provisional 75 % con 3 almas); candidata "Brasa" si los amigos la notan | **Miguel** |
 | D-045 | Balance v0.4 adoptado (base + 4 sales de familias); **reglas congeladas** hasta el feedback de los amigos | Director / Miguel |
+| D-046 | Las almas se llaman **Ánimas** (Fatuos descartado). Vale como nombre de las criaturas; el título del juego necesitará un nombre propio más distintivo ("anima" ya se usa en el género) | **Miguel** |
+| D-047 | Arte v3, 1.ª iteración, en la rama `arte-v3` (no se publica hasta que contesten los amigos); queda una iteración | Director |
