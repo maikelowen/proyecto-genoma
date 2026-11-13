@@ -18,6 +18,15 @@ Actualizado: 2026-11-13 (noche). Fuente de verdad: este fichero (el repositorio)
   - **Energía 3 por turno** (D-052), aplicada antes de que nadie jugara: menos bola de nieve, pero el gratis sube al 59 % (criterio ≤ 50 % aceptado para la prueba). Vector dorado regenerado (con energía 4 se reproduce el anterior).
   - Preparación para Claude Code: `CLAUDE.md`, subagentes en `.claude/agents/`, comandos `/empezar`, `/cerrar`, `/preguntas`, `/decision`; `plan-diseno.md`, `HOJA-DE-RUTA.md`, `PREGUNTAS.md`, `vocabulario.md` y `DECISIONES.md` completo en el repositorio.
 
+## En curso — ciclo v0.5 (punto de control, 13 nov)
+Rama `combate-v0.5` (D-055 a D-057; plan recortado ~650 k). Si la sesión se corta, retomar por el primer paso sin marcar:
+- [x] Decisiones D-056 (precisiones de Miguel) y D-057 (plan) en `main` (f30441b).
+- [x] Spec `docs/spec/combate-v0.5.md` + `config/combate.v0.5.json` en la rama (91e776f; disenador, 117 k). Abiertas resueltas por el director: prioridad del hueco "primero"; plan B de aturdir también para el arrastrado.
+- [ ] Núcleo (nucleo, Opus): lanzado. **Si se corta a medias, su trabajo queda sin commit en la carpeta del repo en la rama `combate-v0.5`**: mirar `git status` y `npm run check` antes de relanzar; no relanzar desde cero.
+- [ ] Revisión única spec + núcleo (revisor) **en paralelo** con la simulación de 4 configs (analista, Sonnet; criterios en spec §criterios y `criterios_sim.v05`).
+- [ ] Interfaz y página `docs/jugable/combate-v05.html` (cliente, Sonnet); publicar en `main` solo esa página.
+- [ ] `/cerrar`.
+
 ## Siguiente paso
 1. Hecho: enlace enviado a los amigos (13 nov, noche). **Miguel trae las respuestas** tal cual.
 2. **Ciclo de reglas v0.5** en Claude Code (D-053, D-054, D-055; BACKLOG n.º 4), en la rama `combate-v0.5` sin tocar el juego que prueban los amigos.
