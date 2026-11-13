@@ -15,6 +15,7 @@
     "sim:combat": "node sim/combat/cli.ts",
     "sim:profundidad": "node sim/depth/cli.ts",
     "sim:variantes": "node sim/variants/cli.ts",
+    "sim:v04": "node sim/v04/cli.ts",
     "build:combate": "node client/build-combate.mjs"
   },
   "devDependencies": {

@@ -1,0 +1,11 @@
+{
+  "_titulo": "Propuesta combate v0.4.1 (analista): energía 5 por turno y vida base 390",
+  "_doc": "Parche de palancas sobre config/combate.v0.4.json y config/movimientos.v0.4.json (no los modifica). Elegida entre 6 candidatas (sim/v04/candidates.ts) con semillas elige03 por la regla: más criterios aprobados; desempate, menos familias fuera de banda. Se valida con valida04. Informe: docs/informes/combate-v0.4.md.",
+  "combate": {
+    "energia.inicial": 5,
+    "energia.por_turno": 5,
+    "estadisticas.vida.base": 390
+  },
+  "movimientos": {},
+  "sales": {}
+}

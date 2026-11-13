@@ -50,3 +50,8 @@
 - **Un escenario puede no ejercitar la pieza que se estudia:** provocar va en 2 de 72 movimientos y con salvajes casi no sale (Q-02); solo se vio su efecto en C2 (hunde a brote). Registrar el uso de cada pieza nueva y, si un criterio se rompe, quitar la pieza en un diagnóstico pareado antes de culpar a la variante entera.
 - **Contar opciones reales, no las teóricas:** con descanso se esperaban 3 de 4 movimientos y son 3,7, porque el 62 % de las acciones son golpes básicos. La entropía por alma tiene sesgo con partidas cortas: dar también una medida agregada.
 - Dejar los resultados en disco por fases y lanzar lo largo de forma que un corte no lo pierda (una ejecución entera se perdió); no ajustar números encima de un defecto conocido del núcleo (Q-01): marcar las cifras como provisionales.
+
+## Lecciones (combate v0.4)
+- `npm run sim:v04` (`--quick` < 30 s; completo ≈ 8 min; fases `base` → `elegir` → `validar`, semillas `base04`/`elige03`/`valida04`). Parches de movimientos con ruta larga crean claves sin error (R-01): comprobar que existe en la base, que cambia el valor y que la config parseada cambia (catálogo, estadísticas y una partida); aborta si no.
+- Medir también en espejo: remontada ≈ 70 % con el mismo equipo en los dos lados, así que es mecánica de 3 almas y no diferencia de equipos; ninguna palanca de config (vida, energía, sinergia) la movió. Con una IA que no ve una pieza (provocar), dar la profundidad con y sin ella (R-02).
+- Una candidata que sube un criterio puede hundir otro (energía 5: pago ok, pero familias de 2 a 4 fuera de banda): la regla de elección y la de adopción deben mirar también lo que empeora.
