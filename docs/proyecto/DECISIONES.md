@@ -35,3 +35,5 @@ Versión condensada; el detalle con motivos y alternativas está en el proyecto 
 | D-045 | Balance v0.4 adoptado (base + 4 sales de familias); **reglas congeladas** hasta el feedback de los amigos | Director / Miguel |
 | D-046 | Las almas se llaman **Ánimas** (Fatuos descartado). Vale como nombre de las criaturas; el título del juego necesitará un nombre propio más distintivo ("anima" ya se usa en el género) | **Miguel** |
 | D-047 | Arte v3, 1.ª iteración, en la rama `arte-v3` (no se publica hasta que contesten los amigos); queda una iteración | Director |
+| D-048 | Arte v3, 2.ª iteración: **bocas en mezcla** (unas ánimas con boca y otras sin; las bocas son pieza clave de creatividad: colmillos, sierra, lengua…), asimetría de ojos fuerte solo en desquiciado, Llama redibujada, genes legibles (un gen = una zona; prueba padres/cría), ojos de Roca en turquesa. Sustituye a "sin boca por defecto" | **Miguel** |
+| D-049 | Complementos (sombrero, gafas, colgante, monopatín…): objetos equipables que se ganan, en la Fase 2; no salen de los genes. En la 2.ª iteración solo 3–4 de muestra | **Miguel** |

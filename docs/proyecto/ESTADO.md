@@ -13,7 +13,7 @@ Actualizado: 2026-11-13 (tarde). Fuente de verdad: este fichero (el repositorio)
 - Página de Pages: `docs/index.html` → `jugable/combate.html`.
 
 ## En curso (13 nov, noche)
-- **Arte v3, 1.ª iteración** hecha en la rama `arte-v3` (commit e2a3f6a; 225 tests): almas desde los genes, 8 temperamentos, 8 rasgos, reacciones en combate, galería `docs/arte/galeria-v3.html` con prueba ciega a 48 px. **Pendiente: prueba ciega de Miguel**; con su veredicto, segunda y última iteración. No fusionar en `main` hasta que contesten los amigos.
+- **Arte v3, 1.ª iteración** hecha en la rama `arte-v3` (commit e2a3f6a; 225 tests): almas desde los genes, 8 temperamentos, 8 rasgos, reacciones en combate, galería `docs/arte/galeria-v3.html` con prueba ciega a 48 px. Veredicto de Miguel: en general le gustan; **2.ª y última iteración en curso** (D-048, D-049). No fusionar en `main` hasta que contesten los amigos.
 - Flojo conocido: altivo/aburrido/sereno se confunden a 48 px; Llama y Sombra comparten silueta; rasgos casi siempre discretos; ojos de Roca pasados a turquesa (decide Miguel).
 - Nombre: **Ánimas** (D-046). Falta aplicarlo a los textos del juego.
 
