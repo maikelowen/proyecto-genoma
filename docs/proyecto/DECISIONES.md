@@ -37,3 +37,4 @@ Versión condensada; el detalle con motivos y alternativas está en el proyecto 
 | D-047 | Arte v3, 1.ª iteración, en la rama `arte-v3` (no se publica hasta que contesten los amigos); queda una iteración | Director |
 | D-048 | Arte v3, 2.ª iteración: **bocas en mezcla** (unas ánimas con boca y otras sin; las bocas son pieza clave de creatividad: colmillos, sierra, lengua…), asimetría de ojos fuerte solo en desquiciado, Llama redibujada, genes legibles (un gen = una zona; prueba padres/cría), ojos de Roca en turquesa. Sustituye a "sin boca por defecto" | **Miguel** |
 | D-049 | Complementos (sombrero, gafas, colgante, monopatín…): objetos equipables que se ganan, en la Fase 2; no salen de los genes. En la 2.ª iteración solo 3–4 de muestra | **Miguel** |
+| D-050 | Arte v3 **congelado por ahora** tras dos iteraciones ("no está mal, se podría mejorar"); la silueta sigue saliendo del gen de cuerpo. Se fusiona en `main` tras la prueba de los amigos | **Miguel** |

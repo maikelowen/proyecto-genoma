@@ -14,7 +14,7 @@ Actualizado: 2026-11-13 (tarde). Fuente de verdad: este fichero (el repositorio)
 
 ## En curso (13 nov, noche)
 - **Arte v3 terminado (2 iteraciones)** en la rama `arte-v3` (commit 848fa3b; 225 tests; coste 218 k + 218 k). Un gen = una zona (cabeza: cara y boca; cuerpo: silueta y núcleo; extremidades: rasgo; cola: lo de debajo); 18 siluetas; 8 bocas (6 de 18 genes de cabeza sin boca); Llama redibujada; asimetría solo en desquiciado; 4 complementos de muestra fuera de los genes. Galería `docs/arte/galeria-v3.html` con prueba de herencia (7 tríos).
-- **Pendiente de Miguel:** veredicto de la galería y decidir si la silueta sale del gen de cuerpo (ahora; ~30 % de salvajes llevan silueta de otra familia con su color) o de la familia del ánima.
+- **Veredicto de Miguel (D-050):** no está mal, mejorable; se deja así por ahora. La silueta sigue saliendo del gen de cuerpo (~30 % de salvajes con silueta de otra familia).
 - **No fusionar en `main` hasta que contesten los amigos.** Flojo conocido: mueca altiva y boca cosida justas a 48 px; ojos de Sombra con poco contraste; grietas/fuego de Llama raros sobre cuerpos de otro color; galería de 955 KB; quizá la cara deba verse más grande en combate.
 - Nombre: **Ánimas** (D-046). Falta aplicarlo a los textos del juego.
 
