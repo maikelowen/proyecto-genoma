@@ -6,11 +6,12 @@ Formato de cada pregunta: contexto en 2–3 líneas, opciones con su consecuenci
 
 ## Abiertas
 
-### P-07 · ¿Un ánima puede actuar dos veces en un turno?
-- **Contexto:** Miguel lo propone porque, cuando queda una sola ánima, sobra energía (con energía compartida, el bando con menos ánimas acumula y no puede gastar). Funcionaría como **mecánica de remontada**, igual que "Brasa", así que compite con ella por el mismo problema (bola de nieve, D-044).
-- **Opciones:** A) segunda acción en el mismo turno pagando un recargo (p. ej. +2 de energía), con descanso impidiendo repetir el mismo movimiento; B) solo cuando al bando le queda **una** ánima; C) "Brasa" (+energía al caer un ánima propia); D) nada.
-- **Recomendación del director:** no tocar reglas durante la prueba; con el feedback, simular B y C juntas (~300–400 k) y elegir. B es la más simple de entender y no cambia las partidas igualadas.
-- **Bloquea:** nada hasta el feedback de los amigos.
+### P-07 · Doble acción de la última ánima: cómo encaja con el descanso (D-053)
+- **Contexto:** decidido que la última ánima actúa dos veces por turno (D-053). Problema que ve Miguel: con el descanso, si usa dos movimientos de pago, el turno siguiente solo le quedan el gratis y uno de pago.
+- **Opciones:** A) la última ánima **no tiene descanso**, solo la regla de no repetir el mismo movimiento de pago en el mismo turno (el gratis sí puede repetirse); B) descansa solo el último movimiento usado en el turno; C) se mantiene el descanso normal.
+- **Recomendación del director:** A. El descanso existe para que un equipo varíe; con una sola ánima y dos acciones, "no repetir en el mismo turno" ya obliga a variar, y es lo más fácil de explicar.
+- **Cuándo:** la prueba con amigos acaba de empezar con las reglas actuales. Recomendado: hacerlo en una rama (spec + núcleo + simulación + revisión + interfaz, ~300–500 k) y publicarlo con el resto de cambios tras el feedback, para no mezclar resultados.
+- **Bloquea:** implementar D-053.
 
 ### P-01 · Cierre de la Fase 1 tras la prueba con amigos
 - **Contexto:** el combate v0.4 está publicado y en prueba (`prueba-amigos.md`). Riesgo conocido: bola de nieve (~72 % gana quien hace el primer KO, D-044).
