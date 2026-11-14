@@ -189,19 +189,18 @@ export function lastAnimaPos(state: BattleState, side: SideId, cfg: AnyConfig): 
 /**
  * ¿Puede la criatura elegir acción este turno? (viva y no aturdida).
  * combate v0.5 §3.3 U4 (C26): con `ultima_anima.aturdir = "primero"`, la última con
- * `skipTurn = turno` sí elige (se le cancela el 1.º movimiento); hace falta `cfg` para verlo.
+ * `skipTurn = turno` sí elige (se le cancela el 1.º movimiento); por eso `cfg` es obligatorio (QA I-01).
  */
-export function canAct(state: BattleState, side: 0 | 1, idx: number, cfg?: AnyConfig): boolean {
+export function canAct(state: BattleState, side: 0 | 1, idx: number, cfg: AnyConfig): boolean {
   const f = state.fighters[side][idx] as FighterState;
   if (f.ko) return false;
   if (f.skipTurn !== state.turn) return true;
-  if (cfg === undefined) return false;
   const C = combatOf(cfg);
   return C.variants.lastAnima.stun === "primero" && lastIdx(state, side, C) === idx + 1;
 }
 
-/** Posiciones (1–4) que deben recibir acción en el plan de `side` (con `cfg`, incluye el plan B de aturdir de v0.5). */
-export function eligibleActors(state: BattleState, side: SideId, cfg?: AnyConfig): number[] {
+/** Posiciones (1–4) que deben recibir acción en el plan de `side` (incluye el plan B de aturdir de v0.5). */
+export function eligibleActors(state: BattleState, side: SideId, cfg: AnyConfig): number[] {
   const s = sideIndex(side);
   return [1, 2, 3, 4].filter((p) => canAct(state, s, p - 1, cfg));
 }
@@ -214,10 +213,10 @@ function aliveMask(fs: readonly { readonly ko: boolean }[]): boolean[] {
 
 /**
  * variantes v0.3 V2 — movimientos (1–4) de la criatura `pos` que están en descanso este turno.
- * combate v0.5 §2.4: con `cfg`, la última ánima no tiene ninguno (sus contadores se ignoran).
+ * combate v0.5 §2.4: la última ánima no tiene ninguno (sus contadores se ignoran).
  */
-export function restingMoves(state: BattleState, side: SideId, pos: number, cfg?: AnyConfig): number[] {
-  if (cfg !== undefined && lastIdx(state, sideIndex(side), combatOf(cfg)) === pos) return [];
+export function restingMoves(state: BattleState, side: SideId, pos: number, cfg: AnyConfig): number[] {
+  if (lastIdx(state, sideIndex(side), combatOf(cfg)) === pos) return [];
   const rest = (state.fighters[sideIndex(side)][pos - 1] as FighterState).rest;
   const out: number[] = [];
   if (rest) rest.forEach((n, k) => { if (n > 0) out.push(k + 1); });

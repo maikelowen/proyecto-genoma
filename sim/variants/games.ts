@@ -125,8 +125,8 @@ export function play(A: readonly Combatant[], B: readonly Combatant[], seed: str
   while (state.result === null) {
     for (const s of [0, 1] as const) {
       const side = s === 0 ? "A" : "B";
-      for (const pos of eligibleActors(state, side)) {
-        const resting = restingMoves(state, side, pos);
+      for (const pos of eligibleActors(state, side, cfg)) {
+        const resting = restingMoves(state, side, pos, cfg);
         const c = state.teams[s][pos - 1]!;
         r.decN++;
         r.availSum += 4 - resting.length;

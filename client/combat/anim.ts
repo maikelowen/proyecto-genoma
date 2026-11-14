@@ -311,7 +311,8 @@ export function playTurn(field: Field, before: BattleState, after: BattleState, 
           curFamily = m ? m.family : (before.teams[idx(e.side)][e.actor - 1]?.family ?? null);
           curColor = palette(curFamily ?? "sombra").main;
           const mvName = m ? m.name : "golpe básico";
-          say(e.targets.length === 0 ? `${who(names, e.side, e.actor)} usa ${mvName}, pero ya no queda objetivo.` : `${who(names, e.side, e.actor)} usa ${mvName} sobre ${e.targets.map((t) => who(names, e.targetSide, t)).join(" y ")}.`);
+          const sq = e.seq && e.seq.of > 1 ? ` (${e.seq.index}/${e.seq.of})` : "";
+          say(e.targets.length === 0 ? `${who(names, e.side, e.actor)} usa ${mvName}${sq}, pero ya no queda objetivo.` : `${who(names, e.side, e.actor)} usa ${mvName}${sq} sobre ${e.targets.map((t) => who(names, e.targetSide, t)).join(" y ")}.`);
           const u = unitOf(e.side, e.actor);
           if (u) (acting = u).unit.classList.add("acting");
           const sb = bonus[e.side][e.actor - 1] ?? 0;
@@ -329,8 +330,16 @@ export function playTurn(field: Field, before: BattleState, after: BattleState, 
           break;
         }
         case "cancel":
-          say(`${who(names, e.side, e.actor)} ${e.reason === "aturdido" ? "está aturdido y pierde su acción" : "ya está KO y no actúa"}.`);
+          say(`${who(names, e.side, e.actor)} ${e.reason === "aturdido" ? "está aturdido y pierde su acción" : e.lost !== undefined ? "cae antes de actuar" : "ya está KO y no actúa"}${e.lost ? `: se pierden ${e.lost} de energía` : ""}.`);
           floater(e.side, e.actor, e.reason === "aturdido" ? "¡Aturdido!" : "KO", "info");
+          if (e.lost) {
+            floater(e.side, e.actor, `−${e.lost} energía`, "stat");
+            if (e.side === "A") for (const el of [field.energy.A, ...Array.from(document.querySelectorAll(".energy"))]) {
+              el.classList.remove("lostflash");
+              void (el as HTMLElement).offsetWidth;
+              el.classList.add("lostflash");
+            }
+          }
           if (!(await sleepOrAbort(450))) return;
           break;
         case "lost":

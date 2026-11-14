@@ -128,7 +128,7 @@ function countingAi(base: Ai, slot: number, cost: number, r: JobResult): Ai {
   return (state, side, cfg) => {
     const plan = base(state, side, cfg);
     const s = side === "A" ? 0 : 1;
-    if (eligibleActors(state, side).includes(1) && state.energy[s] >= cost) {
+    if (eligibleActors(state, side, cfg).includes(1) && state.energy[s] >= cost) {
       r.usable++;
       if (plan.some((a) => a.actor === 1 && a.move === slot)) r.used++;
     }
@@ -142,7 +142,7 @@ function costUseAi(base: Ai, r: JobResult): Ai {
     const plan = base(state, side, cfg);
     const s = side === "A" ? 0 : 1;
     const e = state.energy[s];
-    for (const actor of eligibleActors(state, side)) {
+    for (const actor of eligibleActors(state, side, cfg)) {
       const c = state.teams[s][actor - 1]!;
       const act = plan.find((a) => a.actor === actor);
       const usedCost = act && act.move > 0 ? c.moves[act.move - 1]!.cost : 0;

@@ -230,12 +230,12 @@ describe("D-053 aislada: varios movimientos de la última ánima (§2, §3)", ()
     assert.ok(of(r, "ko", "A").some((e) => e.pos === 2));
     const s2 = r.state;
     assert.equal(lastAnimaPos(s2, "A", BOTH), 1);
-    assert.deepEqual(restingMoves(s2, "A", 1), [1]); // el contador sigue en el estado…
+    assert.ok((s2.fighters[0][0]!.rest ?? [])[0]! > 0); // el contador sigue en el estado…
     assert.deepEqual(restingMoves(s2, "A", 1, BOTH), []); // …pero la última lo ignora
     assert.equal(validatePlan(s2, "A", seq(1, [1, 2, 4]), BOTH), null);
     const r2 = play(s2, seq(1, [1, 2]), free([1, 2, 3]), BOTH);
     assert.deepEqual(of(r2, "action", "A").map((e) => e.move), [1, 2]);
-    assert.deepEqual(restingMoves(r2.state, "A", 1), []); // lo que ejecuta la última no descansa
+    assert.ok((r2.state.fighters[0][0]!.rest ?? []).every((n: number) => n === 0)); // lo que ejecuta la última no descansa
   });
 
   it("U9 / §8: planSynergy cuenta ánimas distintas (tres entradas de la misma ⇒ 0; combo_familia falsa)", () => {
@@ -289,7 +289,6 @@ describe("casos borde con aturdir y KO (U2–U5)", () => {
         const r2 = play(r.state, [], free([1, 2, 3]), cfg);
         assert.equal(of(r2, "cancel", "A").length + of(r2, "action", "A").length, 0);
       } else {
-        assert.deepEqual(eligibleActors(r.state, "A"), []); // sin cfg, la regla de v0.4
         assert.deepEqual(eligibleActors(r.state, "A", cfg), [1]);
         // B1 tiene el aturdir en descanso: aturde B2 (mismo movimiento) para ver la inmunidad
         const r2 = play(r.state, seq(1, [1, 2]), [{ actor: 2, move: 1, target: 0 }, ...free([1, 3])], cfg);

@@ -27,6 +27,8 @@ const STATUS_ES: Record<string, string> = {
   prisa: "prisa",
   regenerar: "regenerar",
 };
+/** "(2/3)" para los movimientos de una secuencia de la última ánima. */
+const seqTxt = (q?: { readonly index: number; readonly of: number }): string => (q && q.of > 1 ? ` (${q.index}/${q.of})` : "");
 export const statusName = (id: string): string => STATUS_ES[id] ?? id;
 
 /** `before` es el estado previo al turno (equipos y nombres); `names[side][pos-1]` = nombre. */
@@ -67,7 +69,7 @@ export function narrate(before: BattleState, events: readonly BattleEvent[], nam
         const mv = e.move === 0 ? null : before.teams[idx(e.side)][e.actor - 1]?.moves[e.move - 1];
         lastFamily = mv ? mv.family : (before.teams[idx(e.side)][e.actor - 1]?.family ?? null);
         lastEff = null;
-        const parts: Part[] = [nm(e.side, e.actor), ` usa ${moveName(e.side, e.actor, e.move)}`];
+        const parts: Part[] = [nm(e.side, e.actor), ` usa ${moveName(e.side, e.actor, e.move)}${seqTxt(e.seq)}`];
         if (e.targets.length === 0) parts.push(", pero ya no queda objetivo");
         else {
           parts.push(" sobre ");
@@ -79,9 +81,13 @@ export function narrate(before: BattleState, events: readonly BattleEvent[], nam
         lines.push({ kind: "act", parts });
         break;
       }
-      case "cancel":
-        lines.push({ kind: "info", parts: [nm(e.side, e.actor), e.reason === "aturdido" ? " está aturdido y pierde su acción" : " ya está KO y no actúa", e.refund > 0 && e.side === "A" ? ` (se le devuelven ${e.refund} de energía)` : ""] });
+      case "cancel": {
+        const lost = e.lost ?? 0;
+        const what = e.seq && e.move !== undefined ? ` (${moveName(e.side, e.actor, e.move)}${seqTxt(e.seq)})` : "";
+        const why = e.reason === "aturdido" ? " está aturdido y pierde su acción" : e.lost !== undefined ? " cae antes de actuar" : " ya está KO y no actúa";
+        lines.push({ kind: "info", parts: [nm(e.side, e.actor), why + what, lost > 0 ? `: se pierden ${lost} de energía` : "", e.refund > 0 && e.side === "A" ? ` (se le devuelven ${e.refund} de energía)` : ""] });
         break;
+      }
       case "lost":
         lines.push({ kind: "info", parts: ["La acción de ", nm(e.side, e.actor), " se pierde: no queda objetivo válido."] });
         break;

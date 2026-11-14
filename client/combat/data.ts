@@ -42,3 +42,6 @@ export function familyLabel(f: string): string {
 export function palette(f: string): Palette {
   return paletteOf(f, gcfg.hybridById.get(f)?.components);
 }
+
+/** Versión de prueba v0.5 (la construye `build:combate-v05` con combate.v0.5.json): última ánima con varios pagos y energía pagada al confirmar. */
+export const V05: boolean = cfg.combat.variants.lastAnima.active || cfg.combat.energy.payOnConfirm;
