@@ -589,8 +589,8 @@
         0.35
       ],
       "energia_perdida_por_partida_inf": [
-        0.5,
-        3
+        4,
+        5.5
       ],
       "plan_b_aturdir_mejora_min_pp": 1
     }

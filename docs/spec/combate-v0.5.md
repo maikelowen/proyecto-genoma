@@ -235,7 +235,7 @@ Se corre `ambas_aturdir_primero` **solo si** `ambas` no mejora la bola de nieve 
 | Métrica | Rango informativo | Estimación |
 |---|---|---|
 | Pagos por turno de la última | `[ultima_pagos_por_turno_inf]` 1,2–2,0 | ≈ 1,4–1,8: con E = 3 y una sola ánima, en v0.4 llega a última con ≈ 6–10 de energía acumulada y el primer turno puede lanzar 2–3 pagos; después ≈ 1,2 (3 de energía / coste medio ≈ 2,4). Por encima de 2,0, la última es una "bomba" y conviene vigilar el WR de la última. |
-| Energía perdida por partida | `[energia_perdida_por_partida_inf]` 0,5–3,0 | ≈ 1–2 (≈ 4 KO por partida, ≈ 35 % sin haber actuado y con pago comprometido de ≈ 1,5 de media; aturdir ≈ 0,3) |
+| Energía perdida por partida | `[energia_perdida_por_partida_inf]` 4–5,5 | ≈ 5 (corregido tras QA I-02: en v0.4 ya se devolvían ≈ 4,6/partida; D-054 los convierte en pérdida y la última ánima añade ≈ 0,6; ≈ 36 % cae en el turno del KO final, sin efecto). Informar también de la "energía perdida útil" (sin ese turno) |
 | Primer KO | — | `solo_D053`: −2 a −5 pp (solo pesa en finales 1 contra 2 o 3); `solo_D054`: +0,5 a +1,5 pp (la energía perdida es casi siempre del bando que ya pierde un ánima); `ambas`: −1 a −4 pp. **Riesgo**: que `solo_D053` no llegue a −2 pp si la mayoría de partidas ya están decididas cuando aparece la última. |
 | Duración | — | `solo_D053`: −0,2 a −0,5 turnos (finales más rápidos); `solo_D054`: ≈ igual |
 | % gratis | — | baja algo con D-053 (la última deja de usar el gratis por falta de opciones); el incumplimiento aceptado en D-052 seguirá |
