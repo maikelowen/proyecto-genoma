@@ -1,14 +1,14 @@
 # HOJA DE RUTA — Proyecto Genoma
 
-Actualizada: 2026-11-13. Sustituye a la sección 11 de `plan-diseno.md`. Se planifica **por cuota de uso** (D-032): cada ciclo termina en algo que Miguel puede probar. Los costes son estimaciones del director en tokens de agentes (un encargo típico: 150–400 k); se corrigen con el coste real al cerrar cada fase.
+Actualizada: 2026-11-14. Sustituye a la sección 11 de `plan-diseno.md`. Se planifica **por cuota de uso** (D-032): cada ciclo termina en algo que Miguel puede probar. Los costes son estimaciones del director en tokens de agentes (un encargo típico: 150–400 k); se corrigen con el coste real al cerrar cada fase.
 
 ## Fases
 
 | Fase | Estado | Qué se construye | Hito para pasar | Coste est. |
 | --- | --- | --- | --- | --- |
 | 0. Reglas y simuladores | **Hecha** | Genética v0.2, gramática de movimientos, motor de combate, IA, simuladores | Las reglas aguantan en números | (gastado ~4,6 M) |
-| 1. Prototipo de combate | **En prueba** | Combate v0.4 jugable en el navegador contra la IA; arte v3 en rama | **3–5 amigos dicen que pelear es divertido** | 0,3–0,8 M para cerrarla |
-| 2. Colección y resonancia | Siguiente | Ver abajo | El bucle completo funciona sin conexión y Miguel quiere seguir jugando | 2–3 M |
+| 1. Prototipo de combate | **En prueba; cierre el 18 nov** (D-061) | Combate v0.4 jugable; v0.5 adoptado en rama (D-060); arte v3 en rama | **3–5 amigos dicen que pelear es divertido** | 0,3–0,8 M para cerrarla |
+| 2. Colección y resonancia | Siguiente, en dos pasos (D-062) | Ver abajo | Paso 1: **Miguel resuena 20 veces y quiere la 21.ª**; paso 2: el mundo se recorre a gusto | Paso 1: 1,0–1,3 M (tope 1,5 M); paso 2: 1–1,5 M |
 | 3. Online y PvP asíncrono | — | Cuentas (Supabase), guardado en la nube, PvP asíncrono resuelto en servidor (D-030), ranking y temporadas; hoja de metas en días de juego antes de empezar (D-032) | Partidas entre jugadores reales | 2–3 M |
 | 4. Contenido y beta cerrada | — | 8 santuarios, historia ligera, misiones, balance, beta cerrada. **Sin mercado** (D-028) | Retención y diversión medidas | 2–3 M |
 | 5. Lanzamiento | Después | Mercado, tiempo real (Colyseus), monetización cosmética, arte final, tiendas | — | — |
@@ -19,21 +19,24 @@ Actualizada: 2026-11-13. Sustituye a la sección 11 de `plan-diseno.md`. Se plan
 3. Fusionar `arte-v3` en `main` y aplicar el nombre Ánimas a los textos.
 4. **Hito:** Miguel declara la Fase 1 cerrada (es una decisión suya).
 
-## Fase 2 — alcance propuesto (a confirmar por Miguel antes de empezar)
-Objetivo: el bucle "capturar → combatir → resonar (criar) → ver qué sale" funcionando sin servidor, con guardado local.
+## Fase 2 — en dos pasos (D-062)
+Objetivo: el bucle "atrapar → combatir → resonar → ver qué eco sale" sin servidor, con guardado local. Vocabulario: D-063.
 
+### Paso 1 — resonancia jugable cuanto antes
 | Bloque | Contenido | Decisiones de base |
 | --- | --- | --- |
-| Zonas | Lista de 2–3 zonas con ánimas salvajes por familia (sin mapa de casillas) | D-028 |
-| Captura | Encuentro → combate → captura; dos capturas nunca son idénticas | — |
-| Colección | Lista de ánimas con sus genes visibles (D) y ocultos (descubiertos) | D-048 (un gen = una zona) |
-| Resonancia (cría) | Elegir dos ánimas, ver la cría, límite de 5 por ánima; prueba de herencia legible | D-008, D-010, D-011 |
-| Progresión | Nivel que desbloquea un movimiento o variante, no estadísticas | D-029 B |
-| Santuarios | 2 santuarios con combate especial; dan habilidades enseñables por familia y complementos | D-036, D-049 |
-| Mutaciones situacionales | Movimientos de mutación que brillan en ciertas situaciones | D-029 A |
-| Guardado | `localStorage` con exportar/importar | D-016 |
+| Inicio | Un hechicero en un santuario te da tu primer ánima | D-062 |
+| Captura mínima | Ganar a un ánima salvaje → gastar un farol para intentar atraparla; dos capturas nunca son idénticas | D-062 |
+| Colección | Lista de ánimas con genes visibles (D) y ocultos descubiertos | D-048 (un gen = una zona) |
+| Resonancia | Elegir dos ánimas, ver el eco, límite de 5 por ánima; herencia legible | D-008, D-010, D-011 |
+| Guardado mínimo | `localStorage` (exportar/importar si cabe) | D-016 |
 
-Orden recomendado: colección + captura → resonancia → progresión → santuarios → mutaciones situacionales. Cada bloque termina en algo jugable.
+**Hito:** Miguel resuena 20 veces y quiere hacerlo la 21.ª. **Coste estimado 1,0–1,3 M, tope 1,5 M** (spec ~200 k; núcleo + revisión ~400 k; cliente ~400–500 k; fusión de `arte-v3` y textos ~100 k). Si se acerca al tope, se recorta antes el exportar/importar y el pulido visual que la resonancia.
+
+### Paso 2 — el mundo (solo si se cumple el hito)
+- **Mapa de la región** para viajar entre zonas; cada zona, una **escena ilustrada con puntos tocables**: camino con encuentros según la zona y santuario. Tienda y aldeanos esperan a que haya moneda y misiones.
+- Datos de zonas, encuentros y personajes **separados de la presentación**, para pasar a un mapa caminable sin rehacer contenido. El mapa caminable es una decisión posterior, con el bucle validado (revisa D-028).
+- Pendiente de ordenar dentro del paso 2 o después: progresión (D-029 B), santuarios con habilidades enseñables y complementos (D-036, D-049), mutaciones situacionales (D-029 A).
 
 ## Fuera de alcance hasta nuevo aviso
 Mercado (D-028), economía con monedas y gemas, música, tiempo real, movimientos con sabor por parte del cuerpo (D-024, sin fecha), board externo (D-009).

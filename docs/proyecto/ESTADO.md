@@ -6,7 +6,7 @@ Actualizado: 2026-11-14. Fuente de verdad: este fichero (el repositorio).
 - **Fase 1 (prototipo de combate) en prueba.** Combate v0.4 publicado en https://maikelowen.github.io/proyecto-genoma/ y con **reglas congeladas** hasta el feedback de los amigos (D-045).
 - **Arte v3 terminado y congelado** en la rama `arte-v3` (D-050); se fusiona tras la prueba.
 - **Desarrollo en Claude Code** (D-051); los chats del proyecto de Claude son para decisiones.
-- **Combate v0.5 terminado en la rama `combate-v0.5`** y en prueba solo por Miguel: https://maikelowen.github.io/proyecto-genoma/jugable/combate-v05.html. Ninguna de sus reglas mejora la bola de nieve con claridad; **pendiente P-08**.
+- **Combate v0.5 terminado en la rama `combate-v0.5`** y en prueba solo por Miguel: https://maikelowen.github.io/proyecto-genoma/jugable/combate-v05.html. **Adoptado (D-060)**: llega a `main` tras el feedback, con un reequilibrio único.
 
 ## Hecho
 - **Fase 0:** genética v0.2 validada; gramática de movimientos, motor de combate, IA normal y de búsqueda, simuladores.
@@ -28,10 +28,10 @@ Actualizado: 2026-11-14. Fuente de verdad: este fichero (el repositorio).
 
 ## Siguiente paso
 1. Hecho: enlace enviado a los amigos (13 nov, noche). **Miguel trae las respuestas** tal cual.
-2. **Miguel juega `combate-v05.html`** y contesta P-08 (qué hacer con D-053 y D-054). Nada de la rama llega a `main` hasta el feedback de los amigos (D-055).
-3. Mirar en el feedback: bola de nieve (P-01) y si sobran rondas de ataque gratis (efecto de D-052).
-4. Con el feedback (P-01): cerrar la Fase 1 o iterar reglas; fusionar `arte-v3` (al fusionar, hay conflicto esperado en `client/combat/main.ts` y en `docs/jugable/combate.html`: conservar el SPOT en espejo de `main` y regenerar con `npm run build:combate`); aplicar el nombre Ánimas a los textos.
-5. Fase 2 según `HOJA-DE-RUTA.md`, cuando Miguel confirme su alcance (P-02).
+2. **18 nov: cierre de la Fase 1** con las respuestas que haya y la nota de Miguel (D-061). Sin más ciclos de reglas antes (D-060).
+3. Mirar en el feedback: bola de nieve (si la hay: revisar D-054 o "Brasa") y si sobran rondas de ataque gratis (efecto de D-052).
+4. Tras el cierre: reequilibrio único y v0.5 a `main` (BACKLOG 4b); fusionar `arte-v3` (al fusionar, hay conflicto esperado en `client/combat/main.ts` y en `docs/jugable/combate.html`: conservar el SPOT en espejo de `main` y regenerar con `npm run build:combate`); aplicar el vocabulario D-063 a los textos.
+5. **Fase 2, paso 1** (D-062): colección + captura con farol + resonancia + guardado mínimo; hito: Miguel resuena 20 veces. Coste 1,0–1,3 M, tope 1,5 M.
 
 ## Pendientes menores
 - QA v0.5 M-01–M-05 (desempates de la IA, test de provocar en U10). QA R-01 (claves desconocidas en bloques antiguos de config) y R-02 (la IA de referencia no ve el provocar del turno); `placement.ts:61` con un 3 fijo; tests de provocador que cae a mitad de turno.
