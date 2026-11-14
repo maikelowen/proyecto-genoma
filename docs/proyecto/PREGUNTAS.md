@@ -36,3 +36,9 @@ Formato de cada pregunta: contexto en 2–3 líneas, opciones con su consecuenci
 
 ### P-06 · Pendientes menores del documento de diseño (sin prisa)
 Duración de temporadas y recompensas; si se puede liberar o fusionar ánimas para retirarlas de la economía; nombre y temática de la región. Antes de la Fase 3–4.
+
+### P-08 · Qué hacer con las reglas v0.5 (D-053 y D-054)
+- **Contexto:** simulación con semillas nuevas (`docs/informes/combate-v0.5.md`). Partidas ganadas por quien hace el primer KO: v0.4 69,7 %; solo varios ataques de la última ánima (D-053) 68,5 % (−1,2 pp, neutra: mejora sin llegar al umbral de −2 pp); solo energía pagada al confirmar (D-054) 71,5 % (+1,8 pp, **empeora**: el que va perdiendo pierde más energía porque le caen más ánimas); las dos juntas 70,3 % (+0,6 pp, neutra). Con D-054 se salen de banda 2–3 familias de 13. Duración y profundidad no cambian.
+- **Opciones:** A) quedarse solo con D-053 (lo único que va en la buena dirección); B) quedarse con las dos tal cual si al jugar se sienten mejor (la sensación de "elegir bien a quién gastar" no la mide el simulador); C) D-053 reforzada (p. ej. +1 de energía para la última ánima) y medir de nuevo; D) descartar v0.5 y esperar al feedback (P-01, mecánica "Brasa").
+- **Recomendación:** A, y decidir C después del feedback de los amigos si la bola de nieve les molesta. Antes, juega `combate-v05.html` (tiene las dos activas) para ver si D-054 aporta algo que compense.
+- **Bloquea:** el ajuste de v0.5 (BACKLOG 4b). No bloquea nada de la Fase 1.

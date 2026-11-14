@@ -37,3 +37,7 @@ Lecciones y convenciones de dirección. Se lee al empezar cada sesión y se ampl
 - Lo que decide Miguel va a `PREGUNTAS.md`; él lo lleva al chat de decisiones (`/preguntas`) y vuelve con `/decision`.
 - Antes de diagnosticar una queja de juego como problema de reglas, mira la pantalla: "ataca al del lado opuesto" era la escena del rival girada 180°, no el objetivo automático.
 - Una medida rápida de una palanca (p. ej. energía) se hace en una copia en `/tmp` del repo con `--out /tmp/...` y semillas nuevas: el simulador v0.4 tarda ~1 min con 4 hilos.
+- Docs de `main` mientras se trabaja en una rama: usar una `git worktree` de `main` en el scratchpad; así no se cambia de rama bajo los agentes que trabajan en la carpeta del repo.
+- Si el límite de uso corta a los agentes, al volver se reanudan con `SendMessage` (conservan su contexto); no relanzarlos desde cero.
+- El subagente `revisor` puede no cargarse en la sesión: usar un agente general (Opus) diciéndole que lea y siga `.claude/agents/revisor.md`.
+- Con varios agentes en paralelo en la misma carpeta, hacer commit por rutas (`git add sim/ …`) y no tocar firmas compartidas (p. ej. hacer obligatorio un parámetro) hasta que terminen.
