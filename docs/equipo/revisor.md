@@ -52,3 +52,4 @@
 - **Comparar con `puntosEf(M)`:** M ya ha perdido puntos por redondeo, así que una cota estricta castiga a los originales mal redondeados. Antes de proponer tolerancia, cuenta "pieza añadida con la misma potencia" y "cambio por una pieza más cara con la misma potencia" (N-01).
 - **Reglas que se activan con un contador de la colección (acompañante < 2 ánimas):** cruza su condición con quién entra en el equipo. Los simuladores rehacen el equipo y no lo ven (N-03).
 - **Parser nuevo:** prueba siempre una errata de clave por bloque. En progresión v0.1 faltaba `onlyKeys` (N-02, lo mismo que R-01).
+- **Mundo/mapas (v0.1):** recalcula la regla de encuentro paso a paso con tu propio `createRng(semilla|paso|k)` y valida rutas contra un Bellman-Ford propio y ejecutándolas con `step`; mira también los contratos de orden de escritura y de doble evento que quedan en el cliente.
