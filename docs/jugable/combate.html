@@ -109,9 +109,9 @@ details.help .log{border:0;margin:4px 0;padding:0}
 .float{top:auto;bottom:calc(100% + 58px);-webkit-text-stroke:3px #0b0d13;paint-order:stroke fill;text-shadow:none}
 .float svg{width:30px;height:30px;display:block;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 2px #000) drop-shadow(0 1px 1px #000)}
 /* halo: sin disco, brillo pegado a la silueta */
-.unit .ico svg>circle:first-child{display:none}
-.ico svg{filter:drop-shadow(0 0 2px var(--fam)) drop-shadow(0 0 9px color-mix(in srgb,var(--fam) 55%,transparent))}
-.unit.acting .ico svg{filter:drop-shadow(0 0 2px var(--fam)) drop-shadow(0 0 18px var(--fam)) brightness(1.15)}
+/* arte v3: el halo va dentro del SVG (sin filtros por alma, más ligero en móvil) */
+.ico svg{filter:none}
+.unit.acting .ico svg{filter:brightness(1.18)}
 /* vida: barra grande, inclinada segun bando */
 .bar{position:relative;width:84px;height:8px;background:#05060c;border:1px solid #000;border-radius:2px;overflow:hidden}
 .unit.mine .bar{transform:skewX(-18deg)}.unit.foe .bar{transform:skewX(18deg)}
@@ -222,6 +222,15 @@ dl.glos{margin:4px 0;font-size:13px}dl.glos dt{font-weight:700;color:var(--acc);
 .opts5{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:760px){.opts5{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .ord{font-size:11px;padding:0 3px;white-space:nowrap}
+
+/* v0.5 (prueba): rótulo, secuencia de la última ánima, notas y aviso de energía perdida */
+.v05tag{font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--warn);border:1px solid var(--warn);border-radius:99px;padding:1px 7px;white-space:nowrap;flex:none}
+.opt .seqn{flex:none;min-width:17px;height:17px;border-radius:50%;background:var(--acc);color:#0b0d13;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.opt[disabled]{opacity:.45;cursor:not-allowed}
+.tray .note{font-size:12px;line-height:1.3;background:var(--panel2);border:1px solid var(--acc);border-radius:8px;padding:5px 8px;margin-bottom:5px;color:var(--fg,#e6e8f0)}
+.tray .note.warn{border-color:var(--warn);color:var(--warn)}
+@keyframes lostflash{0%,100%{background:transparent}25%,75%{background:#ff6b6b55;box-shadow:0 0 0 2px #ff6b6b}}
+.lostflash{animation:lostflash .9s ease 2;border-radius:6px}
 </style></head>
 <body><div id="app"></div>
 <script>"use strict";
@@ -235,7 +244,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 /** Interfaz del combate jugable (DOM sin dependencias). Estados: team → plan ⇄ report. */
 const index_ts_1 = require("../../packages/core/src/index.ts");
 const data_ts_1 = require("./data.ts");
-const souls_ts_1 = require("./souls.ts");
+const soul_ts_1 = require("../art/soul.ts");
 const game_ts_1 = require("./game.ts");
 const narrate_ts_1 = require("./narrate.ts");
 const anim_ts_1 = require("./anim.ts");
@@ -317,20 +326,18 @@ const SIDE = { A: 0, B: 1 };
 const alive = (s, side) => s.fighters[SIDE[side]].map((f) => !f.ko);
 const rowName = (pos) => (data_ts_1.cfg.combat.frontRow.includes(pos) ? "Delantera" : "Trasera");
 // ------------------------------------------------------------------ componentes visuales
-/** Icono del alma: silueta y cara estáticas de la familia (híbridas: la del primer componente con halo del segundo). */
-function soulShape(family, size, ko = false) {
-    const hy = data_ts_1.gcfg.hybridById.get(family);
-    const art = souls_ts_1.SOUL_ART[hy ? hy.components[0] : family] ?? souls_ts_1.SOUL_ART["sombra"];
-    const svg = document.createElementNS(svgNS, "svg");
-    svg.setAttribute("viewBox", art.viewBox);
-    svg.setAttribute("width", String(size));
-    svg.setAttribute("height", String(size));
-    svg.setAttribute("aria-hidden", "true");
-    svg.setAttribute("class", "soul" + (ko ? " dead" : ""));
-    if (hy)
-        svg.setAttribute("style", `filter:drop-shadow(0 0 3px ${(0, data_ts_1.palette)(hy.components[1]).main}) drop-shadow(0 0 2px ${(0, data_ts_1.palette)(hy.components[1]).main})`);
-    svg.innerHTML = art.svg; // constante estática de souls.ts, nunca datos del usuario
-    return svg;
+/** Icono del alma: arte v3 generado desde sus genes (client/art/soul.ts). `ko` muestra los ojos de caída. */
+function soulShape(soul, size, ko = false) {
+    const tpl = document.createElementNS(svgNS, "g");
+    tpl.innerHTML = (0, soul_ts_1.soulSvg)(soul.creature, data_ts_1.gcfg, { size, mood: ko ? "ko" : "idle", className: "soul" }); // SVG generado por nuestro código, nunca datos del usuario
+    return tpl.firstElementChild;
+}
+// CSS del arte v3 (estados de los ojos y vaivén por temperamento), una sola vez
+if (typeof document !== "undefined" && !document.getElementById("soul3-css")) {
+    const st = document.createElement("style");
+    st.id = "soul3-css";
+    st.textContent = soul_ts_1.SOUL_CSS;
+    document.head.append(st);
 }
 function partNode(p) {
     if (typeof p === "string")
@@ -377,7 +384,7 @@ function buildField(f, st, sel) {
         const c = soul.combatant;
         const [x, y] = SPOT[side][pos - 1];
         const front = data_ts_1.cfg.combat.frontRow.includes(pos);
-        const ico = h("div", { class: "ico" }, soulShape(c.family, 100));
+        const ico = h("div", { class: "ico" }, soulShape(soul, 100));
         const bar = h("i", null);
         const hp = h("div", { class: "hpn" });
         const chips = h("div", { class: "chips" });
@@ -471,6 +478,13 @@ const HELP = [
     ["Familias", "Anillo base: Marea > Llama > Brote > Roca > Voltio > Sombra > Marea (cada una gana a la siguiente: x1,25, y pierde contra la anterior: x0,8). Las híbridas tienen su propio anillo: Vapor > Magma > Espora > Liquen > Plasma > Tormenta > Abismo > Vapor."],
     ["Sinergia", "Si 2 o 3 de tus almas usan movimientos de pago de la misma familia en el mismo turno, esos movimientos ganan +10 % o +25 % de potencia. El gratis no cuenta."],
 ];
+if (data_ts_1.V05) {
+    HELP.push(["Última ánima (prueba v0.5)", "Cuando a un bando le queda una sola ánima viva, ese turno puede encadenar hasta 3 movimientos de pago distintos (sin descanso) o usar el gratis. Se ejecutan en el orden marcado."]);
+    HELP.push(["Energía pagada al confirmar (prueba v0.5)", "Al confirmar el turno la energía de tus acciones se gasta ya: si un ánima cae o es aturdida antes de actuar, esa energía se pierde."]);
+}
+function v05Tag() {
+    return data_ts_1.V05 ? h("div", { class: "v05tag" }, "Versión de prueba v0.5") : null;
+}
 function glossaryNodes() {
     return [h("p", null, h("b", null, "Glosario")), h("dl", { class: "glos" }, ...GLOSARIO.flatMap(([w, d]) => [h("dt", null, w), h("dd", null, d)]))];
 }
@@ -478,7 +492,7 @@ function helpBox() {
     return h("details", { class: "help" }, h("summary", null, "Ayuda: cómo se juega"), ...HELP.map(([t, x]) => h("p", null, h("b", null, t + ". "), x)), ...glossaryNodes());
 }
 function topBar() {
-    return h("div", { class: "top" }, h("h1", null, "Proyecto Genoma · Combate"), h("div", { class: "score", id: "score" }, `Partidas: ${score.played} · Ganadas: ${score.won}`));
+    return h("div", { class: "top" }, h("h1", null, "Proyecto Genoma · Combate"), v05Tag(), h("div", { class: "score", id: "score" }, `Partidas: ${score.played} · Ganadas: ${score.won}`));
 }
 // ------------------------------------------------------------------ pantalla de equipo
 function toggleSoul(i) {
@@ -521,7 +535,7 @@ function soulCard(i) {
     const k = picked.indexOf(i);
     const pal = (0, data_ts_1.palette)(c.family);
     const moves = orderedMoves(c).map(({ m }) => h("li", null, h("b", null, m.name), h("span", { class: "cost" }, m.cost === 0 ? " gratis" : ` ${m.cost}⚡`), h("div", { class: "mdesc" }, (0, index_ts_1.describeMoveShort)(m, data_ts_1.cfg.moves))));
-    return h("div", { class: `scard${k >= 0 ? " picked" : ""}`, style: `--fam:${pal.main}`, role: "button", tabindex: 0, onclick: () => toggleSoul(i), onkeydown: ((e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggleSoul(i))) }, h("div", { class: "fhead" }, soulShape(c.family, 64), h("div", { class: "fname" }, h("b", null, s.name), h("small", null, (0, data_ts_1.familyLabel)(c.family))), k >= 0 ? h("span", { class: "pk" }, String(k + 1)) : null), h("div", { class: "stats" }, h("span", null, `Vida ${c.maxHp}`), h("span", null, `Ataque ${c.attack.toFixed(2)}`), h("span", null, `Iniciativa ${Math.round(c.initiative)}`)), h("ul", { class: "moves" }, ...moves));
+    return h("div", { class: `scard${k >= 0 ? " picked" : ""}`, style: `--fam:${pal.main}`, role: "button", tabindex: 0, onclick: () => toggleSoul(i), onkeydown: ((e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggleSoul(i))) }, h("div", { class: "fhead" }, soulShape(s, 64), h("div", { class: "fname" }, h("b", null, s.name), h("small", null, (0, data_ts_1.familyLabel)(c.family))), k >= 0 ? h("span", { class: "pk" }, String(k + 1)) : null), h("div", { class: "stats" }, h("span", null, `Vida ${c.maxHp}`), h("span", null, `Ataque ${c.attack.toFixed(2)}`), h("span", null, `Iniciativa ${Math.round(c.initiative)}`)), h("ul", { class: "moves" }, ...moves));
 }
 function goPlace() {
     slots = [0, 1, 2, null]; // por defecto: 2 delante + 1 detrás
@@ -581,11 +595,11 @@ function renderPlace() {
             ondragover: ((e) => e.preventDefault()),
             ondrop: ((e) => { e.preventDefault(); if (dragging !== null)
                 putIn(slot, dragging); }),
-        }, soul ? soulShape(soul.combatant.family, 38) : null, soul ? h("span", { class: "pn" }, soul.name) : h("span", { class: "pe" }, selSoul !== null ? "Colocar aquí" : "Vacía"), soul ? h("small", null, (0, data_ts_1.familyLabel)(soul.combatant.family)) : null);
+        }, soul ? soulShape(soul, 38) : null, soul ? h("span", { class: "pn" }, soul.name) : h("span", { class: "pe" }, selSoul !== null ? "Colocar aquí" : "Vacía"), soul ? h("small", null, (0, data_ts_1.familyLabel)(soul.combatant.family)) : null);
         return b;
     };
     const pool = team.map((s, si) => ({ s, si })).filter((x) => !slots.includes(x.si));
-    const chip = ({ s, si }) => h("button", { class: "pchip" + (si === selSoul ? " sel" : ""), "data-soul": si, draggable: "true", style: `--fam:${(0, data_ts_1.palette)(s.combatant.family).main}`, onclick: () => clickChip(si), ondragstart: (() => (dragging = si)) }, soulShape(s.combatant.family, 30), h("span", { class: "pn" }, s.name));
+    const chip = ({ s, si }) => h("button", { class: "pchip" + (si === selSoul ? " sel" : ""), "data-soul": si, draggable: "true", style: `--fam:${(0, data_ts_1.palette)(s.combatant.family).main}`, onclick: () => clickChip(si), ondragstart: (() => (dragging = si)) }, soulShape(s, 30), h("span", { class: "pn" }, s.name));
     const ok = slots.filter((x) => x !== null).length === 3;
     const placement = () => team.map((_, si) => slots.indexOf(si) + 1);
     app.replaceChildren(topBar(), h("p", { class: "intro" }, "Coloca tus 3 almas: toca un alma y luego una casilla, o arrástrala. El rival coloca a ciegas; no verás su formación hasta empezar."), h("div", { class: "pgrid" }, h("div", { class: "prl" }, h("b", null, "Delantera"), h("span", null, " recibe los ataques mientras viva")), h("div", { class: "prow" }, cell(1), cell(2)), h("div", { class: "prl" }, h("b", null, "Trasera"), h("span", null, " a salvo mientras viva la delantera (salvo «atrás»)")), h("div", { class: "prow" }, cell(3), cell(4))), h("div", { class: "ppool", ondragover: ((e) => e.preventDefault()), ondrop: ((e) => { e.preventDefault(); if (dragging !== null) {
@@ -615,10 +629,10 @@ function beginPlanning() {
     // todas las almas empiezan el turno con su movimiento gratis
     picks = [1, 2, 3, 4].map((p) => {
         const c = f.state.teams[0][p - 1];
-        return { move: c ? (0, index_ts_1.freeMoveSlot)(c) : 1 };
+        return { move: c ? (0, index_ts_1.freeMoveSlot)(c) : 1, seq: [] };
     });
     inspect = null;
-    const el = (0, index_ts_1.eligibleActors)(f.state, "A");
+    const el = (0, index_ts_1.eligibleActors)(f.state, "A", data_ts_1.cfg);
     if (!el.includes(focus))
         focus = el[0] ?? ([1, 2, 3, 4].find((p) => f.mine[p - 1] && !f.state.fighters[0][p - 1]?.ko) ?? 1);
     phase = "plan";
@@ -631,12 +645,41 @@ function costOf(f, pos, move) {
     return moveOf(f, pos, move)?.cost ?? 0;
 }
 function spentBy(f, except) {
-    return (0, index_ts_1.eligibleActors)(f.state, "A")
+    return (0, index_ts_1.eligibleActors)(f.state, "A", data_ts_1.cfg)
         .filter((q) => q !== except)
-        .reduce((a, q) => a + costOf(f, q, picks[q - 1].move), 0);
+        .reduce((a, q) => a + pickCost(f, q), 0);
 }
+/** Casilla de la última ánima de mi bando este turno (0 si no aplica). */
+function lastPos(f) {
+    return data_ts_1.V05 ? (0, index_ts_1.lastAnimaPos)(f.state, "A", data_ts_1.cfg) : 0;
+}
+const pickCost = (f, pos) => {
+    const p = picks[pos - 1];
+    return p.seq.length > 0 ? p.seq.reduce((a, m) => a + costOf(f, pos, m), 0) : costOf(f, pos, p.move);
+};
+let lastNoteSeen = false;
 function selectMove(pos, move) {
-    picks[pos - 1].move = move;
+    const f = fight;
+    const p = picks[pos - 1];
+    if (pos === lastPos(f)) {
+        // última ánima: el gratis va solo; los pagos se marcan en orden (cada uno una vez)
+        if (costOf(f, pos, move) === 0)
+            p.seq = [];
+        else {
+            const k = p.seq.indexOf(move);
+            if (k >= 0)
+                p.seq.splice(k, 1);
+            else if (p.seq.length < 3 && pickCost(f, pos) + costOf(f, pos, move) <= f.state.energy[0])
+                p.seq.push(move);
+        }
+        const fs = (0, index_ts_1.freeMoveSlot)(f.state.teams[0][pos - 1]);
+        p.move = p.seq[0] ?? fs;
+        focus = pos;
+        inspect = null;
+        render();
+        return;
+    }
+    p.move = move;
     focus = pos;
     inspect = null;
     render();
@@ -703,7 +746,7 @@ function trayPlan(f) {
     if (inspect !== null) {
         const soul = f.rival[inspect - 1];
         const fs = f.state.fighters[1][inspect - 1];
-        head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "nb" }, `${soul.name} (rival)`), h("small", null, `${(0, data_ts_1.familyLabel)(soul.combatant.family)} · ${rowName(inspect)}${fs.ko ? " · KO" : ` · vida ${fs.hp}/${soul.combatant.maxHp}`}`), h("span", { class: "tnote" }, "Sus movimientos"));
+        head = h("div", { class: "thead" }, soulShape(soul, 30), h("b", { class: "nb" }, `${soul.name} (rival)`), h("small", null, `${(0, data_ts_1.familyLabel)(soul.combatant.family)} · ${rowName(inspect)}${fs.ko ? " · KO" : ` · vida ${fs.hp}/${soul.combatant.maxHp}`}`), h("span", { class: "tnote" }, "Sus movimientos"));
         body = h("div", { class: "opts5" }, ...orderedMoves(soul.combatant).map(({ m, slot }) => optButton(m, slot, "ro", false)));
     }
     else {
@@ -711,24 +754,42 @@ function trayPlan(f) {
         const soul = f.mine[pos - 1];
         const fs = f.state.fighters[0][pos - 1];
         const p = picks[pos - 1];
-        const fc = (0, index_ts_1.eligibleActors)(f.state, "A").includes(pos) ? (0, index_ts_1.forecastTargets)(f.state, "A", pos, p.move, data_ts_1.cfg) : null;
+        const fc = (0, index_ts_1.eligibleActors)(f.state, "A", data_ts_1.cfg).includes(pos) ? (0, index_ts_1.forecastTargets)(f.state, "A", pos, p.move, data_ts_1.cfg) : null;
         const nm = fc ? (fc.side === "A" ? f.mine : f.rival) : [];
         const tgt = !fc ? "" : "Irá a: " + (fc.positions.map((q) => nm[q - 1]?.name ?? "?").join(" y ") || "nadie");
-        head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "na" }, soul.name), h("small", null, `${(0, data_ts_1.familyLabel)(soul.combatant.family)} · ${rowName(pos)}`), h("span", { class: "tnote hot", title: "Previsión: el objetivo se decide al actuar" }, tgt));
+        head = h("div", { class: "thead" }, soulShape(soul, 30), h("b", { class: "na" }, soul.name), h("small", null, `${(0, data_ts_1.familyLabel)(soul.combatant.family)} · ${rowName(pos)}`), h("span", { class: "tnote hot", title: "Previsión: el objetivo se decide al actuar" }, tgt));
         if (fs.ko)
             body = h("div", { class: "opts5 msg" }, "Esta alma está KO.");
-        else if (!(0, index_ts_1.eligibleActors)(f.state, "A").includes(pos))
+        else if (!(0, index_ts_1.eligibleActors)(f.state, "A", data_ts_1.cfg).includes(pos))
             body = h("div", { class: "opts5 msg" }, "Aturdida: pierde este turno.");
         else {
-            const avail = f.state.energy[0] - spentBy(f, pos);
-            const resting = (0, index_ts_1.restingMoves)(f.state, "A", pos);
-            body = h("div", { class: "opts5" }, ...orderedMoves(soul.combatant).map(({ m, slot }) => optButton(m, slot, resting.includes(slot) ? "rest" : p.move === slot ? "on" : "", m.cost > avail, () => selectMove(pos, slot))));
+            const isLast = pos === lastPos(f);
+            const avail = f.state.energy[0] - (isLast ? pickCost(f, pos) : spentBy(f, pos));
+            const resting = (0, index_ts_1.restingMoves)(f.state, "A", pos, data_ts_1.cfg);
+            body = h("div", { class: "opts5" }, ...orderedMoves(soul.combatant).map(({ m, slot }) => {
+                if (!isLast)
+                    return optButton(m, slot, resting.includes(slot) ? "rest" : p.move === slot ? "on" : "", m.cost > avail, () => selectMove(pos, slot));
+                const n = p.seq.indexOf(slot);
+                const on = m.cost === 0 ? p.seq.length === 0 : n >= 0;
+                const b = optButton(m, slot, on ? "on" : "", !on && (m.cost > avail || (m.cost > 0 && p.seq.length >= 3)), () => selectMove(pos, slot));
+                if (n >= 0)
+                    b.querySelector(".oname")?.prepend(h("span", { class: "seqn" }, String(n + 1)));
+                return b;
+            }));
         }
     }
-    return h("div", { class: "tray" }, head, body, confirm);
+    const notes = [];
+    if (data_ts_1.V05 && lastPos(f) > 0 && !lastNoteSeen)
+        notes.push(h("div", { class: "note" }, h("b", null, "Última ánima: "), "encadena varios pagos (se ejecutan en el orden marcado, sin descanso) o usa solo el gratis."));
+    if (data_ts_1.V05 && data_ts_1.cfg.combat.energy.payOnConfirm && currentPlan(f).cost > 0)
+        notes.push(h("div", { class: "note warn" }, "La energía se gasta al confirmar: si el ánima cae o la aturden antes de actuar, se pierde."));
+    return h("div", { class: "tray" }, ...notes, head, body, confirm);
 }
 function currentPlan(f) {
-    const plan = (0, index_ts_1.eligibleActors)(f.state, "A").map((pos) => ({ actor: pos, move: picks[pos - 1].move, target: 0 }));
+    const plan = (0, index_ts_1.eligibleActors)(f.state, "A", data_ts_1.cfg).flatMap((pos) => {
+        const p = picks[pos - 1];
+        return (p.seq.length > 0 ? p.seq : [p.move]).map((move) => ({ actor: pos, move, target: 0 }));
+    });
     return { plan, cost: plan.reduce((a, x) => a + costOf(f, x.actor, x.move), 0) };
 }
 function onPickPlan(side, pos) {
@@ -764,12 +825,12 @@ function toggleOverlay(o) {
         app.append(box);
 }
 function turnBar(f, left, withBtns) {
-    return h("div", { class: "turnbar" }, h("b", null, left), h("span", { class: "score", id: "score" }, `Partidas: ${score.played} · Ganadas: ${score.won}`), withBtns ? h("span", { class: "tbr" }, report ? h("button", { class: "btn sm", onclick: () => toggleOverlay("prev") }, "Turno anterior") : null, h("button", { class: "btn sm", onclick: () => toggleOverlay("help") }, "Ayuda")) : h("span", { class: "tbr" }, h("button", { class: "btn sm", onclick: () => toggleOverlay("help") }, "Ayuda")));
+    return h("div", { class: "turnbar" }, h("b", null, left), v05Tag(), h("span", { class: "score", id: "score" }, `Partidas: ${score.played} · Ganadas: ${score.won}`), withBtns ? h("span", { class: "tbr" }, report ? h("button", { class: "btn sm", onclick: () => toggleOverlay("prev") }, "Turno anterior") : null, h("button", { class: "btn sm", onclick: () => toggleOverlay("help") }, "Ayuda")) : h("span", { class: "tbr" }, h("button", { class: "btn sm", onclick: () => toggleOverlay("help") }, "Ayuda")));
 }
 function renderPlan() {
     const f = fight;
     const { cost } = currentPlan(f);
-    const elig = (0, index_ts_1.eligibleActors)(f.state, "A");
+    const elig = (0, index_ts_1.eligibleActors)(f.state, "A", data_ts_1.cfg);
     if (!elig.includes(focus) && inspect === null)
         focus = elig[0] ?? ([1, 2, 3, 4].find((p) => f.mine[p - 1] && !f.state.fighters[0][p - 1]?.ko) ?? focus);
     const tgts = [];
@@ -786,7 +847,10 @@ function renderPlan() {
                 for (const q of fc.positions)
                     tgts.push({ side: fc.side, pos: q });
         }
-        if (m && m.cost > 0)
+        const pc = pickCost(f, pos);
+        if (p.seq.length > 1)
+            orders[pos] = { txt: `⚡${pc}`, title: p.seq.map((q) => moveOf(f, pos, q)?.name ?? "").join(" → ") + ` (${pc} de energía)` };
+        else if (m && m.cost > 0)
             orders[pos] = { txt: `⚡${m.cost}`, title: `${m.name} (${m.cost} de energía)` };
     }
     const atk = (0, index_ts_1.attackable)(f.state, "B", data_ts_1.cfg);
@@ -795,6 +859,8 @@ function renderPlan() {
 function confirmTurn() {
     const f = fight;
     const { plan } = currentPlan(f);
+    if (lastPos(f) > 0)
+        lastNoteSeen = true;
     const { before, events } = (0, game_ts_1.playTurn)(f, plan);
     report = { lines: (0, narrate_ts_1.narrate)(before, events, f.names).lines, before, events };
     pendingResult = f.state.result;
@@ -3332,8 +3398,9 @@ function describeMoveShort(m, mcfg) {
 defs["packages/core/src/combat/index.ts"]=function(module,exports,require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validatePlacement = exports.referencePlacement = exports.placementShape = exports.allPlacements = exports.searchStateKey = exports.evaluateState = exports.createSearchAi = exports.suggestFormation = exports.runBattle = exports.energyPrice = exports.createReferenceAi = exports.wearFactor = exports.validTargetPositions = exports.validatePlan = exports.SIDE_IDS = exports.rowOf = exports.restingMoves = exports.resolveTurn = exports.planSynergy = exports.placementOf = exports.laneOrder = exports.laneOf = exports.freeMoveSlot = exports.forecastTargets = exports.fallbackPlan = exports.exposedRow = exports.eligibleActors = exports.damageAmount = exports.createBattle = exports.canAct = exports.battleHash = exports.basicEffectOf = exports.autoTargetPosition = exports.backRowFirst = exports.autoTarget = exports.attackable = exports.actionPriority = exports.actionMove = exports.actionCost = exports.withMove = exports.synergyGroups = exports.deriveStats = exports.buildCombatant = exports.patchRawConfig = exports.buildBattleConfig = exports.STATUS_IDS = exports.parseCombatConfig = exports.BASIC_EFFECT_STATUS_IDS = exports.AI_STATUS_IDS = void 0;
-/** API pública de combate v0.4 (también carga configs v0.2, con variantes v0.3). */
+exports.allPlacements = exports.searchStateKey = exports.evaluateState = exports.createSearchAi = exports.suggestFormation = exports.runBattle = exports.energyPrice = exports.createReferenceAi = exports.wearFactor = exports.validTargetPositions = exports.validatePlan = exports.slotPriority = exports.SIDE_IDS = exports.rowOf = exports.restingMoves = exports.resolveTurn = exports.planSynergy = exports.placementOf = exports.lastAnimaPos = exports.lastAnimaPlans = exports.laneOrder = exports.laneOf = exports.freeMoveSlot = exports.forecastTargets = exports.fallbackPlan = exports.exposedRow = exports.energyLost = exports.eligibleActors = exports.damageAmount = exports.createBattle = exports.canAct = exports.battleHash = exports.basicEffectOf = exports.autoTargetPosition = exports.backRowFirst = exports.autoTarget = exports.attackable = exports.actionPriority = exports.actionMove = exports.actionCost = exports.withMove = exports.synergyGroups = exports.deriveStats = exports.buildCombatant = exports.patchRawConfig = exports.buildBattleConfig = exports.STATUS_IDS = exports.parseCombatConfig = exports.BASIC_EFFECT_STATUS_IDS = exports.AI_STATUS_IDS = void 0;
+exports.validatePlacement = exports.referencePlacement = exports.placementShape = void 0;
+/** API pública de combate v0.4/v0.5 (también carga configs v0.2, con variantes v0.3). */
 var config_ts_1 = require("./config.ts");
 Object.defineProperty(exports, "AI_STATUS_IDS", { enumerable: true, get: function () { return config_ts_1.AI_STATUS_IDS; } });
 Object.defineProperty(exports, "BASIC_EFFECT_STATUS_IDS", { enumerable: true, get: function () { return config_ts_1.BASIC_EFFECT_STATUS_IDS; } });
@@ -3361,18 +3428,22 @@ Object.defineProperty(exports, "canAct", { enumerable: true, get: function () { 
 Object.defineProperty(exports, "createBattle", { enumerable: true, get: function () { return engine_ts_1.createBattle; } });
 Object.defineProperty(exports, "damageAmount", { enumerable: true, get: function () { return engine_ts_1.damageAmount; } });
 Object.defineProperty(exports, "eligibleActors", { enumerable: true, get: function () { return engine_ts_1.eligibleActors; } });
+Object.defineProperty(exports, "energyLost", { enumerable: true, get: function () { return engine_ts_1.energyLost; } });
 Object.defineProperty(exports, "exposedRow", { enumerable: true, get: function () { return engine_ts_1.exposedRow; } });
 Object.defineProperty(exports, "fallbackPlan", { enumerable: true, get: function () { return engine_ts_1.fallbackPlan; } });
 Object.defineProperty(exports, "forecastTargets", { enumerable: true, get: function () { return engine_ts_1.forecastTargets; } });
 Object.defineProperty(exports, "freeMoveSlot", { enumerable: true, get: function () { return engine_ts_1.freeMoveSlot; } });
 Object.defineProperty(exports, "laneOf", { enumerable: true, get: function () { return engine_ts_1.laneOf; } });
 Object.defineProperty(exports, "laneOrder", { enumerable: true, get: function () { return engine_ts_1.laneOrder; } });
+Object.defineProperty(exports, "lastAnimaPlans", { enumerable: true, get: function () { return engine_ts_1.lastAnimaPlans; } });
+Object.defineProperty(exports, "lastAnimaPos", { enumerable: true, get: function () { return engine_ts_1.lastAnimaPos; } });
 Object.defineProperty(exports, "placementOf", { enumerable: true, get: function () { return engine_ts_1.placementOf; } });
 Object.defineProperty(exports, "planSynergy", { enumerable: true, get: function () { return engine_ts_1.planSynergy; } });
 Object.defineProperty(exports, "resolveTurn", { enumerable: true, get: function () { return engine_ts_1.resolveTurn; } });
 Object.defineProperty(exports, "restingMoves", { enumerable: true, get: function () { return engine_ts_1.restingMoves; } });
 Object.defineProperty(exports, "rowOf", { enumerable: true, get: function () { return engine_ts_1.rowOf; } });
 Object.defineProperty(exports, "SIDE_IDS", { enumerable: true, get: function () { return engine_ts_1.SIDE_IDS; } });
+Object.defineProperty(exports, "slotPriority", { enumerable: true, get: function () { return engine_ts_1.slotPriority; } });
 Object.defineProperty(exports, "validatePlan", { enumerable: true, get: function () { return engine_ts_1.validatePlan; } });
 Object.defineProperty(exports, "validTargetPositions", { enumerable: true, get: function () { return engine_ts_1.validTargetPositions; } });
 Object.defineProperty(exports, "wearFactor", { enumerable: true, get: function () { return engine_ts_1.wearFactor; } });
@@ -3441,8 +3512,31 @@ function v04(v04, value, path, legacy, parse) {
     }
     return parse(value);
 }
+/** combate v0.5 §8 — clave nueva de v0.5: obligatoria en la config v0.5; antes, el valor de regresión (`legacy`). */
+function v05(is05, value, path, legacy, parse) {
+    if (value === undefined) {
+        if (is05)
+            (0, parse_ts_1.fail)(path, "obligatoria en la config v0.5");
+        return legacy;
+    }
+    return parse(value);
+}
+/** combate v0.5 §0/§8 — bloque `variantes.ultima_anima` (desactivado si falta antes de v0.5). */
+const LAST_OFF = Object.freeze({ active: false, stun: "turno", slotPriority: "primero" });
+function parseLastAnima(v) {
+    const P = "variantes.ultima_anima";
+    const o = (0, parse_ts_1.obj)(v, P);
+    (0, parse_ts_1.onlyKeys)(o, ["activo", "aturdir", "prioridad_hueco"], P);
+    const stun = (0, parse_ts_1.str)(o["aturdir"], `${P}.aturdir`);
+    if (stun !== "turno" && stun !== "primero")
+        (0, parse_ts_1.fail)(`${P}.aturdir`, "debe ser turno|primero");
+    const sp = (0, parse_ts_1.str)(o["prioridad_hueco"], `${P}.prioridad_hueco`);
+    if (sp !== "primero" && sp !== "minimo")
+        (0, parse_ts_1.fail)(`${P}.prioridad_hueco`, "debe ser primero|minimo");
+    return Object.freeze({ active: (0, parse_ts_1.bool)(o["activo"], `${P}.activo`), stun, slotPriority: sp });
+}
 /** variantes v0.3 §2 — bloque `variantes` (opcional en v0.2). Q-03: rechaza claves desconocidas en todos sus bloques. */
-function parseVariants(v, baseRing, is04) {
+function parseVariants(v, baseRing, is04, is05) {
     const effects = {};
     for (const f of baseRing)
         effects[f] = NO_EFFECT;
@@ -3454,10 +3548,11 @@ function parseVariants(v, baseRing, is04) {
             rest: Object.freeze({ active: false, turns: 1, freeRests: true }),
             autoTarget: Object.freeze({ active: false, tauntShieldsSelf: true, rowPriority: false, shieldExposedRow: false, healIfAllFull: "primero" }),
             taunt: Object.freeze({ duration: 1, aiValue: 0, aiRequiresEndurance: false }),
+            lastAnima: LAST_OFF,
         });
     }
     const r = (0, parse_ts_1.obj)(v, "variantes");
-    (0, parse_ts_1.onlyKeys)(r, ["golpe_basico_efecto", "descanso", "objetivo_automatico", "provocar"], "variantes");
+    (0, parse_ts_1.onlyKeys)(r, ["golpe_basico_efecto", "descanso", "objetivo_automatico", "provocar", "ultima_anima"], "variantes");
     // V1
     const gb = (0, parse_ts_1.obj)(r["golpe_basico_efecto"], "variantes.golpe_basico_efecto");
     (0, parse_ts_1.onlyKeys)(gb, ["activo", "componente_hibrida", "efectos"], "variantes.golpe_basico_efecto");
@@ -3519,6 +3614,8 @@ function parseVariants(v, baseRing, is04) {
             aiValue: (0, parse_ts_1.num)(pv["valor_ia"], "variantes.provocar.valor_ia", 0),
             aiRequiresEndurance: v04(is04, pv["ia_exige_aguante"], "variantes.provocar.ia_exige_aguante", false, (x) => (0, parse_ts_1.bool)(x, "variantes.provocar.ia_exige_aguante")),
         }),
+        // combate v0.5 §0: obligatoria en v0.5; antes puede faltar (desactivada) o venir para estudiarla
+        lastAnima: v05(is05, r["ultima_anima"], "variantes.ultima_anima", LAST_OFF, parseLastAnima),
     });
 }
 /** combate §6: tabla derivada de los anillos (siguiente = fuerte, anterior = débil). */
@@ -3570,9 +3667,11 @@ function parseCombatConfig(raw) {
     const r = (0, parse_ts_1.obj)(raw, "config");
     const version = (0, parse_ts_1.str)(r["version"], "version");
     // v0.4 es la vigente; v0.2 se sigue cargando (claves nuevas opcionales con su valor anterior) para los tests de regresión
-    if (version !== "0.2" && version !== "0.4")
-        (0, parse_ts_1.fail)("version", `solo se admiten las configs de combate v0.2 y v0.4 (recibida '${version}')`);
-    const is04 = version === "0.4";
+    // combate v0.5 §8: la v0.5 exige todo lo de v0.4 más sus dos claves nuevas
+    if (version !== "0.2" && version !== "0.4" && version !== "0.5")
+        (0, parse_ts_1.fail)("version", `solo se admiten las configs de combate v0.2, v0.4 y v0.5 (recibida '${version}')`);
+    const is04 = version === "0.4" || version === "0.5";
+    const is05 = version === "0.5";
     // Q-03: claves desconocidas en la raíz
     (0, parse_ts_1.onlyKeys)(r, ["version", "equipo", "estadisticas", "energia", "orden", "dano", "familias", "sinergia", "estados", "desgaste", "fin", "tiradas", "semilla", "ia", "variantes", "escenarios_sim", "criterios_sim", "barridos_sim"], "config");
     // combate v0.4 §1 — cuadrícula 2×2 fija (4 casillas); el equipo ocupa `tamano` casillas
@@ -3605,10 +3704,13 @@ function parseCombatConfig(raw) {
         (0, parse_ts_1.fail)("estadisticas.nivel", "v0.2 no tiene nivel (debe ser false)");
     // combate §3
     const en = (0, parse_ts_1.obj)(r["energia"], "energia");
+    (0, parse_ts_1.onlyKeys)(en, ["inicial", "por_turno", "maximo", "pago_al_confirmar"], "energia"); // combate v0.5 §8
     const energy = {
         initial: (0, parse_ts_1.int)(en["inicial"], "energia.inicial", 0),
         perTurn: (0, parse_ts_1.int)(en["por_turno"], "energia.por_turno", 0),
         max: (0, parse_ts_1.int)(en["maximo"], "energia.maximo", 1),
+        // combate v0.5 §1 (D-054): obligatoria en v0.5; en v0.2/v0.4, false (se devuelve)
+        payOnConfirm: v05(is05, en["pago_al_confirmar"], "energia.pago_al_confirmar", false, (x) => (0, parse_ts_1.bool)(x, "energia.pago_al_confirmar")),
     };
     if (energy.initial > energy.max)
         (0, parse_ts_1.fail)("energia.inicial", "mayor que el máximo");
@@ -3759,7 +3861,7 @@ function parseCombatConfig(raw) {
     if (teamSize < slots && ai.placement === null)
         (0, parse_ts_1.fail)("ia.colocacion", "obligatoria con casilla vacía (tamano < casillas)");
     (0, parse_ts_1.onlyKeys)(ia, ["reserva_por_defecto", "bonus_ko", "kappa", "valor_estado", "holgura_regenerar", "valor_max_escudo", "objetivos_area_estimados", "factor_cura_estimada", "prob_condicion_estimada", "penalizacion_coste", "colocacion"], "ia");
-    const variants = parseVariants(r["variantes"], baseRing, is04);
+    const variants = parseVariants(r["variantes"], baseRing, is04, is05);
     // combate v0.4 §2: sin golpe básico no hay a qué ponerle efecto (V1)
     if (!damage.basicActive && variants.basicEffect.active)
         (0, parse_ts_1.fail)("variantes.golpe_basico_efecto.activo", "requiere dano.golpe_basico.activo = true");
@@ -3924,6 +4026,7 @@ exports.actionMove = actionMove;
 exports.actionCost = actionCost;
 exports.rowOf = rowOf;
 exports.validTargetPositions = validTargetPositions;
+exports.lastAnimaPos = lastAnimaPos;
 exports.canAct = canAct;
 exports.eligibleActors = eligibleActors;
 exports.restingMoves = restingMoves;
@@ -3940,6 +4043,9 @@ exports.placementOf = placementOf;
 exports.planSynergy = planSynergy;
 exports.validatePlan = validatePlan;
 exports.fallbackPlan = fallbackPlan;
+exports.lastAnimaPlans = lastAnimaPlans;
+exports.slotPriority = slotPriority;
+exports.energyLost = energyLost;
 exports.createBattle = createBattle;
 exports.actionPriority = actionPriority;
 exports.wearFactor = wearFactor;
@@ -3994,22 +4100,60 @@ function validTargetPositions(move, alive, cfg) {
     const front = cfg.frontRow.filter((p) => alive[p - 1]);
     return front.length > 0 ? front : cfg.backRow.filter((p) => alive[p - 1]);
 }
-/** ¿Puede la criatura elegir acción este turno? (viva y no aturdida) */
-function canAct(state, side, idx) {
-    const f = state.fighters[side][idx];
-    return !f.ko && f.skipTurn !== state.turn;
+const combatOf = (cfg) => ("combat" in cfg ? cfg.combat : cfg);
+/** combate v0.5 §2.2 — máximo de movimientos de pago de una secuencia (estructural: cabeza, cuerpo y cola). */
+const SEQ_MAX = 3;
+function lastIdx(state, s, C) {
+    if (!C.variants.lastAnima.active)
+        return 0;
+    let pos = 0;
+    for (let p = 1; p <= 4; p++) {
+        if (state.fighters[s][p - 1].ko)
+            continue;
+        if (pos > 0)
+            return 0;
+        pos = p;
+    }
+    return pos;
 }
-/** Posiciones (1–4) que deben recibir acción en el plan de `side`. */
-function eligibleActors(state, side) {
+/**
+ * combate v0.5 §2.1 — casilla (1–4) de la última ánima del bando en este turno, o 0:
+ * con `variantes.ultima_anima.activo`, el bando tiene exactamente una viva al empezar
+ * el turno (el estado que se pasa es el del inicio del turno). Una vez última, lo es hasta el final.
+ */
+function lastAnimaPos(state, side, cfg) {
+    return lastIdx(state, sideIndex(side), combatOf(cfg));
+}
+/**
+ * ¿Puede la criatura elegir acción este turno? (viva y no aturdida).
+ * combate v0.5 §3.3 U4 (C26): con `ultima_anima.aturdir = "primero"`, la última con
+ * `skipTurn = turno` sí elige (se le cancela el 1.º movimiento); por eso `cfg` es obligatorio (QA I-01).
+ */
+function canAct(state, side, idx, cfg) {
+    const f = state.fighters[side][idx];
+    if (f.ko)
+        return false;
+    if (f.skipTurn !== state.turn)
+        return true;
+    const C = combatOf(cfg);
+    return C.variants.lastAnima.stun === "primero" && lastIdx(state, side, C) === idx + 1;
+}
+/** Posiciones (1–4) que deben recibir acción en el plan de `side` (incluye el plan B de aturdir de v0.5). */
+function eligibleActors(state, side, cfg) {
     const s = sideIndex(side);
-    return [1, 2, 3, 4].filter((p) => canAct(state, s, p - 1));
+    return [1, 2, 3, 4].filter((p) => canAct(state, s, p - 1, cfg));
 }
 function aliveMask(fs) {
     return fs.map((f) => !f.ko);
 }
 // ---------------------------------------------------------------- variantes v0.3
-/** variantes v0.3 V2 — movimientos (1–4) de la criatura `pos` que están en descanso este turno. */
-function restingMoves(state, side, pos) {
+/**
+ * variantes v0.3 V2 — movimientos (1–4) de la criatura `pos` que están en descanso este turno.
+ * combate v0.5 §2.4: la última ánima no tiene ninguno (sus contadores se ignoran).
+ */
+function restingMoves(state, side, pos, cfg) {
+    if (lastIdx(state, sideIndex(side), combatOf(cfg)) === pos)
+        return [];
     const rest = state.fighters[sideIndex(side)][pos - 1].rest;
     const out = [];
     if (rest)
@@ -4189,7 +4333,16 @@ function placementOf(state, side, cfg) {
  */
 function planSynergy(team, plan, cfg) {
     // combate v0.4 §5: el gratis ni cuenta ni recibe bonus (`sinergia.cuenta_gratis` = false)
-    const users = plan.filter((a) => a.move !== 0 && (cfg.synergy.countsFree || team[a.actor - 1].moves[a.move - 1].cost !== 0));
+    // combate v0.5 §8 / U9 (D-057): se cuentan ánimas distintas, no entradas del plan (la última, grupo de 1 ⇒ 0)
+    const counted = new Set();
+    const users = plan.filter((a) => {
+        if (a.move === 0 || counted.has(a.actor))
+            return false;
+        if (!cfg.synergy.countsFree && team[a.actor - 1].moves[a.move - 1].cost === 0)
+            return false;
+        counted.add(a.actor);
+        return true;
+    });
     const count = new Map();
     for (const a of users)
         for (const g of team[a.actor - 1].groups)
@@ -4219,7 +4372,10 @@ function validatePlan(state, side, plan, cfg) {
     if (!Array.isArray(plan))
         return "el plan no es una lista";
     const team = state.teams[s];
-    const eligible = eligibleActors(state, side);
+    const eligible = eligibleActors(state, side, cfg);
+    // combate v0.5 §2.3: la última ánima (si elige este turno) puede tener varias entradas
+    const last = eligible.length === 1 && lastIdx(state, s, cfg.combat) === eligible[0] ? eligible[0] : 0;
+    const lastMoves = [];
     const seen = new Set();
     let cost = 0;
     for (const a of plan) {
@@ -4228,7 +4384,7 @@ function validatePlan(state, side, plan, cfg) {
         const { actor, move, target } = a;
         if (!Number.isInteger(actor) || actor < 1 || actor > 4)
             return `actor inválido ${actor}`;
-        if (seen.has(actor))
+        if (seen.has(actor) && actor !== last)
             return `actor ${actor} repetido`;
         seen.add(actor);
         if (!eligible.includes(actor))
@@ -4244,14 +4400,28 @@ function validatePlan(state, side, plan, cfg) {
             if (!Number.isInteger(target) || !valid.includes(target))
                 return `objetivo inválido ${target} (actor ${actor})`;
         }
-        // variantes v0.3 V2: el movimiento usado no se puede repetir mientras descansa
-        if (move !== 0 && cfg.combat.variants.rest.active && ((state.fighters[s][actor - 1].rest ?? [])[move - 1] ?? 0) > 0) {
+        if (actor === last) {
+            // combate v0.5 §2.2–2.4: ningún movimiento se repite y los descansos de la última no cuentan
+            if (lastMoves.includes(move))
+                return `movimiento ${move} repetido (última ánima ${actor})`;
+            lastMoves.push(move);
+        }
+        else if (move !== 0 && cfg.combat.variants.rest.active && ((state.fighters[s][actor - 1].rest ?? [])[move - 1] ?? 0) > 0) {
+            // variantes v0.3 V2: el movimiento usado no se puede repetir mientras descansa
             return `movimiento ${move} en descanso (actor ${actor})`;
         }
         cost += actionCost(c, move, cfg.combat);
     }
     if (seen.size !== eligible.length)
         return "falta la acción de alguna criatura";
+    if (last > 0) {
+        // combate v0.5 §2.3 regla 2: o el gratis solo, o 1–3 pagos distintos
+        const c = team[last - 1];
+        if (lastMoves.length > 1 && lastMoves.some((m) => actionCost(c, m, cfg.combat) === 0))
+            return `el gratis va solo (última ánima ${last})`;
+        if (lastMoves.length > SEQ_MAX)
+            return `más de ${SEQ_MAX} movimientos (última ánima ${last})`;
+    }
     if (cost > state.energy[s])
         return `energía insuficiente (${cost} > ${state.energy[s]})`;
     return null;
@@ -4262,8 +4432,9 @@ function validatePlan(state, side, plan, cfg) {
  */
 function fallbackPlan(state, side, cfg) {
     const s = sideIndex(side);
+    // combate v0.5 §2.3: la última ánima también hace su gratis (una sola entrada)
     if (!cfg.damage.basicActive) {
-        return eligibleActors(state, side).map((actor) => {
+        return eligibleActors(state, side, cfg).map((actor) => {
             const c = state.teams[s][actor - 1];
             const move = freeMoveSlot(c);
             if (cfg.variants.autoTarget.active)
@@ -4275,9 +4446,106 @@ function fallbackPlan(state, side, cfg) {
     }
     // variantes v0.3 V4: sin objetivo (0)
     if (cfg.variants.autoTarget.active)
-        return eligibleActors(state, side).map((actor) => ({ actor, move: 0, target: 0 }));
+        return eligibleActors(state, side, cfg).map((actor) => ({ actor, move: 0, target: 0 }));
     const valid = validTargetPositions(null, aliveMask(state.fighters[1 - s]), cfg);
-    return eligibleActors(state, side).map((actor) => ({ actor, move: 0, target: valid[0] ?? 1 }));
+    return eligibleActors(state, side, cfg).map((actor) => ({ actor, move: 0, target: valid[0] ?? 1 }));
+}
+/**
+ * combate v0.5 §2.2 y §5 — todos los planes válidos de la última ánima: su gratis (o el
+ * golpe básico) y cada secuencia ordenada de 1–3 pagos distintos con Σ coste ≤ energía.
+ * Orden determinista: opciones por lista ascendente de movimientos (lexicográfico; el gratis
+ * como su propio índice) y, dentro de cada una, sus órdenes en orden lexicográfico.
+ * Lista vacía si el bando no tiene una última ánima que elija este turno. Sin tiradas.
+ */
+function lastAnimaPlans(state, side, cfg) {
+    const s = sideIndex(side);
+    const C = cfg.combat;
+    if (state.result !== null)
+        return [];
+    const last = lastIdx(state, s, C);
+    if (last === 0 || !canAct(state, s, last - 1, C))
+        return [];
+    const c = state.teams[s][last - 1];
+    const e = state.energy[s];
+    const target = (move) => {
+        if (C.variants.autoTarget.active)
+            return 0;
+        const m = actionMove(c, move);
+        const tSide = m && m.target === "aliado" ? s : 1 - s;
+        return validTargetPositions(m, aliveMask(state.fighters[tSide]), C)[0] ?? 1;
+    };
+    const free = C.damage.basicActive ? 0 : freeMoveSlot(c);
+    const paid = [];
+    c.moves.forEach((m, k) => {
+        if (m.cost > 0)
+            paid.push(k + 1);
+    });
+    const options = [[free]];
+    const n = paid.length;
+    for (let mask = 1; mask < 1 << n; mask++) {
+        const sub = paid.filter((_, i) => ((mask >> i) & 1) === 1);
+        if (sub.length > SEQ_MAX)
+            continue;
+        let cost = 0;
+        for (const k of sub)
+            cost += actionCost(c, k, C);
+        if (cost <= e)
+            options.push(sub);
+    }
+    options.sort(lexCompare);
+    const plans = [];
+    for (const sub of options)
+        for (const order of permutations(sub))
+            plans.push(order.map((move) => ({ actor: last, move, target: target(move) })));
+    return plans;
+}
+/** Comparación lexicográfica de listas de enteros (desempate total; más corta primero si es prefijo). */
+function lexCompare(a, b) {
+    for (let i = 0; i < a.length && i < b.length; i++)
+        if (a[i] !== b[i])
+            return a[i] - b[i];
+    return a.length - b.length;
+}
+/** Permutaciones en orden lexicográfico (la entrada, ascendente). */
+function permutations(xs) {
+    if (xs.length <= 1)
+        return [xs.slice()];
+    const out = [];
+    xs.forEach((x, i) => {
+        for (const r of permutations([...xs.slice(0, i), ...xs.slice(i + 1)]))
+            out.push([x, ...r]);
+    });
+    return out;
+}
+/**
+ * combate v0.5 §3.1 — nivel de prioridad del hueco de una secuencia: el del primer
+ * movimiento (`prioridad_hueco = "primero"`) o el menor (`"minimo"`). Una acción suelta: el suyo.
+ */
+function slotPriority(moves, cfg) {
+    const first = actionPriority(moves[0] ?? null, cfg);
+    if (cfg.variants.lastAnima.slotPriority === "primero")
+        return first;
+    let p = first;
+    for (const m of moves)
+        p = Math.min(p, actionPriority(m, cfg));
+    return p;
+}
+/**
+ * combate v0.5 §1 — energía perdida por cancelaciones (eventos `cancel` con `lost`) en un
+ * registro de partida, por bando y motivo; `last` = la parte de últimas ánimas (eventos con `seq`).
+ */
+function energyLost(log) {
+    const out = { A: { ko: 0, aturdido: 0, last: 0 }, B: { ko: 0, aturdido: 0, last: 0 } };
+    for (const turn of log) {
+        for (const e of turn) {
+            if (e.type !== "cancel" || !e.lost)
+                continue;
+            out[e.side][e.reason] += e.lost;
+            if (e.seq)
+                out[e.side].last += e.lost;
+        }
+    }
+    return out;
 }
 /**
  * Estado inicial (turno 1, energía inicial, vida al máximo).
@@ -4371,6 +4639,8 @@ function resolveTurn(state, planA, planB, rng, cfg) {
     if (state.result !== null)
         throw new RangeError("resolveTurn: la partida ya ha terminado");
     const t = state.turn;
+    // combate v0.5 §2.1: la última ánima se fija al empezar el turno (0 = ninguna o variante inactiva)
+    const lastPos = [lastIdx(state, 0, C), lastIdx(state, 1, C)];
     const events = [];
     const energy = [state.energy[0], state.energy[1]];
     events.push({ type: "turn", turn: t, energy: [energy[0], energy[1]] });
@@ -4416,10 +4686,22 @@ function resolveTurn(state, planA, planB, rng, cfg) {
     // 5. orden (combate §4)
     const entries = [];
     for (const s of [0, 1]) {
+        // combate v0.5 §3.1: un hueco por ánima; la última agrupa su secuencia en el orden del plan
+        const byActor = new Map();
         for (const a of plans[s]) {
-            const idx = a.actor - 1;
+            const list = byActor.get(a.actor);
+            if (list)
+                list.push(a);
+            else
+                byActor.set(a.actor, [a]);
+        }
+        for (const [actor, acts] of byActor) {
+            const idx = actor - 1;
             const c = state.teams[s][idx];
-            const m = actionMove(c, a.move);
+            const seq = lastPos[s] === actor;
+            // combate v0.5 §3.4: L = [casilla de la última] ++ las otras 3 en orden ascendente; el movimiento j usa L[j]
+            const L = [idx, ...[0, 1, 2, 3].filter((i) => i !== idx)];
+            const steps = acts.map((a, j) => ({ action: a, move: actionMove(c, a.move), cost: actionCost(c, a.move, C), varSlot: L[j] }));
             const w = W[s][idx];
             w.hasAction = true;
             let ini = c.initiative;
@@ -4433,10 +4715,10 @@ function resolveTurn(state, planA, planB, rng, cfg) {
             entries.push({
                 side: s,
                 idx,
-                action: a,
-                move: m,
-                cost: actionCost(c, a.move, C),
-                priority: actionPriority(m, C),
+                steps,
+                seq,
+                // combate v0.5 §3.1: nivel del hueco según `prioridad_hueco` (una acción suelta: el suyo)
+                priority: seq ? slotPriority(steps.map((st) => st.move), C) : actionPriority(steps[0].move, C),
                 initiative: ini,
             });
         }
@@ -4447,7 +4729,10 @@ function resolveTurn(state, planA, planB, rng, cfg) {
         (x.side === y.side ? 0 : x.side === favored ? -1 : 1) ||
         x.idx - y.idx ||
         x.side - y.side);
-    events.push({ type: "order", queue: entries.map((e) => ({ side: exports.SIDE_IDS[e.side], actor: e.idx + 1, priority: e.priority, initiative: e.initiative })) });
+    events.push({
+        type: "order",
+        queue: entries.map((e) => ({ side: exports.SIDE_IDS[e.side], actor: e.idx + 1, priority: e.priority, initiative: e.initiative, ...(e.seq ? { moves: e.steps.map((st) => st.action.move) } : {}) })),
+    });
     const knockOut = (s, i) => {
         const w = W[s][i];
         w.hp = 0;
@@ -4502,8 +4787,8 @@ function resolveTurn(state, planA, planB, rng, cfg) {
         events.push({ type: "status", side: exports.SIDE_IDS[s], pos: i + 1, status: id, turns: now.turns, value: now.value });
     };
     // condiciones (movimientos §2.5), evaluadas al ejecutar
-    const condMet = (e, tSide, tIdx) => {
-        const m = e.move;
+    // combate v0.5 U14: se evalúan por movimiento al ejecutarlo
+    const condMet = (e, m, tSide, tIdx) => {
         if (!m || !m.condition)
             return false;
         const me = W[e.side][e.idx];
@@ -4521,21 +4806,55 @@ function resolveTurn(state, planA, planB, rng, cfg) {
                 return !W[tSide][tIdx].acted;
         }
     };
+    /**
+     * combate §3.5 / v0.5 §1: KO o aturdido antes de actuar ⇒ movimiento cancelado (no descansa).
+     * Sin `pago_al_confirmar` se devuelve el coste (tope `maximo`); con él, se pierde (`lost`).
+     */
+    const cancel = (e, st, j, reason) => {
+        const pay = C.energy.payOnConfirm;
+        const refund = pay ? 0 : st.cost;
+        energy[e.side] = Math.min(C.energy.max, energy[e.side] + refund);
+        events.push({
+            type: "cancel",
+            side: exports.SIDE_IDS[e.side],
+            actor: e.idx + 1,
+            reason,
+            refund,
+            // combate v0.5 C25: campos nuevos solo con su mecánica (sin ellas, el registro es el de v0.4)
+            ...(pay ? { lost: st.cost } : {}),
+            ...(e.seq ? { move: st.action.move, seq: { index: j + 1, of: e.steps.length } } : {}),
+        });
+    };
     for (const e of entries) {
+        const me = W[e.side][e.idx];
+        for (let j = 0; j < e.steps.length; j++) {
+            const st = e.steps[j];
+            // combate v0.5 U5/U6: KO antes (o en medio) ⇒ se cancela lo que queda
+            if (me.ko) {
+                cancel(e, st, j, "ko");
+                continue;
+            }
+            // combate v0.5 U2–U4: aturdida antes de su hueco pierde la secuencia ("turno") o solo el 1.º ("primero",
+            // también si arrastra el aturdimiento del turno anterior, C26)
+            const first = e.seq && V.lastAnima.stun === "primero";
+            if (first ? j === 0 && (me.stunnedNow || me.skipTurn === t) : me.stunnedNow) {
+                cancel(e, st, j, "aturdido");
+                continue;
+            }
+            me.acted = true; // combate v0.5 §8.4: al empezar el primero que se ejecuta
+            executeStep(e, st, j);
+        }
+    }
+    function executeStep(e, st, j) {
         const side = exports.SIDE_IDS[e.side];
         const me = W[e.side][e.idx];
         const c = state.teams[e.side][e.idx];
-        // combate §3.5: KO o aturdido antes de actuar ⇒ cancelada y se devuelve el coste
-        if (me.ko || me.stunnedNow) {
-            energy[e.side] = Math.min(C.energy.max, energy[e.side] + e.cost);
-            events.push({ type: "cancel", side, actor: e.idx + 1, reason: me.ko ? "ko" : "aturdido", refund: e.cost });
-            continue;
-        }
-        me.acted = true;
-        const m = e.move;
+        const seqInfo = e.seq ? { seq: { index: j + 1, of: e.steps.length } } : {};
+        const m = st.move;
         // variantes v0.3 V2: ejecutado (aunque se pierda) ⇒ descansa; combate v0.4 §2: el gratis no descansa
-        if (m && (V.rest.freeRests || m.cost !== 0))
-            me.usedSlot = e.action.move;
+        // combate v0.5 §2.4: lo que ejecuta la última ánima no descansa
+        if (!e.seq && m && (V.rest.freeRests || m.cost !== 0))
+            me.usedSlot = st.action.move;
         const tSide = m && m.target === "aliado" ? e.side : (1 - e.side);
         const taunting = W[tSide].map((w) => !w.ko && w.taunt > 0);
         let tPos;
@@ -4547,7 +4866,7 @@ function resolveTurn(state, planA, planB, rng, cfg) {
         else {
             // combate §2: reobjetivo a la primera válida por posición ascendente
             const valid = validTargetPositions(m, aliveMask(W[tSide]), C);
-            tPos = valid.includes(e.action.target) ? e.action.target : valid[0];
+            tPos = valid.includes(st.action.target) ? st.action.target : valid[0];
             // variantes v0.3 (provocar con objetivo manual): un ataque enemigo de un solo objetivo se desvía a quien provoca
             if (tPos !== undefined && tSide !== e.side && !(m && m.area) && !taunting[tPos - 1]) {
                 const taunter = laneOrder(e.idx + 1, false, C).find((p) => taunting[p - 1]);
@@ -4556,16 +4875,17 @@ function resolveTurn(state, planA, planB, rng, cfg) {
             }
         }
         if (tPos === undefined) {
-            events.push({ type: "lost", side, actor: e.idx + 1 });
-            continue;
+            // combate v0.5 U8: sin enemigos vivos, el movimiento ofensivo se pierde (pagado)
+            events.push({ type: "lost", side, actor: e.idx + 1, ...(e.seq ? { move: st.action.move } : {}), ...seqInfo });
+            return;
         }
         const row = rowOf(tPos, C);
         const targets = m && m.area ? row.filter((p) => !W[tSide][p - 1].ko) : [tPos];
-        events.push({ type: "action", side, actor: e.idx + 1, move: e.action.move, moveId: m ? m.id : null, targetSide: exports.SIDE_IDS[tSide], targets });
+        events.push({ type: "action", side, actor: e.idx + 1, move: st.action.move, moveId: m ? m.id : null, targetSide: exports.SIDE_IDS[tSide], targets, ...seqInfo });
         const syn = m ? 1 + synergy[e.side].bonus[e.idx] : 1;
         const basePower = m ? m.power : C.damage.basicPower;
         const potFor = (tIdx) => {
-            const met = condMet(e, tSide, tIdx);
+            const met = condMet(e, m, tSide, tIdx);
             return { pot: basePower * (met ? 1 + M.conditions.bonus : 1) * syn, met };
         };
         // daño → drenaje
@@ -4578,8 +4898,9 @@ function resolveTurn(state, planA, planB, rng, cfg) {
                 const tc = state.teams[tSide][p - 1];
                 const { pot, met } = potFor(p - 1);
                 // combate §5/§11: tiradas de varianza de la posición del actor; en área, por orden de posición en la fila
+                // combate v0.5 §3.4: el movimiento j de una secuencia usa el par de la casilla L[j]
                 const k = m && m.area ? row.indexOf(p) : 0;
-                const u = varU[(e.side * C.slots + e.idx) * C.draws.variancePerAction + k];
+                const u = varU[(e.side * C.slots + st.varSlot) * C.draws.variancePerAction + k];
                 const variance = 1 - C.damage.variance + 2 * C.damage.variance * u;
                 const dmg = damageAmount(pot, c.attack, m ? m.family : c.family, tc.family, !!getStatus(tw, "marca"), !!getStatus(me, "debilitar"), variance, t, C);
                 let rest = dmg;
@@ -4610,7 +4931,7 @@ function resolveTurn(state, planA, planB, rng, cfg) {
             const fx = basicEffectOf(c, cfg);
             if (fx && fx.kind === "estado") {
                 // probabilidad con la 2.ª tirada de varianza de la posición (el golpe solo gasta la 1.ª)
-                const u = varU[(e.side * C.slots + e.idx) * C.draws.variancePerAction + 1];
+                const u = varU[(e.side * C.slots + st.varSlot) * C.draws.variancePerAction + 1];
                 if (u < fx.chance) {
                     if (fx.status === "prisa" || fx.status === "regenerar")
                         applyStatus(e.side, e.idx, fx.status);
@@ -4627,7 +4948,7 @@ function resolveTurn(state, planA, planB, rng, cfg) {
                 const total = addShield(me, fx.amount);
                 events.push({ type: "shield", side, pos: e.idx + 1, amount: fx.amount, total, condition: false });
             }
-            continue;
+            return;
         }
         // estado
         if (m.status === "prisa") {
@@ -4921,7 +5242,7 @@ function referencePlan(state, side, cfg, reserve, kappa) {
     const o = (1 - s);
     const team = state.teams[s];
     const enemyTeam = state.teams[o];
-    const actors = (0, engine_ts_1.eligibleActors)(state, side);
+    const actors = (0, engine_ts_1.eligibleActors)(state, side, cfg);
     if (actors.length === 0)
         return [];
     const e = state.energy[s];
@@ -4936,17 +5257,21 @@ function referencePlan(state, side, cfg, reserve, kappa) {
     const auto = C.variants.autoTarget.active;
     const enemyTaunting = state.fighters[o].map((f) => !f.ko && (f.taunt ?? 0) > 0);
     const noTaunt = [false, false, false, false];
-    const resting = (pos, slot) => C.variants.rest.active && ((state.fighters[s][pos - 1].rest ?? [])[slot - 1] ?? 0) > 0;
+    // combate v0.5 §2.4/§5: la última ánima ignora sus descansos
+    const last = (0, engine_ts_1.lastAnimaPos)(state, side, cfg);
+    const resting = (pos, slot) => pos !== last && C.variants.rest.active && ((state.fighters[s][pos - 1].rest ?? [])[slot - 1] ?? 0) > 0;
     // combate v0.4 §2: la acción "por defecto" de cada alma (golpe básico en v0.2; gratis en v0.4)
     const baseMove = actors.map((pos) => (C.damage.basicActive ? 0 : (0, engine_ts_1.freeMoveSlot)(team[pos - 1])));
     // combate v0.4 §8: simular en orden de iniciativa estimada (prioridad, iniciativa sin jitter con prisa/ralentizar, casilla)
     const rowRules = C.variants.autoTarget.rowPriority;
-    const estIni = actors.map((pos) => {
+    const estIniOf = (pos) => {
         const f = state.fighters[s][pos - 1];
         return team[pos - 1].initiative + (hasStatus(f, "prisa") ? C.statuses.prisa.value : 0) + (hasStatus(f, "ralentizar") ? C.statuses.ralentizar.value : 0);
-    });
+    };
     // combate §10.3 — evalúa una combinación (índices de movimiento por actor). Devuelve valor y objetivos.
-    const evaluate = (combo, withSynergy) => {
+    // combate v0.5 §5: con `seq`, `combo` es la secuencia de la última ánima `seq` y se simula en el orden dado (un hueco)
+    const evaluate = (combo, withSynergy, seq = 0) => {
+        const actorsOf = seq > 0 ? combo.map(() => seq) : actors;
         const sim = {
             hp: [state.fighters[0].map((f) => f.hp), state.fighters[1].map((f) => f.hp)],
             neg: [negOf(state.fighters[0]), negOf(state.fighters[1])],
@@ -4954,7 +5279,7 @@ function referencePlan(state, side, cfg, reserve, kappa) {
             acted: [[false, false, false, false], [false, false, false, false]],
             shield: state.fighters[s].map(shieldOf),
         };
-        const plan = actors.map((a, i) => ({ actor: a, move: combo[i], target: 1 }));
+        const plan = actorsOf.map((a, i) => ({ actor: a, move: combo[i], target: 1 }));
         const syn = withSynergy ? (0, engine_ts_1.planSynergy)(team, plan, C) : { bonus: [0, 0, 0, 0], combo: [false, false, false, false] };
         let cost = 0;
         for (const a of plan) {
@@ -4964,14 +5289,15 @@ function referencePlan(state, side, cfg, reserve, kappa) {
         const afterPay = e - cost;
         // [v0.2] valor de lo que se guarda: λ · min(e − Σcoste, c*, máx − por_turno); − penalización (desempate)
         let value = price.lambda * Math.min(afterPay, saveCap) - A.costPenalty * cost;
-        const order = actors.map((_, i) => i);
-        if (rowRules) {
-            const pri = actors.map((pos, i) => (0, engine_ts_1.actionPriority)((0, engine_ts_1.actionMove)(team[pos - 1], combo[i]), C));
-            order.sort((a, b) => pri[b] - pri[a] || estIni[b] - estIni[a] || a - b);
+        const order = actorsOf.map((_, i) => i);
+        if (rowRules && seq === 0) {
+            const pri = actorsOf.map((pos, i) => (0, engine_ts_1.actionPriority)((0, engine_ts_1.actionMove)(team[pos - 1], combo[i]), C));
+            const ini = actorsOf.map(estIniOf);
+            order.sort((a, b) => pri[b] - pri[a] || ini[b] - ini[a] || a - b);
         }
-        const targets = actors.map(() => 1);
+        const targets = actorsOf.map(() => 1);
         order.forEach((i) => {
-            const pos = actors[i];
+            const pos = actorsOf[i];
             const idx = pos - 1;
             const c = team[idx];
             const m = (0, engine_ts_1.actionMove)(c, combo[i]);
@@ -5169,6 +5495,23 @@ function referencePlan(state, side, cfg, reserve, kappa) {
         if (!canKo) {
             return toPlan(baseMove, evaluate(baseMove, false).targets);
         }
+    }
+    // combate v0.5 §5 — última ánima: {gratis} ∪ subconjuntos de pagos con Σcoste ≤ e, cada uno con todos sus órdenes
+    // (≤ 16 simulaciones). Mejor valor; empate dentro del subconjunto: más prioridad del hueco y luego orden
+    // lexicográfico; entre opciones, la combinación menor (la primera, `lastAnimaPlans` ya las ordena así).
+    if (last > 0 && actors.length === 1 && actors[0] === last) {
+        const c = team[last - 1];
+        const key = (p) => p.map((a) => a.move).slice().sort((x, y) => x - y).join(",");
+        const prio = (p) => (0, engine_ts_1.slotPriority)(p.map((a) => (0, engine_ts_1.actionMove)(c, a.move)), C);
+        let best = null;
+        for (const p of (0, engine_ts_1.lastAnimaPlans)(state, side, cfg)) {
+            const r = evaluate(p.map((a) => a.move), true, last);
+            const better = best === null || r.value > best.value || (r.value === best.value && key(p) === key(best.plan) && prio(p) > prio(best.plan));
+            if (better)
+                best = { plan: p, value: r.value, targets: r.targets };
+        }
+        if (best !== null)
+            return best.plan.map((a, i) => ({ actor: a.actor, move: a.move, target: auto ? 0 : best.targets[i] }));
     }
     // combate §10.3 — enumeración lexicográfica (golpe = 0, movimientos 1–4), Σcoste ≤ e
     const options = actors.map((pos) => {
@@ -5436,7 +5779,7 @@ function createSearchAi(options = {}) {
         const other = s === 0 ? "B" : "A";
         if (state.result !== null)
             return [];
-        const actors = (0, engine_ts_1.eligibleActors)(state, side);
+        const actors = (0, engine_ts_1.eligibleActors)(state, side, cfg);
         if (actors.length === 0)
             return [];
         const auto = cfg.combat.variants.autoTarget.active;
@@ -5452,6 +5795,10 @@ function createSearchAi(options = {}) {
         };
         add(refDefault(state, side, cfg));
         add(refGreedy(state, side, cfg));
+        // combate v0.5 §5: la última ánima enumera todas sus opciones (gratis y cada orden de cada secuencia; ≤ 16)
+        const seqPlans = (0, engine_ts_1.lastAnimaPlans)(state, side, cfg);
+        for (const p of seqPlans)
+            add(p);
         const lambda = (0, ai_ts_1.energyPrice)(state, side, cfg).lambda;
         const opts = actors.map((pos) => {
             const all = actionOptions(state, s, pos, cfg, lambda);
@@ -5478,7 +5825,8 @@ function createSearchAi(options = {}) {
                 cur.pop();
             }
         };
-        rec(0, 0);
+        if (seqPlans.length === 0)
+            rec(0, 0);
         combos.sort((a, b) => b.score - a.score || a.idx - b.idx);
         const fixed = cands.length;
         for (const c of combos) {
@@ -5524,7 +5872,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cfg = exports.gcfg = void 0;
+exports.V05 = exports.cfg = exports.gcfg = void 0;
 exports.soulName = soulName;
 exports.familyLabel = familyLabel;
 exports.palette = palette;
@@ -5568,6 +5916,8 @@ function familyLabel(f) {
 function palette(f) {
     return (0, palette_ts_1.paletteOf)(f, exports.gcfg.hybridById.get(f)?.components);
 }
+/** Versión de prueba v0.5 (la construye `build:combate-v05` con combate.v0.5.json): última ánima con varios pagos y energía pagada al confirmar. */
+exports.V05 = exports.cfg.combat.variants.lastAnima.active || exports.cfg.combat.energy.payOnConfirm;
 
 };
 defs["config/genetica.v0.2.json"]=function(module,exports,require){
@@ -5640,19 +5990,840 @@ function paletteOf(family, components) {
 }
 
 };
-defs["client/combat/souls.ts"]=function(module,exports,require){
+defs["client/art/soul.ts"]=function(module,exports,require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SOUL_ART = void 0;
-/** Siluetas y caras de las 6 familias base, extraídas tal cual de docs/arte/referencia-almas.svg (dibujo estático, no generado desde los genes). */
-exports.SOUL_ART = {
-    llama: { viewBox: "80 62 140 140", svg: "<circle cx=\"150\" cy=\"132\" r=\"62\" fill=\"#FF6A3D\" opacity=\"0.12\"/><path d=\"M120,170 Q112,140 126,118 Q124,132 134,128 Q130,104 146,86 Q146,104 156,106 Q158,84 170,72 Q168,98 178,112 Q188,130 181,152 Q178,174 150,175 Q126,175 120,170 Z\" fill=\"#E5532D\" stroke=\"#7A1E0C\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M132,168 Q126,148 139,134 Q141,146 149,144 Q149,126 160,116 Q164,136 171,146 Q173,166 150,168 Z\" fill=\"#FF8A4C\" opacity=\"0.55\"/><path d=\"M136,150 L152,153 L137,155 Z\" fill=\"#FFD23F\"/><path d=\"M144,150.5 L145,155\" stroke=\"#2A0A04\" stroke-width=\"1.6\"/><path d=\"M174,149 L158,153 L173,155 Z\" fill=\"#FFD23F\"/><path d=\"M166,150.5 L165,155\" stroke=\"#2A0A04\" stroke-width=\"1.6\"/><path d=\"M134,142 L152,148 M176,141 L158,148\" stroke=\"#2A0A04\" stroke-width=\"2.4\" stroke-linecap=\"round\"/><path d=\"M140,160 Q156,174 172,158 Q156,166 140,160 Z\" fill=\"#2A0A04\"/><path d=\"M144,161.5 L147,168 L150,163.5 Z M164,162 L167,167 L169,160.5 Z\" fill=\"#fff\"/>" },
-    marea: { viewBox: "274 74 132 132", svg: "<circle cx=\"340\" cy=\"140\" r=\"58\" fill=\"#3FA8FF\" opacity=\"0.12\"/><path d=\"M340,92 Q356,112 372,130 Q388,150 373,168 Q356,181 334,179 Q305,175 303,150 Q303,128 326,112 Q336,104 340,92 Z\" fill=\"#2E86C9\" stroke=\"#0C3557\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M326,112 Q311,100 318,86 Q324,100 337,100 Z\" fill=\"#8FD3F5\" stroke=\"#0C3557\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M318,151 Q326,148 334,151 Q326,154 318,151 Z\" fill=\"#7FF3FF\"/><ellipse cx=\"330\" cy=\"151\" rx=\"1.2\" ry=\"2.6\" fill=\"#06192A\"/><path d=\"M342,151 Q350,148 358,151 Q350,154 342,151 Z\" fill=\"#7FF3FF\"/><ellipse cx=\"354\" cy=\"151\" rx=\"1.2\" ry=\"2.6\" fill=\"#06192A\"/><path d=\"M317,149 L335,149 M341,149 L359,145\" stroke=\"#06192A\" stroke-width=\"2.6\" stroke-linecap=\"round\"/><path d=\"M330,165 Q342,170 354,160\" fill=\"none\" stroke=\"#06192A\" stroke-width=\"2\" stroke-linecap=\"round\"/><path d=\"M348,166 L350,171.5 L352.5,165\" fill=\"#fff\" stroke=\"#06192A\" stroke-width=\"1\" stroke-linejoin=\"round\"/>" },
-    brote: { viewBox: "472 82 116 116", svg: "<circle cx=\"530\" cy=\"140\" r=\"50\" fill=\"#7BD35A\" opacity=\"0.12\"/><path d=\"M530,108 Q512,86 497,94 Q510,108 528,110 Z M530,108 Q548,82 565,88 Q552,106 532,110 Z\" fill=\"#B6E07A\" stroke=\"#1C4A1A\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M516,171 Q512,181 505,184 M544,171 Q548,181 555,184 M530,174 L530,186\" fill=\"none\" stroke=\"#1C4A1A\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><path d=\"M530,108 Q557,116 558,146 Q558,173 530,175 Q502,173 502,146 Q503,116 530,108 Z\" fill=\"#4FA34A\" stroke=\"#1C4A1A\" stroke-width=\"1.5\"/><path d=\"M511,148 Q518,142 526,148\" fill=\"none\" stroke=\"#0C220B\" stroke-width=\"2.4\" stroke-linecap=\"round\"/><path d=\"M534,147 Q542,141 550,147 Q542,152 534,147 Z\" fill=\"#E6FF7A\"/><ellipse cx=\"545\" cy=\"146\" rx=\"1.2\" ry=\"2.8\" fill=\"#0C220B\"/><path d=\"M534,138 L550,136\" stroke=\"#0C220B\" stroke-width=\"2\" stroke-linecap=\"round\"/><path d=\"M518,157 Q532,172 546,157 Z\" fill=\"#0C220B\"/><path d=\"M526,157.5 L526,162 L530,162 L530,157.5 Z M533,157.5 L533,162 L537,162 L537,157.5 Z\" fill=\"#fff\"/>" },
-    roca: { viewBox: "76 224 148 148", svg: "<circle cx=\"150\" cy=\"298\" r=\"66\" fill=\"#E0A85C\" opacity=\"0.1\"/><path d=\"M104,330 L100,296 L116,268 L146,256 L180,264 L198,292 L194,326 L160,338 L124,338 Z\" fill=\"#9C7B5B\" stroke=\"#3D2A1A\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M178,296 L198,292 L194,326 L170,334 Z\" fill=\"#7A5E43\" opacity=\"0.8\"/><path d=\"M116,268 L132,290 L146,256 M132,290 L100,296 M180,264 L178,296 L198,292 M178,296 L170,334\" fill=\"none\" stroke=\"#3D2A1A\" stroke-width=\"1\" opacity=\"0.55\"/><path d=\"M126,262 L121,240 L134,256 Z M150,256 L156,230 L163,258 Z M172,262 L183,244 L181,266 Z\" fill=\"#7FD3C9\" stroke=\"#3D2A1A\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M128,302 L144,301 L142,305 L130,305 Z\" fill=\"#FF8A2B\"/><ellipse cx=\"138\" cy=\"303\" rx=\"1.2\" ry=\"2\" fill=\"#1A1009\"/><path d=\"M156,301 L172,302 L170,305 L158,305 Z\" fill=\"#FF8A2B\"/><ellipse cx=\"162\" cy=\"303\" rx=\"1.2\" ry=\"2\" fill=\"#1A1009\"/><path d=\"M126,293 L146,300 M154,300 L174,293\" stroke=\"#1A1009\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M138,322 Q150,314 162,322 Z\" fill=\"#1A1009\"/><path d=\"M141,321 L143,313 L146,319.5 Z M159,321 L157,313 L154,319.5 Z\" fill=\"#F4EBDD\" stroke=\"#1A1009\" stroke-width=\"0.8\" stroke-linejoin=\"round\"/>" },
-    voltio: { viewBox: "286 240 108 108", svg: "<circle cx=\"340\" cy=\"294\" r=\"46\" fill=\"#FFE04A\" opacity=\"0.13\"/><path d=\"M334,256 L325,240 L338,242 L331,221 L351,246 L342,246 L348,256 Z\" fill=\"#FFF0A0\" stroke=\"#5E4A06\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M320,272 L313,258 L326,268 Z M360,272 L367,258 L354,268 Z\" fill=\"#E8C22E\" stroke=\"#5E4A06\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M340,256 L362,272 L362,316 L340,334 L318,316 L318,272 Z\" fill=\"#E8C22E\" stroke=\"#5E4A06\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M340,256 L362,272 L362,316 L340,334 Z\" fill=\"#C99F18\" opacity=\"0.45\"/><circle cx=\"331\" cy=\"292\" r=\"5.5\" fill=\"#5FD0FF\" stroke=\"#2A2003\" stroke-width=\"1.3\"/><ellipse cx=\"332\" cy=\"292\" rx=\"1\" ry=\"3\" fill=\"#2A2003\"/><circle cx=\"349\" cy=\"292\" r=\"5.5\" fill=\"#5FD0FF\" stroke=\"#2A2003\" stroke-width=\"1.3\"/><ellipse cx=\"348\" cy=\"292\" rx=\"1\" ry=\"3\" fill=\"#2A2003\"/><path d=\"M324,283 L336,288 M356,283 L344,288\" stroke=\"#2A2003\" stroke-width=\"2.2\" stroke-linecap=\"round\"/><path d=\"M325,303 Q340,322 355,303 Q340,309 325,303 Z\" fill=\"#2A2003\"/><path d=\"M330,304.5 L332.5,310 L335,305.5 Z M345,305.5 L347.5,310 L350,304.5 Z M338,306 L340,311 L342,306 Z\" fill=\"#fff\"/>" },
-    sombra: { viewBox: "462 224 140 140", svg: "<circle cx=\"532\" cy=\"294\" r=\"62\" fill=\"#9B7BFF\" opacity=\"0.12\"/><path d=\"M498,344 Q490,338 494,330 Q500,336 504,338 Z\" fill=\"#5B3FA0\" stroke=\"#1E1240\" stroke-width=\"1\" opacity=\"0.55\" stroke-linejoin=\"round\"/><path d=\"M515,268 Q505,264 507,250 Q515,256 522,262 Z\" fill=\"#3B2C6B\" stroke=\"#1E1240\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M552,262 Q560,258 561,247 Q553,251 547,257 Z\" fill=\"#3B2C6B\" stroke=\"#1E1240\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M556,346 Q552,338 548,332 Q542,337 538,333 L533,341 Q530,335 526,331 Q518,337 516,335 L508,351 Q506,338 503,327 Q499,312 506,300 Q502,282 513,271 Q516,258 528,253 Q520,244 526,235 Q532,226 546,223 Q551,229 544,236 Q538,243 546,249 Q560,254 562,272 Q566,288 561,302 Q569,317 561,331 Q560,339 556,346 Z\" fill=\"#5B3FA0\" stroke=\"#1E1240\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M524,330 Q518,310 524,292 Q528,272 540,262 Q534,276 534,290 Q536,312 524,330 Z\" fill=\"#7458C0\" opacity=\"0.4\"/><path d=\"M514,292 L529,296.5 L515,298.5 Z\" fill=\"#E36BFF\"/><path d=\"M522,293.5 L522,298.5\" stroke=\"#07030F\" stroke-width=\"1.6\"/><path d=\"M552,292 L537,296.5 L551,298.5 Z\" fill=\"#E36BFF\"/><path d=\"M544,293.5 L544,298.5\" stroke=\"#07030F\" stroke-width=\"1.6\"/><path d=\"M514,287 L529,291.5 M552,287 L537,291.5\" stroke=\"#0E0820\" stroke-width=\"2.4\" stroke-linecap=\"round\"/><path d=\"M516,305 Q534,324 551,303 Q534,312 516,305 Z\" fill=\"#0E0820\"/><path d=\"M521,307 L523.5,312 L526.5,308.5 Z M541,308.5 L544,313 L546,307 Z\" fill=\"#fff\"/>" },
+exports.SOUL_CSS = exports.VIEWBOX = exports.MOODS = exports.ACCESSORY_LABEL = exports.ACCESSORIES = exports.SILHOUETTES = exports.REMAINS = exports.CORES = exports.TRAITS = exports.MOUTH_LABEL = exports.MOUTHS = exports.TEMPERAMENT_LABEL = exports.TEMPERAMENTS = void 0;
+exports.lookOf = lookOf;
+exports.renderSoulLook = renderSoulLook;
+exports.soulSvg = soulSvg;
+const geom_ts_1 = require("./geom.ts");
+const palette_ts_1 = require("./palette.ts");
+// ------------------------------------------------------------------ catálogos
+exports.TEMPERAMENTS = ["altivo", "aburrido", "travieso", "feroz", "timido", "desquiciado", "sereno", "astuto"];
+exports.TEMPERAMENT_LABEL = {
+    altivo: "Altivo",
+    aburrido: "Aburrido",
+    travieso: "Travieso",
+    feroz: "Feroz",
+    timido: "Tímido",
+    desquiciado: "Desquiciado",
+    sereno: "Sereno",
+    astuto: "Astuto",
 };
+exports.MOUTHS = ["colmillos", "sierra", "lengua", "torcida", "cosida", "mueca", "abierta", "bostezo"];
+exports.MOUTH_LABEL = {
+    colmillos: "Colmillos",
+    sierra: "Dientes de sierra",
+    lengua: "Lengua fuera",
+    torcida: "Sonrisa torcida",
+    cosida: "Boca cosida",
+    mueca: "Mueca altiva",
+    abierta: "Boca abierta",
+    bostezo: "Bostezo",
+};
+exports.TRAITS = ["cuernos", "halo roto", "bracitos", "orejas de llama", "alitas", "antenas", "corona de esquirlas", "cuerno único"];
+exports.CORES = ["círculo", "rombo", "estrella", "media luna", "hexágono", "lágrima", "rayo", "anillo"];
+exports.REMAINS = { llama: "brasas", marea: "gotas", brote: "hojas", roca: "esquirlas", voltio: "chispas", sombra: "jirones" };
+exports.SILHOUETTES = {
+    llama: ["brasa coronada", "ascua agrietada", "mecha"],
+    marea: ["ola", "remolino", "gota alta"],
+    brote: ["bulbo con hojas", "capullo", "brote enredado"],
+    roca: ["bloque", "menhir", "drusa"],
+    voltio: ["pila con rayo", "punta", "estrella"],
+    sombra: ["capucha", "llama negra", "manto"],
+};
+/** Complementos de muestra (futuros objetos equipables). No salen de los genes. */
+exports.ACCESSORIES = ["gorro", "gafas", "colgante", "monopatin"];
+exports.ACCESSORY_LABEL = { gorro: "Gorro (cabeza)", gafas: "Gafas (cara)", colgante: "Colgante (cuello)", monopatin: "Monopatín (base)" };
+exports.MOODS = ["idle", "atk", "hurt", "low", "ko"];
+const BASES = ["llama", "marea", "brote", "roca", "voltio", "sombra"];
+const isBase = (s) => BASES.includes(s);
+/**
+ * Gen de cabeza (familia, variante 1–3) → temperamento y boca. Cada familia da 3 temperamentos;
+ * 6 de los 18 genes no tienen boca (los serenos, los tímidos, un travieso y un astuto).
+ */
+const HEAD = {
+    llama: [["feroz", "colmillos"], ["travieso", "lengua"], ["desquiciado", "sierra"]],
+    marea: [["sereno", null], ["timido", null], ["astuto", "torcida"]],
+    brote: [["travieso", null], ["timido", null], ["aburrido", "bostezo"]],
+    roca: [["aburrido", "cosida"], ["altivo", "mueca"], ["feroz", "colmillos"]],
+    voltio: [["desquiciado", "abierta"], ["astuto", null], ["travieso", "lengua"]],
+    sombra: [["astuto", "torcida"], ["altivo", "mueca"], ["sereno", null]],
+};
+/** Gen de cuerpo → núcleo (índice de CORES). */
+const CORE = {
+    llama: [5, 2, 1],
+    marea: [0, 3, 5],
+    brote: [7, 0, 3],
+    roca: [4, 6, 1],
+    voltio: [1, 2, 4],
+    sombra: [3, 6, 7],
+};
+/** Gen de extremidades → rasgo (índice de TRAITS). */
+const TRAIT = {
+    llama: [3, 0, 2],
+    marea: [4, 5, 1],
+    brote: [5, 2, 6],
+    roca: [6, 0, 7],
+    voltio: [5, 7, 1],
+    sombra: [0, 4, 1],
+};
+/** Color de los ojos por familia: luz en contraste con el cuerpo (Voltio, cuerpo amarillo: azul eléctrico oscuro). */
+const EYE = {
+    llama: "#fff2a6",
+    marea: "#9af8ff",
+    brote: "#fdffc4",
+    roca: "#8ffcea",
+    voltio: "#2f5be6",
+    sombra: "#f59bff",
+};
+/** Luz del núcleo por familia del gen de cuerpo (siempre clara). */
+const CORE_LIGHT = { llama: "#ffe45c", marea: "#9af8ff", brote: "#e8ff6a", roca: "#8ffcea", voltio: "#7ae2ff", sombra: "#f59bff" };
+/** Llama: cuerpo de brasa (más oscuro que el naranja de la paleta) para que el fuego y los ojos resalten. */
+const BODY_OVERRIDE = {
+    llama: { dark: "#4a160e", mid: "#9a2e1b", light: "#c9472a" },
+};
+const FLAME = { outer: "#ff9a2e", inner: "#ffe27a" };
+// ------------------------------------------------------------------ siluetas (3 por familia, por gen de cuerpo)
+// Coordenadas locales: centro del cuerpo en (0,0), ~50 de ancho, cima ≈ −22…−46, base ≈ +27.
+// Solo M, L, Q y Z (se aplanan para calcular anclajes de rasgos).
+const SIL = {
+    llama: [
+        // brasa coronada: terrón ancho y achatado (la corona de fuego va en DECO)
+        "M-26 8Q-28-6-19-14L-12-19Q-4-23 4-21L12-20Q21-18 25-9Q29 1 26 11Q22 25 2 27Q-19 27-26 8Z",
+        // ascua agrietada: canto rodado redondo con grietas de luz (DECO)
+        "M-23 14Q-28-4-18-18Q-8-27 3-27Q16-26 22-16Q28-4 25 12Q21 26 1 27Q-17 27-23 14Z",
+        // mecha: cabo de vela con chorretones; la mecha y su llama van en DECO
+        "M-20 24Q-22 4-21-13Q-21-20-14-21Q-11-16-8-20Q-2-23 4-20Q7-15 10-20Q19-21 20-13Q22 4 20 24Q9 28 0 27Q-9 28-20 24Z",
+    ],
+    marea: [
+        "M0-30Q10-16 20-6Q30 6 20 20Q10 28-4 27Q-24 24-25 6Q-25-8-12-18Q-16-28-10-36Q-8-28 0-30Z",
+        "M-26 14Q-30-4-16-16Q-4-26 10-24Q24-22 26-10Q20-16 12-12Q22-6 26 4Q30 18 18 24Q4 30-10 27Q-24 24-26 14Z",
+        "M2-38Q8-26 16-16Q26-4 22 12Q16 27 0 27Q-18 27-22 12Q-26-2-14-14Q-18-22-14-30Q-10-22-4-22Q-2-30 2-38Z",
+    ],
+    brote: [
+        "M0-24Q22-20 24 2Q24 26 0 27Q-24 26-24 2Q-22-20 0-24ZM-1-23Q-12-40-24-36Q-14-26-1-23ZM1-23Q12-44 26-40Q18-28 1-23Z",
+        "M0-36Q18-20 20 2Q20 26 0 27Q-20 26-20 2Q-18-20 0-36ZM2-30Q14-46 25-42Q18-30 3-27Z",
+        "M-6-26Q-14-36-12-44Q-4-36 0-28Q2-40 8-46Q10-34 6-26Q16-34 22-32Q16-26 12-22Q26-12 26 4Q26 26 0 27Q-26 26-26 4Q-26-18-6-26Z",
+    ],
+    roca: [
+        "M-24 18L-26-4L-14-22L4-28L22-18L28 2L22 22L2 28L-16 27Z",
+        "M-18 24L-20-12L-10-32L8-36L18-20L20 10L14 26L-2 28Z",
+        "M-28 16L-26-6L-18-16L-16-30L-10-18L-2-22L2-38L8-20L16-18L20-28L22-12L28 0L26 18L10 27L-12 27Z",
+    ],
+    voltio: [
+        "M0-26L22-14L22 14L0 27L-22 14L-22-14ZM-3-24L-9-36L-1-35L-5-48L7-31L1-31L4-24Z",
+        "M0-40L20-6L14 18L0 28L-14 18L-20-6Z",
+        "M0-30L8-18L24-22L18-6L26 6L16 12L14 26L0 20L-14 26L-16 12L-26 6L-18-6L-24-22L-8-18Z",
+    ],
+    sombra: [
+        "M20 22Q14 16 10 20Q6 26 0 22Q-6 28-12 22Q-18 26-22 20Q-28 6-24-6Q-22-20-10-26Q-14-34-8-40Q-2-44 6-44Q0-38 4-32Q22-26 24-8Q28 6 20 22Z",
+        "M-20 24Q-26 0-18-18Q-10-34 10-42Q4-30 14-22Q26-10 24 8Q24 20 18 26Q14 20 8 25Q2 20-4 26Q-10 20-14 26Q-18 22-20 24Z",
+        "M-26 14Q-30-6-20-18Q-24-28-18-34Q-14-24-8-24Q-6-36 2-40Q0-28 6-24Q14-30 20-28Q16-22 20-16Q30-4 26 14Q22 24 14 20Q8 28 0 22Q-8 28-14 21Q-22 24-26 14Z",
+    ],
+};
+/** Piezas de luz propias de una silueta (fuego de la familia Llama). Se dibujan dentro del cuerpo escalado. */
+const DECO = {
+    llama: [
+        // corona de tres lenguas sobre el terrón
+        `<path d="M-13-17Q-18-27-11-34Q-10-27-5-27Q-8-38 1-47Q2-36 6-31Q9-37 14-38Q16-27 12-17Q0-21-13-17Z" fill="${FLAME.outer}"/>` +
+            `<path d="M-7-19Q-9-25-5-28Q-4-24-1-24Q-2-32 2-37Q4-29 6-26Q9-29 9-25Q9-21 7-19Q0-21-7-19Z" fill="${FLAME.inner}"/>`,
+        // grietas de luz en los bordes y una lengua que sale de la grieta de arriba
+        `<path d="M-14-23Q-19-31-13-38Q-11-31-8-29Q-9-26-10-23Z" fill="${FLAME.outer}"/>` +
+            `<path d="M-12-24L-9-19L-13-15M25 4L19 7L21 12L16 15M-22 12L-16 11L-15 18M8 26L10 21L15 20" fill="none" stroke="${FLAME.outer}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>` +
+            `<path d="M-12-24L-9-19L-13-15M25 4L19 7L21 12" fill="none" stroke="${FLAME.inner}" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"/>`,
+        // mecha y llama en gota, chorretones claros
+        `<path d="M0-21Q-1-25 1-28" fill="none" stroke="#2a0d08" stroke-width="2" stroke-linecap="round"/>` +
+            `<path d="M1-26Q-8-33 1-49Q10-33 1-26Z" fill="${FLAME.outer}"/><path d="M1-28Q-4-33 1-41Q6-33 1-28Z" fill="${FLAME.inner}"/>` +
+            `<path d="M-14-21Q-15-12-13-9Q-11-12-11-19ZM10-20Q11-14 12-12Q14-14 14-20Z" fill="#e8643a"/>`,
+    ],
+};
+/** Cima real (con DECO) para colocar rasgos que flotan. */
+const DECO_TOP = { llama: [-47, -38, -49] };
+/** Aplana un path (M/L/Q/Z con números) en polígonos. */
+function flatten(d) {
+    const tok = d.match(/[MLQZ]|-?\d*\.?\d+/g) ?? [];
+    const polys = [];
+    let cur = [];
+    let i = 0;
+    let cmd = "";
+    const num = () => Number(tok[i++]);
+    while (i < tok.length) {
+        const t = tok[i];
+        if (/[MLQZ]/.test(t)) {
+            cmd = t;
+            i++;
+            if (cmd === "Z") {
+                if (cur.length)
+                    polys.push(cur);
+                cur = [];
+                continue;
+            }
+        }
+        if (cmd === "M") {
+            if (cur.length)
+                polys.push(cur);
+            cur = [[num(), num()]];
+            cmd = "L";
+        }
+        else if (cmd === "L")
+            cur.push([num(), num()]);
+        else if (cmd === "Q") {
+            const p0 = cur[cur.length - 1];
+            const c = [num(), num()];
+            const p1 = [num(), num()];
+            for (let k = 1; k <= 8; k++) {
+                const s = k / 8, u = 1 - s;
+                cur.push([u * u * p0[0] + 2 * u * s * c[0] + s * s * p1[0], u * u * p0[1] + 2 * u * s * c[1] + s * s * p1[1]]);
+            }
+        }
+    }
+    if (cur.length)
+        polys.push(cur);
+    return polys;
+}
+function crossings(polys, axis, v) {
+    const o = 1 - axis;
+    const out = [];
+    for (const poly of polys) {
+        for (let k = 0; k < poly.length; k++) {
+            const a = poly[k], b = poly[(k + 1) % poly.length];
+            if ((a[axis] <= v && b[axis] > v) || (b[axis] <= v && a[axis] > v)) {
+                const t = (v - a[axis]) / (b[axis] - a[axis]);
+                out.push(a[o] + t * (b[o] - a[o]));
+            }
+        }
+    }
+    return out;
+}
+const anchorCache = new Map();
+function anchors(d) {
+    const hit = anchorCache.get(d);
+    if (hit)
+        return hit;
+    // solo la primera subruta es el cuerpo (las demás son hojas o rayos)
+    const all = flatten(d);
+    const body = [all[0]];
+    let minY = Infinity;
+    for (const poly of all)
+        for (const p of poly)
+            minY = Math.min(minY, p[1]);
+    const top = (x) => Math.min(...crossings(body, 0, x), 0);
+    const half = (y) => Math.max(...crossings(body, 1, y), 8);
+    const a = { top, half, minY, bottom: Math.max(...crossings(body, 0, 0.01), 20) };
+    anchorCache.set(d, a);
+    return a;
+}
+function variantOf(g) {
+    const m = /\.(\d+)$/.exec(g.id);
+    const n = m ? Number(m[1]) - 1 : (0, geom_ts_1.hashStr)(g.id) % 3;
+    return ((n % 3) + 3) % 3;
+}
+/** Familia base del gen para elegir pieza: la suya, o un componente fijo si es híbrida. */
+function baseOf(fam, cfg, salt) {
+    if (isBase(fam))
+        return fam;
+    const hy = cfg.hybridById.get(fam);
+    if (hy) {
+        const c = hy.components[(0, geom_ts_1.hashStr)(salt) % 2];
+        return (isBase(c) ? c : hy.components[0]);
+    }
+    return BASES[(0, geom_ts_1.hashStr)(fam + salt) % BASES.length];
+}
+function pick3(table, g, cfg) {
+    return table[baseOf(g.family, cfg, g.id)][variantOf(g)];
+}
+function eyeOf(fam, cfg, table = EYE) {
+    if (isBase(fam))
+        return table[fam];
+    const hy = cfg.hybridById.get(fam);
+    const c = hy?.components[1];
+    return c && isBase(c) ? table[c] : table.sombra;
+}
+function palOf(fam, cfg) {
+    return (0, palette_ts_1.paletteOf)(fam, cfg.hybridById.get(fam)?.components);
+}
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+function lookOf(c, cfg) {
+    const g = c.genome;
+    const hy = cfg.hybridById.get(c.family);
+    const pal = palOf(c.family, cfg);
+    const genes = [g.cabeza.D, g.cuerpo.D, g.extremidades.D, g.cola.D];
+    const seed = (0, geom_ts_1.hashStr)(genes.map((x) => x.id).join("|") + "|" + c.id);
+    const b = g.cuerpo.D;
+    const q = b.quality || 90;
+    // proporción por el gen de cuerpo (su ancla: igual en padre y cría), en un rango corto
+    const wide = (b.anchor.resistencia - b.anchor.velocidad) / q;
+    const sx = clamp(1 + wide * 0.6, 0.92, 1.08);
+    const sy = clamp(1 - wide * 0.4, 0.94, 1.06);
+    const k = clamp(0.97 + ((b.quality - 85.5) / 9) * 0.06, 0.95, 1.03);
+    const ex = g.extremidades.D;
+    let tier = ex.quality >= 93 ? 2 : ex.quality >= 91.2 ? 1 : 0;
+    if (ex.origin === "mutacion" || !isBase(ex.family))
+        tier = 2;
+    if (hy)
+        tier = Math.min(2, tier + 1);
+    const [temperament, mouth] = pick3(HEAD, g.cabeza.D, cfg);
+    return {
+        family: c.family,
+        silFamily: baseOf(b.family, cfg, b.id),
+        variant: variantOf(b),
+        pal,
+        eye: eyeOf(c.family, cfg),
+        halo: pal.main,
+        halo2: hy && isBase(hy.components[1]) ? (0, palette_ts_1.paletteOf)(hy.components[1]).main : pal.main,
+        temperament,
+        mouth,
+        core: pick3(CORE, b, cfg),
+        coreColor: eyeOf(b.family, cfg, CORE_LIGHT),
+        trait: pick3(TRAIT, ex, cfg),
+        traitPal: palOf(ex.family, cfg),
+        tier,
+        remains: baseOf(g.cola.D.family, cfg, g.cola.D.id),
+        tailPal: palOf(g.cola.D.family, cfg),
+        tailVariant: variantOf(g.cola.D),
+        sx,
+        sy,
+        k,
+        seed,
+    };
+}
+/** Path de un ojo con x hacia fuera (+) y centro en 0,0. */
+function eyePath(e) {
+    const { w, h } = e;
+    switch (e.s) {
+        case "almond":
+            return `M${(0, geom_ts_1.f)(-w)} 0Q0 ${(0, geom_ts_1.f)(-2 * h)} ${(0, geom_ts_1.f)(w)} 0Q0 ${(0, geom_ts_1.f)(2 * h)} ${(0, geom_ts_1.f)(-w)} 0Z`;
+        case "lid": {
+            const ti = (e.ti ?? 0) * h, to = (e.to ?? 0) * h;
+            return `M${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(ti)}L${(0, geom_ts_1.f)(w)} ${(0, geom_ts_1.f)(to)}Q${(0, geom_ts_1.f)(w * 0.1)} ${(0, geom_ts_1.f)(2.1 * h)} ${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(ti)}Z`;
+        }
+        case "droop": {
+            const ti = (e.ti ?? -0.5) * h, to = (e.to ?? 0.4) * h;
+            return `M${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(ti)}Q0 ${(0, geom_ts_1.f)(Math.min(ti, to) - 0.3 * h)} ${(0, geom_ts_1.f)(w)} ${(0, geom_ts_1.f)(to)}Q${(0, geom_ts_1.f)(w * 0.2)} ${(0, geom_ts_1.f)(1.9 * h)} ${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(ti)}Z`;
+        }
+        case "fierce":
+            return `M${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(0.35 * h)}L${(0, geom_ts_1.f)(w)} ${(0, geom_ts_1.f)(-h)}Q${(0, geom_ts_1.f)(0.45 * w)} ${(0, geom_ts_1.f)(1.7 * h)} ${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(0.35 * h)}Z`;
+        case "happy":
+            return `M${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(0.6 * h)}Q0 ${(0, geom_ts_1.f)(-2.2 * h)} ${(0, geom_ts_1.f)(w)} ${(0, geom_ts_1.f)(0.6 * h)}Q0 ${(0, geom_ts_1.f)(-0.7 * h)} ${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(0.6 * h)}Z`;
+        case "closed":
+            return `M${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(-0.3 * h)}Q0 ${(0, geom_ts_1.f)(1.9 * h)} ${(0, geom_ts_1.f)(w)} ${(0, geom_ts_1.f)(-0.3 * h)}Q0 ${(0, geom_ts_1.f)(0.7 * h)} ${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(-0.3 * h)}Z`;
+        case "round":
+            return `M${(0, geom_ts_1.f)(-w)} 0A${(0, geom_ts_1.f)(w)} ${(0, geom_ts_1.f)(h)} 0 1 0 ${(0, geom_ts_1.f)(w)} 0A${(0, geom_ts_1.f)(w)} ${(0, geom_ts_1.f)(h)} 0 1 0 ${(0, geom_ts_1.f)(-w)} 0Z`;
+        case "chevron":
+            return `M${(0, geom_ts_1.f)(w)} ${(0, geom_ts_1.f)(-h)}L${(0, geom_ts_1.f)(-w)} 0L${(0, geom_ts_1.f)(w)} ${(0, geom_ts_1.f)(h)}L${(0, geom_ts_1.f)(0.35 * w)} 0Z`;
+        case "flat":
+            return `M${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(-0.45)}L${(0, geom_ts_1.f)(w)} ${(0, geom_ts_1.f)(-0.45)}L${(0, geom_ts_1.f)(w)} ${(0, geom_ts_1.f)(0.45)}L${(0, geom_ts_1.f)(-w)} ${(0, geom_ts_1.f)(0.45)}Z`;
+    }
+}
+/**
+ * Caras por temperamento. Los dos ojos miden casi lo mismo (≤ ~12 % de diferencia);
+ * solo el desquiciado tiene uno enorme y otro diminuto.
+ */
+const FACES = {
+    // párpados pesados y rectos, mirada por encima del hombro (pupilas abajo)
+    altivo: { L: { s: "lid", w: 5.6, h: 3.1, ti: 0.15, to: -0.2, rot: -8, pupil: [0.1, 0.8] }, R: { s: "lid", w: 5.6, h: 3.1, ti: 0.3, to: -0.05, rot: -8, pupil: [0.15, 0.85] } },
+    // rendijas caídas por fuera, sin pupila: mirada vacía
+    aburrido: { L: { s: "droop", w: 5.4, h: 2.3, ti: -0.1, to: 0.7, dy: 1.2 }, R: { s: "droop", w: 5.6, h: 2.5, ti: -0.2, to: 0.6, dy: 0.9 } },
+    // un ojo guiñado en sonrisa, el otro abierto mirando de reojo
+    travieso: { L: { s: "happy", w: 5.3, h: 3, dy: 0.4 }, R: { s: "almond", w: 5.6, h: 3.5, pupil: [-0.35, 0.05], rot: -6 } },
+    // ojos en V que bajan hacia el centro
+    feroz: { L: { s: "fierce", w: 6.2, h: 3.6 }, R: { s: "fierce", w: 6.5, h: 3.8, dy: -0.3 } },
+    // ojos pequeños, bajos y juntos, mirando abajo y a un lado
+    timido: { L: { s: "round", w: 2.9, h: 3.3, pupil: [0.3, 0.45] }, R: { s: "round", w: 3.1, h: 3.4, pupil: [-0.2, 0.45] }, gap: 6.6, dy: 2.2 },
+    // uno enorme y otro diminuto (la única asimetría fuerte)
+    desquiciado: { L: { s: "round", w: 5.4, h: 5.6, pupil: [0.1, -0.05] }, R: { s: "round", w: 2, h: 2, dy: -1.5, dx: 1 }, gap: 9.4 },
+    // cerrados en arco, en calma
+    sereno: { L: { s: "closed", w: 5.2, h: 3, rot: 4 }, R: { s: "closed", w: 5.2, h: 3, rot: 4 } },
+    // los dos entornados, mirando de lado
+    astuto: { L: { s: "lid", w: 5.8, h: 2.5, ti: -0.1, to: 0.25, rot: 6, pupil: [0.45, 0.4] }, R: { s: "lid", w: 5.8, h: 2.8, ti: -0.3, to: 0.15, rot: -8, pupil: [-0.45, 0.35] } },
+};
+/** Reacciones: al atacar, al recibir, con poca vida y al caer. */
+function moodFace(t, m) {
+    if (m === "idle")
+        return FACES[t];
+    if (m === "atk") {
+        if (t === "timido")
+            return { L: { s: "round", w: 3.8, h: 4.1 }, R: { s: "round", w: 3.8, h: 4.1 }, gap: 7.4, dy: 1 };
+        if (t === "sereno")
+            return { L: { s: "almond", w: 6.2, h: 3.4 }, R: { s: "almond", w: 6.2, h: 3.4 } };
+        if (t === "desquiciado")
+            return { L: { s: "round", w: 6.4, h: 6.6, pupil: [0, 0] }, R: { s: "fierce", w: 4, h: 2.8 }, gap: 9.6 };
+        return { L: { s: "fierce", w: 6.6, h: 3.8 }, R: { s: "fierce", w: 6.8, h: 3.9, dy: -0.3 } };
+    }
+    if (m === "hurt")
+        return { L: { s: "chevron", w: 4.4, h: 3.2 }, R: { s: "chevron", w: 4.4, h: 3.2 } };
+    if (m === "low")
+        return { L: { s: "droop", w: 5, h: 2.1, ti: 0.1, to: 0.7, dy: 1 }, R: { s: "droop", w: 5, h: 2.3, ti: 0, to: 0.6, dy: 1.3 } };
+    return { L: { s: "flat", w: 4.4, h: 1, rot: 8 }, R: { s: "flat", w: 4.4, h: 1, rot: -8, dy: 0.8 } };
+}
+/** Bocas planas sin contorno, centradas en 0,0 y de ~13 de ancho (legibles a 48 px). */
+function mouthSvg(m, c) {
+    const H = (d) => `<path d="${d}" fill="${c.hole}"/>`;
+    const W = (d) => `<path d="${d}" fill="${c.teeth}"/>`;
+    const S = (d, col, w) => `<path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    switch (m) {
+        case "colmillos":
+            // media luna oscura con dos colmillos que asoman por debajo
+            return H("M-6.8-1.2Q0 3.2 6.8-1.2Q0 5.6-6.8-1.2Z") + W("M-5-0.2L-2.4 0.9L-3.9 5.2ZM5-0.2L2.4 0.9L3.9 5.2Z");
+        case "sierra":
+            // boca ancha abierta con dientes en zigzag arriba y abajo
+            return H("M-7.2-1.6Q0-3.4 7.2-1.6Q6.2 4.6 0 5Q-6.2 4.6-7.2-1.6Z") + W("M-6.6-1.6L-5 1L-3.4-2.3L-1.7 1L0-2.5L1.7 1L3.4-2.3L5 1L6.6-1.6Q0-3.3-6.6-1.6Z") + W("M-5.4 3.7L-3.8 1.6L-2 4.4L0 1.6L2 4.4L3.8 1.6L5.4 3.7Q0 5.6-5.4 3.7Z");
+        case "lengua":
+            // sonrisa abierta con una lengua grande colgando a un lado
+            return H("M-6.4-1.4Q0 0.6 6.4-1.4Q5.2 4 0 4.3Q-5.2 4-6.4-1.4Z") + `<path d="M-0.4 1.6Q4.6 0.6 4.9 4.4Q5.1 8 2.3 8.1Q-0.4 8.2-0.5 4.8Z" fill="${c.tongue}"/>` + S("M2.2 3.2L2.3 6", c.hole, 0.8);
+        case "torcida":
+            // sonrisa ladeada: sube hacia un lado, con hoyuelo
+            return S("M-5.6 0.6Q0.5 2.6 5.4-2.4", c.hole, 2.2) + S("M4.1-3.6L6.6-1.4", c.hole, 1.4);
+        case "cosida":
+            // costura: línea oscura con cuatro puntadas claras
+            return S("M-6 0L6 0", c.hole, 1.8) + S("M-4.2-2L-3.8 2M-1.4-2.1L-1.4 2.1M1.4-2.1L1.4 2.1M4.2-2L3.8 2", c.teeth, 1.2);
+        case "mueca":
+            // gesto altivo: boca pequeña hacia abajo, desplazada, con la comisura más baja
+            return `<g transform="translate(1.6 0)">${H("M-4.6 2.2Q0-3 4.6 2.2Q0-0.6-4.6 2.2Z")}</g>`;
+        case "abierta":
+            // grito: óvalo grande abierto con la lengua al fondo
+            return H("M-3.6 1.4A3.6 4.4 0 1 0 3.6 1.4A3.6 4.4 0 1 0-3.6 1.4Z") + `<path d="M-2.5 4.2Q0 1.8 2.5 4.2Q0 5.9-2.5 4.2Z" fill="${c.tongue}"/>`;
+        case "bostezo":
+            // bostezo ladeado y caído, con un diente suelto
+            return `<g transform="translate(-1.5 0.5) rotate(-12)">${H("M-5.4 0Q-5 -2.4 0-2.2Q5-2 5.4 0.4Q4.6 3.6 0 3.6Q-4.8 3.4-5.4 0Z")}${W("M1.2-2.2L3.4-2L2.4 0Z")}</g>`;
+    }
+}
+// ------------------------------------------------------------------ núcleo y restos
+function corePath(i, r) {
+    const p = (x, y) => `${(0, geom_ts_1.f)(x * r)} ${(0, geom_ts_1.f)(y * r)}`;
+    switch (i) {
+        case 0:
+            return `M${p(-1, 0)}A${(0, geom_ts_1.f)(r)} ${(0, geom_ts_1.f)(r)} 0 1 0 ${p(1, 0)}A${(0, geom_ts_1.f)(r)} ${(0, geom_ts_1.f)(r)} 0 1 0 ${p(-1, 0)}Z`;
+        case 1:
+            return `M${p(0, -1.3)}L${p(0.85, 0)}L${p(0, 1.3)}L${p(-0.85, 0)}Z`;
+        case 2:
+            return `M${p(0, -1.35)}L${p(0.36, -0.36)}L${p(1.25, 0)}L${p(0.36, 0.36)}L${p(0, 1.35)}L${p(-0.36, 0.36)}L${p(-1.25, 0)}L${p(-0.36, -0.36)}Z`;
+        case 3:
+            return `M${p(0.3, -1.1)}A${(0, geom_ts_1.f)(1.1 * r)} ${(0, geom_ts_1.f)(1.1 * r)} 0 1 0 ${p(0.3, 1.1)}A${(0, geom_ts_1.f)(0.8 * r)} ${(0, geom_ts_1.f)(0.8 * r)} 0 1 1 ${p(0.3, -1.1)}Z`;
+        case 4:
+            return `M${p(0, -1.15)}L${p(1, -0.58)}L${p(1, 0.58)}L${p(0, 1.15)}L${p(-1, 0.58)}L${p(-1, -0.58)}Z`;
+        case 5:
+            return `M${p(0, -1.45)}Q${p(1.15, 0)} ${p(0.75, 0.6)}Q${p(0, 1.4)} ${p(-0.75, 0.6)}Q${p(-1.15, 0)} ${p(0, -1.45)}Z`;
+        case 6:
+            return `M${p(-0.2, -1.4)}L${p(0.75, -1.4)}L${p(0.2, -0.25)}L${p(0.8, -0.25)}L${p(-0.4, 1.45)}L${p(-0.05, 0.2)}L${p(-0.7, 0.2)}Z`;
+        default:
+            return `M${p(-1.15, 0)}A${(0, geom_ts_1.f)(1.15 * r)} ${(0, geom_ts_1.f)(1.15 * r)} 0 1 0 ${p(1.15, 0)}A${(0, geom_ts_1.f)(1.15 * r)} ${(0, geom_ts_1.f)(1.15 * r)} 0 1 0 ${p(-1.15, 0)}ZM${p(-0.5, 0)}A${(0, geom_ts_1.f)(0.5 * r)} ${(0, geom_ts_1.f)(0.5 * r)} 0 1 1 ${p(0.5, 0)}A${(0, geom_ts_1.f)(0.5 * r)} ${(0, geom_ts_1.f)(0.5 * r)} 0 1 1 ${p(-0.5, 0)}Z`;
+    }
+}
+function remainPath(fam, p) {
+    const q = (x, y) => `${(0, geom_ts_1.f)(x * p)} ${(0, geom_ts_1.f)(y * p)}`;
+    switch (fam) {
+        case "llama":
+            return `M${q(0, -1.6)}Q${q(1, 0)} ${q(0, 1)}Q${q(-1, 0)} ${q(0, -1.6)}Z`;
+        case "marea":
+            return `M${q(0, -1.5)}Q${q(0.9, -0.2)} ${q(0.8, 0.3)}Q${q(0.7, 1.1)} ${q(0, 1.1)}Q${q(-0.7, 1.1)} ${q(-0.8, 0.3)}Q${q(-0.9, -0.2)} ${q(0, -1.5)}Z`;
+        case "brote":
+            return `M${q(-1.3, 0.3)}Q${q(0, -1.3)} ${q(1.3, -0.3)}Q${q(0, 1.1)} ${q(-1.3, 0.3)}Z`;
+        case "roca":
+            return `M${q(0, -1.4)}L${q(0.8, 0.1)}L${q(0.1, 1.2)}L${q(-0.6, 0.3)}Z`;
+        case "voltio":
+            return `M${q(-0.7, -1.4)}L${q(0.7, -0.2)}L${q(0, 0)}L${q(0.8, 1.4)}L${q(-0.7, 0.2)}L${q(0, 0)}Z`;
+        case "sombra":
+            return `M${q(-1.3, 0.4)}Q${q(-0.2, -1.4)} ${q(1.3, -0.5)}Q${q(0, -0.5)} ${q(-1.3, 0.4)}Z`;
+    }
+}
+const T = (x, y, rot = 0, s = 1) => `translate(${(0, geom_ts_1.f)(x)} ${(0, geom_ts_1.f)(y)})${rot ? ` rotate(${(0, geom_ts_1.f)(rot)})` : ""}${s !== 1 ? ` scale(${(Math.round(s * 100) / 100).toString()})` : ""}`;
+/**
+ * Rasgo de extremidades: siempre grande y en el tono claro de la familia del gen, para que no se
+ * confunda con las puntas de la silueta. Rareza: 1 añade detalle (bandas, garras, pluma extra),
+ * 2 además brillo y una segunda pieza. Devuelve [detrás del cuerpo, delante].
+ */
+/** Altura de la frente: los rasgos de cabeza nacen aquí, delante del cuerpo, para no perderse entre las puntas de la silueta. */
+const FOREHEAD = -15;
+function traitSvg(i, tier, a, c) {
+    const s = 1.35;
+    const hw = a.half(-4);
+    const glow = (x, y, r) => `<circle cx="${(0, geom_ts_1.f)(x)}" cy="${(0, geom_ts_1.f)(y)}" r="${(0, geom_ts_1.f)(r)}" fill="${c.tGlow}" opacity=".35"/><path transform="${T(x, y)}" d="${corePath(2, r * 0.55)}" fill="${c.tGlow}"/>`;
+    switch (i) {
+        case 0: {
+            // cuernos: un par curvo hacia fuera
+            const y = FOREHEAD;
+            const x = Math.min(hw * 0.55, a.half(y) - 4);
+            const len = 15.5 * s;
+            const horn = (sx) => {
+                const band = tier >= 1 ? `<path d="M${(0, geom_ts_1.f)(-3.6)} ${(0, geom_ts_1.f)(-len * 0.28)}L3.5 ${(0, geom_ts_1.f)(-len * 0.33)}L3.2 ${(0, geom_ts_1.f)(-len * 0.45)}L${(0, geom_ts_1.f)(-3.1)} ${(0, geom_ts_1.f)(-len * 0.4)}Z" fill="${c.tBase}"/>` : "";
+                const tip = tier === 2 ? `<path d="M${(0, geom_ts_1.f)(sx * 0.6)} ${(0, geom_ts_1.f)(-len * 0.72)}L${(0, geom_ts_1.f)(sx * 3.4)} ${(0, geom_ts_1.f)(-len)}L${(0, geom_ts_1.f)(sx * 2.6)} ${(0, geom_ts_1.f)(-len * 0.68)}Z" fill="${c.tGlow}"/>` : "";
+                return `<g transform="${T(sx * x, y, sx * 28)}"><path d="M-5 0Q-4.2 ${(0, geom_ts_1.f)(-len * 0.6)} ${(0, geom_ts_1.f)(sx * 4)} ${(0, geom_ts_1.f)(-len)}Q1 ${(0, geom_ts_1.f)(-len * 0.5)} 5 0Z" fill="${c.tLight}"/>${band}${tip}</g>`;
+            };
+            return ["", horn(-1) + horn(1)];
+        }
+        case 1: {
+            // halo roto: anillo inclinado con un hueco, flotando sobre la cabeza
+            const y = a.minY - 6;
+            const rx = 13, ry = 3.8;
+            const gap = 1.1;
+            const x1 = rx * Math.cos(gap), y1 = ry * Math.sin(gap);
+            const frag1 = tier >= 1 ? `<path d="M${(0, geom_ts_1.f)(rx * 0.55)} ${(0, geom_ts_1.f)(ry + 2.6)}l3 -0.8l-0.6 2.6z" fill="${c.tLight}"/>` : "";
+            const frag2 = tier === 2 ? glow(-rx - 3, -2, 3.2) : "";
+            return ["", `<g transform="${T(0, y, -9)}"><path d="M${(0, geom_ts_1.f)(x1)} ${(0, geom_ts_1.f)(y1)}A${(0, geom_ts_1.f)(rx)} ${(0, geom_ts_1.f)(ry)} 0 1 1 ${(0, geom_ts_1.f)(rx)} 0" fill="none" stroke="${c.tLight}" stroke-width="3.2" stroke-linecap="round"/>${frag1}${frag2}</g>`];
+        }
+        case 2: {
+            // bracitos a los lados, alzados
+            const y = 4;
+            const x = a.half(y) - 3;
+            const arm = (sx, up) => {
+                const claws = tier >= 1 ? `<path d="M${(0, geom_ts_1.f)(sx * 14 * s)} ${(0, geom_ts_1.f)(-7.5 * s)}l${(0, geom_ts_1.f)(sx * 2.6)} -2.4l${(0, geom_ts_1.f)(-sx * 0.4)} 2.8zM${(0, geom_ts_1.f)(sx * 15.6 * s)} ${(0, geom_ts_1.f)(-4 * s)}l${(0, geom_ts_1.f)(sx * 3)} -0.6l${(0, geom_ts_1.f)(-sx * 1.6)} 2.4z" fill="${c.tBase}"/>` : "";
+                const orb = tier === 2 ? glow(sx * 13 * s, -4.5 * s, 3) : "";
+                return `<g transform="${T(sx * x, y, sx * up)}"><path d="M0 -3.6Q${(0, geom_ts_1.f)(sx * 9 * s)} -2.4 ${(0, geom_ts_1.f)(sx * 12 * s)} ${(0, geom_ts_1.f)(-7 * s)}Q${(0, geom_ts_1.f)(sx * 15 * s)} ${(0, geom_ts_1.f)(-1.2 * s)} ${(0, geom_ts_1.f)(sx * 8.5 * s)} 2.4Q${(0, geom_ts_1.f)(sx * 4)} 3.8 0 3.4Z" fill="${c.tLight}"/>${claws}${orb}</g>`;
+            };
+            return ["", arm(-1, -14) + arm(1, 22)];
+        }
+        case 3: {
+            // orejas de llama: dos lenguas laterales hacia fuera
+            const y = FOREHEAD + 2;
+            const x = a.half(y) - 3;
+            const ear = (sx) => {
+                const inner = tier >= 1 ? `<path d="M-1.6 -1Q-2 ${(0, geom_ts_1.f)(-6 * s)} ${(0, geom_ts_1.f)(sx * 1.4)} ${(0, geom_ts_1.f)(-10 * s)}Q1.6 ${(0, geom_ts_1.f)(-5 * s)} 2.6 -1Z" fill="${c.tBase}"/>` : "";
+                const tip = tier === 2 ? glow(sx * 2.4, -16 * s, 2.4) : "";
+                return `<g transform="${T(sx * x, y, sx * 62)}"><path d="M-4.6 0Q-5.6 ${(0, geom_ts_1.f)(-9 * s)} ${(0, geom_ts_1.f)(sx * 2.2)} ${(0, geom_ts_1.f)(-15 * s)}Q${(0, geom_ts_1.f)(sx * 1)} ${(0, geom_ts_1.f)(-8 * s)} 5.4 0Z" fill="${c.tLight}"/>${inner}${tip}</g>`;
+            };
+            return ["", ear(-1) + ear(1)];
+        }
+        case 4: {
+            // alitas: plumas planas que salen de la espalda, por fuera de la silueta
+            const y = -2;
+            const x = a.half(y) - 4;
+            const wing = (sx) => {
+                const feathers = tier >= 1 ? 3 : 2;
+                let g = "";
+                for (let k = 0; k < feathers; k++)
+                    g += `<path transform="rotate(${(0, geom_ts_1.f)(sx * (-22 + k * 20))})" d="M0 -2.4Q${(0, geom_ts_1.f)(sx * 10 * s)} ${(0, geom_ts_1.f)(-8.5 * s)} ${(0, geom_ts_1.f)(sx * 17 * s)} ${(0, geom_ts_1.f)(-4 * s)}Q${(0, geom_ts_1.f)(sx * 10 * s)} 0.4 0 3.2Z" fill="${k === 1 ? c.tBase : c.tLight}"/>`;
+                if (tier === 2)
+                    g += glow(sx * 17 * s, -9 * s, 2.6);
+                return `<g transform="${T(sx * x, y)}">${g}</g>`;
+            };
+            return [wing(-1) + wing(1), ""];
+        }
+        case 5: {
+            // antenas con bola en la punta
+            const x = 6;
+            const ant = (sx) => {
+                const y0 = FOREHEAD - 1;
+                const ex = sx * 7, ey = Math.min(a.minY - 6, -36) - y0;
+                const ball = tier >= 1 ? c.tGlow : c.tLight;
+                const ring = tier === 2 ? `<circle cx="${(0, geom_ts_1.f)(sx * x + ex)}" cy="${(0, geom_ts_1.f)(y0 + ey)}" r="5.6" fill="${c.tGlow}" opacity=".3"/>` : "";
+                return `<path d="M${(0, geom_ts_1.f)(sx * x)} ${(0, geom_ts_1.f)(y0)}Q${(0, geom_ts_1.f)(sx * x + ex * 0.1)} ${(0, geom_ts_1.f)(y0 + ey * 0.7)} ${(0, geom_ts_1.f)(sx * x + ex)} ${(0, geom_ts_1.f)(y0 + ey)}" fill="none" stroke="${c.tLight}" stroke-width="2.2" stroke-linecap="round"/>${ring}<circle cx="${(0, geom_ts_1.f)(sx * x + ex)}" cy="${(0, geom_ts_1.f)(y0 + ey)}" r="3.3" fill="${ball}"/>`;
+            };
+            return ["", ant(-1) + ant(1)];
+        }
+        case 6: {
+            // corona de esquirlas flotando
+            const y = a.minY - 7;
+            const n = tier === 2 ? 5 : 3;
+            let g = "";
+            for (let k = 0; k < n; k++) {
+                const t = k / (n - 1) - 0.5;
+                const mid = k === Math.floor(n / 2);
+                const h = mid ? 14 : 10;
+                const col = mid && tier >= 1 ? c.tGlow : k % 2 ? c.tBase : c.tLight;
+                g += `<path transform="${T(t * 30, Math.abs(t) * 7, t * 40)}" d="M0 ${(0, geom_ts_1.f)(-h)}L4 0L0 2.6L-4 0Z" fill="${col}"/>`;
+            }
+            return ["", `<g transform="${T(0, y)}">${g}</g>`];
+        }
+        default: {
+            // cuerno único, algo desplazado
+            const x = 0;
+            const y = FOREHEAD + 1;
+            const len = 20;
+            const band = tier >= 1 ? `<path d="M-3.2 ${(0, geom_ts_1.f)(-len * 0.3)}L3 ${(0, geom_ts_1.f)(-len * 0.4)}L2.6 ${(0, geom_ts_1.f)(-len * 0.5)}L-2.8 ${(0, geom_ts_1.f)(-len * 0.4)}Z M-2.4 ${(0, geom_ts_1.f)(-len * 0.55)}L2.2 ${(0, geom_ts_1.f)(-len * 0.64)}L1.9 ${(0, geom_ts_1.f)(-len * 0.72)}L-2 ${(0, geom_ts_1.f)(-len * 0.64)}Z" fill="${c.tBase}"/>` : "";
+            const tip = tier === 2 ? glow(2, -len, 2.6) : "";
+            return ["", `<g transform="${T(x, y, 6)}"><path d="M-4.4 0Q-3.4 ${(0, geom_ts_1.f)(-len * 0.6)} 2 ${(0, geom_ts_1.f)(-len)}Q1.8 ${(0, geom_ts_1.f)(-len * 0.5)} 4.4 0Z" fill="${c.tLight}"/>${band}${tip}</g>`];
+        }
+    }
+}
+/** Cola y restos (gen de cola): forma y color de su familia; la variante decide cola larga, sin cola o corta. */
+function tailSvg(look, bottom, c) {
+    let out = "";
+    const tp = look.tailPal;
+    const v = look.tailVariant;
+    if (v !== 1) {
+        const len = v === 0 ? 15 : 10;
+        const side = v === 0 ? 1 : -1;
+        const d = `M-7 -3Q-4 ${(0, geom_ts_1.f)(len * 0.7)} ${(0, geom_ts_1.f)(side * 8)} ${(0, geom_ts_1.f)(len)}Q1 ${(0, geom_ts_1.f)(len * 0.55)} 7 -3Z`;
+        out += `<path transform="translate(0 ${(0, geom_ts_1.f)(bottom)})" d="${d}" fill="${c.dark}"/><path transform="translate(0 ${(0, geom_ts_1.f)(bottom - 1)}) scale(.6)" d="${d}" fill="${c.mid}"/>`;
+    }
+    // posiciones fijas por variante
+    const POS = [
+        [[-15, 7, -20, 2.6], [16, 3, 25, 2.2]],
+        [[-15, 4, -25, 2.6], [-5, 10, 10, 2.9], [6, 9, -15, 2.4], [16, 4, 20, 2.6]],
+        [[-14, 6, -20, 2.5], [12, 7, 15, 2.6], [1, 14, 30, 2.1]],
+    ];
+    const lightT = (0, palette_ts_1.mix)(tp.main, "#ffffff", 0.35);
+    for (const [k, [x, y, rot, p]] of (POS[v] ?? []).entries())
+        out += `<path transform="${T(x, bottom + y, rot)}" d="${remainPath(look.remains, p)}" fill="${k % 2 ? lightT : tp.main}"/>`;
+    return out;
+}
+// ------------------------------------------------------------------ complementos (muestra; no salen de los genes)
+function accessorySvg(acc, a, eyeY, eyeGap, bottom) {
+    switch (acc) {
+        case "gorro": {
+            // gorro de lana con borla, encajado en la cabeza
+            const y = a.top(0) + 6;
+            return `<g transform="${T(0, y, -6)}"><path d="M-14 0Q-15-15 0-17Q15-15 14 0Z" fill="#3f9c8a"/><path d="M-10-12Q0-15 10-12L12-7Q0-10-12-7Z" fill="#e9dcc0"/><rect x="-16" y="-3" width="32" height="6.4" rx="3" fill="#e9dcc0"/><circle cy="-19" r="4.4" fill="#e2574c"/></g>`;
+        }
+        case "gafas": {
+            // gafas redondas de cristal claro (los ojos se siguen viendo)
+            const r = 7;
+            const lens = (x) => `<circle cx="${(0, geom_ts_1.f)(x)}" cy="${(0, geom_ts_1.f)(eyeY)}" r="${r}" fill="#bfefff" opacity=".22"/><circle cx="${(0, geom_ts_1.f)(x)}" cy="${(0, geom_ts_1.f)(eyeY)}" r="${r}" fill="none" stroke="#20202a" stroke-width="1.8"/>`;
+            return lens(-eyeGap) + lens(eyeGap) + `<path d="M${(0, geom_ts_1.f)(-eyeGap + r)} ${(0, geom_ts_1.f)(eyeY - 1)}Q0 ${(0, geom_ts_1.f)(eyeY - 4)} ${(0, geom_ts_1.f)(eyeGap - r)} ${(0, geom_ts_1.f)(eyeY - 1)}" fill="none" stroke="#20202a" stroke-width="1.8"/>`;
+        }
+        case "colgante": {
+            // cordón con una piedra colgando a un lado del núcleo
+            const L = a.half(8) - 2;
+            return `<path d="M${(0, geom_ts_1.f)(-L)} 7Q0 21 ${(0, geom_ts_1.f)(L)} 7" fill="none" stroke="#2a2433" stroke-width="1.6"/><g transform="translate(12.5 11)"><path d="M0 0L0 2.6" stroke="#d9b24a" stroke-width="1.4"/><path d="M0 2Q3.6 5 0 9.6Q-3.6 5 0 2Z" fill="#d9b24a"/><path d="M0 3.6Q2 5.4 0 8Q-2 5.4 0 3.6Z" fill="#e3577a"/></g>`;
+        }
+        case "monopatin": {
+            // tabla con ruedas en lugar de los restos de debajo
+            const y = bottom + 7;
+            return `<g transform="translate(0 ${(0, geom_ts_1.f)(y)})"><path d="M-27-3Q-29-4-28-6Q-25-1-20-1L20-1Q25-1 28-6Q29-4 27-3Q25 2 19 2L-19 2Q-25 2-27-3Z" fill="#3a3f58"/><rect x="-16" y="-1" width="32" height="1.6" fill="#f2c94c"/><circle cx="-14" cy="5" r="3" fill="#e9e4d8"/><circle cx="14" cy="5" r="3" fill="#e9e4d8"/></g>`;
+        }
+    }
+}
+// ------------------------------------------------------------------ render
+const SWAY = {
+    altivo: "quieto",
+    aburrido: "perezoso",
+    travieso: "rebote",
+    feroz: "tenso",
+    timido: "nervioso",
+    desquiciado: "tic",
+    sereno: "lento",
+    astuto: "lateral",
+};
+/** Inclinación por temperamento (gen de cabeza): el altivo levanta la barbilla, el aburrido se deja caer. */
+const TILT = { altivo: -7, aburrido: 8, travieso: -5, feroz: 3, timido: 7, desquiciado: -9, sereno: 0, astuto: -4 };
+exports.VIEWBOX = "-58 -66 116 116";
+/** Alturas fijas de la cara y el núcleo (coordenadas del cuerpo sin escalar). */
+const EYE_Y = -6;
+const MOUTH_Y = 4;
+const CORE_Y = 17.5;
+function renderSoulLook(look, opts = {}) {
+    const t = look.temperament;
+    const pal = look.pal;
+    const ov = look.family === "llama" ? BODY_OVERRIDE.llama : undefined;
+    const tp = look.traitPal;
+    const c = {
+        dark: ov?.dark ?? (0, palette_ts_1.mix)(pal.main, pal.dark, 0.5),
+        mid: ov?.mid ?? pal.main,
+        light: ov?.light ?? (0, palette_ts_1.mix)(pal.main, "#ffffff", 0.3),
+        eye: look.eye === EYE.voltio ? look.eye : (0, palette_ts_1.mix)(look.eye, "#ffffff", 0.2),
+        core: (0, palette_ts_1.mix)(look.coreColor, "#ffffff", 0.25),
+        pupil: (0, palette_ts_1.mix)(pal.dark, "#000000", 0.45),
+        tLight: (0, palette_ts_1.mix)(tp.main, "#fffaf0", 0.72),
+        tBase: (0, palette_ts_1.mix)(tp.main, tp.dark, 0.25),
+        tGlow: (0, palette_ts_1.mix)(tp.accent, "#ffffff", 0.3),
+    };
+    const d = SIL[look.silFamily][look.variant];
+    const an = anchors(d);
+    const { sx, sy } = look;
+    const decoTop = DECO_TOP[look.silFamily]?.[look.variant];
+    const A = {
+        top: (x) => an.top(x / sx) * sy,
+        half: (y) => an.half(y / sy) * sx,
+        minY: Math.min(an.minY, decoTop ?? 0) * sy,
+    };
+    const fs = 1.5 * clamp(0.92 + (sx - 1) * 0.6, 0.88, 1.06);
+    const eyeY = EYE_Y * sy;
+    const face = (m) => {
+        const fc = moodFace(t, m);
+        const gap = (fc.gap ?? 8.6) * fs;
+        const fy = eyeY + (fc.dy ?? 0) * fs;
+        const one = (e, side) => {
+            const cx = side * (gap + (e.dx ?? 0) * fs), cy = fy + (e.dy ?? 0) * fs;
+            const tr = `translate(${(0, geom_ts_1.f)(cx)} ${(0, geom_ts_1.f)(cy)}) scale(${(0, geom_ts_1.f)(side * fs)} ${(0, geom_ts_1.f)(fs)})${e.rot ? ` rotate(${(0, geom_ts_1.f)(e.rot)})` : ""}`;
+            const pu = e.pupil && m !== "ko" ? `<ellipse cx="${(0, geom_ts_1.f)(e.pupil[0] * e.w)}" cy="${(0, geom_ts_1.f)(e.pupil[1] * e.h)}" rx="${(0, geom_ts_1.f)(Math.max(0.8, e.w * 0.17))}" ry="${(0, geom_ts_1.f)(Math.max(1.1, e.h * 0.6))}" fill="${c.pupil}"/>` : "";
+            return `<g transform="${tr}"><path d="${eyePath(e)}" fill="${c.eye}"/>${pu}</g>`;
+        };
+        return `<g class="ey e-${m}"${m === "ko" ? ' opacity=".55"' : ""}>${one(fc.L, -1)}${one(fc.R, 1)}</g>`;
+    };
+    const eyes = exports.MOODS.map(face).join("");
+    const mouth = look.mouth
+        ? `<g class="mo" transform="translate(0 ${(0, geom_ts_1.f)(MOUTH_Y * sy)}) scale(${(0, geom_ts_1.f)(fs * 0.95)})">${mouthSvg(look.mouth, { hole: c.pupil, teeth: (0, palette_ts_1.mix)(look.eye, "#ffffff", 0.55), tongue: "#ff6f8e" })}</g>`
+        : "";
+    // núcleo: resplandor + gema del color de la familia del gen de cuerpo + brillo
+    const coreR = 5.4;
+    const coreY = CORE_Y * sy;
+    const core = `<circle cy="${(0, geom_ts_1.f)(coreY)}" r="${(0, geom_ts_1.f)(coreR * 1.6)}" fill="${c.core}" opacity=".18"/>` +
+        `<path transform="translate(0 ${(0, geom_ts_1.f)(coreY)})" d="${corePath(look.core, coreR)}" fill="${c.core}"${look.core === 7 ? ' fill-rule="evenodd"' : ""}/>` +
+        `<circle cx="${(0, geom_ts_1.f)(-coreR * 0.35)}" cy="${(0, geom_ts_1.f)(coreY - coreR * 0.4)}" r="1.1" fill="#ffffff" opacity=".75"/>`;
+    const [tb, tf] = traitSvg(look.trait, look.tier, A, c);
+    const bottom = an.bottom * sy;
+    const tail = opts.accessory === "monopatin" ? "" : tailSvg(look, bottom, c);
+    const deco = DECO[look.silFamily]?.[look.variant] ?? "";
+    const body = `<g transform="scale(${(0, geom_ts_1.f)(sx)} ${(0, geom_ts_1.f)(sy)})">` +
+        `<path d="${d}" fill="${c.dark}"/>` +
+        `<path transform="translate(-2.4 -2.8) scale(.93)" d="${d}" fill="${c.light}"/>` +
+        `<path transform="translate(1.3 0.4) scale(.85)" d="${d}" fill="${c.mid}"/>` +
+        deco +
+        `</g>`;
+    const acc = opts.accessory ? accessorySvg(opts.accessory, A, eyeY, 8.6 * fs, bottom) : "";
+    const sparks = look.tier === 2 ? `<path transform="${T(-36, -24)}" d="${corePath(2, 2.4)}" fill="${c.tGlow}" opacity=".85"/><path transform="${T(35, -6)}" d="${corePath(2, 1.8)}" fill="${c.tGlow}" opacity=".65"/>` : "";
+    const haloOp = look.tier === 2 ? 0.2 : 0.14;
+    const size = opts.size ?? 120;
+    const delay = -((look.seed >>> 8) % 4000) / 1000;
+    return (`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${exports.VIEWBOX}" width="${size}" height="${size}" class="soul3 m-${opts.mood ?? "idle"}${opts.className ? " " + opts.className : ""}" aria-hidden="true">` +
+        `<circle class="halo" cy="-4" r="46" fill="${look.halo2}" opacity="${(0, geom_ts_1.f)(haloOp * 0.6)}"/><circle class="halo" cy="-2" r="33" fill="${look.halo}" opacity="${(0, geom_ts_1.f)(haloOp)}"/>` +
+        sparks +
+        `<g class="sw sw-${SWAY[t]}" style="animation-delay:${delay.toFixed(2)}s">` +
+        `<g transform="translate(0 -2) rotate(${(0, geom_ts_1.f)(TILT[t])} 0 20) scale(${(look.k * 1.1).toFixed(3)})">` +
+        tail +
+        tb +
+        body +
+        (opts.accessory === "colgante" ? acc : "") +
+        core +
+        eyes +
+        mouth +
+        tf +
+        (opts.accessory === "colgante" ? "" : acc) +
+        `</g></g></svg>`);
+}
+const cache = new WeakMap();
+function soulSvg(c, cfg, opts = {}) {
+    let look = cache.get(c);
+    if (!look) {
+        look = lookOf(c, cfg);
+        cache.set(c, look);
+    }
+    return renderSoulLook(look, opts);
+}
+/** CSS del arte v3: estado de los ojos según `m-<estado>` y vaivén por temperamento. Sin filtros. */
+exports.SOUL_CSS = `
+.soul3 .ey,.soul3 .mo{display:none}
+.soul3.m-idle .e-idle,.soul3.m-atk .e-atk,.soul3.m-hurt .e-hurt,.soul3.m-low .e-low,.soul3.m-ko .e-ko,.soul3.m-idle .mo,.soul3.m-atk .mo{display:inline}
+.soul3.m-low .e-low{animation:s3flick 1.4s steps(1) infinite}
+.soul3 .sw{transform-box:fill-box;transform-origin:50% 85%;animation-duration:4s;animation-timing-function:ease-in-out;animation-iteration-count:infinite}
+.soul3 .sw-quieto{animation-name:s3quieto;animation-duration:5s}
+.soul3 .sw-perezoso{animation-name:s3perezoso;animation-duration:6s}
+.soul3 .sw-rebote{animation-name:s3rebote;animation-duration:1.3s}
+.soul3 .sw-tenso{animation-name:s3tenso;animation-duration:1.5s}
+.soul3 .sw-nervioso{animation-name:s3nervioso;animation-duration:.45s;animation-timing-function:linear}
+.soul3 .sw-tic{animation-name:s3tic;animation-duration:2.6s;animation-timing-function:linear}
+.soul3 .sw-lento{animation-name:s3lento;animation-duration:5.5s}
+.soul3 .sw-lateral{animation-name:s3lateral;animation-duration:3.2s}
+.soul3.m-ko .sw{animation:none}
+@keyframes s3flick{0%,100%{opacity:1}45%{opacity:.35}55%{opacity:1}80%{opacity:.6}}
+@keyframes s3quieto{0%,100%{transform:scale(1,1)}50%{transform:scale(1.015,.985)}}
+@keyframes s3perezoso{0%,100%{transform:rotate(-2deg) translateY(0)}50%{transform:rotate(3.5deg) translateY(1.5px)}}
+@keyframes s3rebote{0%,100%{transform:translateY(0) scale(1,1)}35%{transform:translateY(-4px) scale(.96,1.05)}65%{transform:translateY(0) scale(1.05,.95)}}
+@keyframes s3tenso{0%,100%{transform:scale(1,1)}50%{transform:scale(1.04,.97) translateY(1px)}}
+@keyframes s3nervioso{0%,100%{transform:translate(0,0)}25%{transform:translate(-.7px,.3px) rotate(-1deg)}50%{transform:translate(.6px,-.4px) rotate(.8deg)}75%{transform:translate(-.3px,-.3px)}}
+@keyframes s3tic{0%,78%,100%{transform:rotate(0)}80%{transform:rotate(-7deg) translateX(-1px)}83%{transform:rotate(5deg)}86%{transform:rotate(-2deg)}89%{transform:rotate(0)}}
+@keyframes s3lento{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes s3lateral{0%,100%{transform:rotate(-3deg) translateX(-1px)}50%{transform:rotate(3deg) translateX(1px)}}
+@media (prefers-reduced-motion:reduce){.soul3 .sw{animation:none}.soul3.m-low .e-low{animation:none}}
+`;
+
+};
+defs["client/art/geom.ts"]=function(module,exports,require){
+"use strict";
+/**
+ * Utilidades geométricas del arte procedural. Puras y deterministas:
+ * sin Math.random ni reloj. Todos los números se escriben con 1 decimal.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BBox = void 0;
+exports.f = f;
+exports.p2s = p2s;
+exports.lerp = lerp;
+exports.at = at;
+exports.hashStr = hashStr;
+exports.smoothClosed = smoothClosed;
+exports.smoothOpen = smoothOpen;
+exports.roundedPoly = roundedPoly;
+exports.rot = rot;
+/** Número → texto con 1 decimal (sin "-0"). */
+function f(n) {
+    const r = Math.round(n * 10) / 10;
+    return (r === 0 ? 0 : r).toString();
+}
+function p2s(p) {
+    return `${f(p[0])} ${f(p[1])}`;
+}
+function lerp(a, b, t) {
+    return a + (b - a) * t;
+}
+function at(arr, i) {
+    const n = arr.length;
+    return arr[((i % n) + n) % n];
+}
+/** FNV-1a de 32 bits (determinista, sin dependencias). */
+function hashStr(s) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+    }
+    return h >>> 0;
+}
+/** Curva cerrada suave (Catmull-Rom → Bézier cúbica). */
+function smoothClosed(pts) {
+    let d = `M${p2s(at(pts, 0))}`;
+    for (let i = 0; i < pts.length; i++) {
+        const p0 = at(pts, i - 1), p1 = at(pts, i), p2 = at(pts, i + 1), p3 = at(pts, i + 2);
+        const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+        const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+        d += `C${p2s(c1)} ${p2s(c2)} ${p2s(p2)}`;
+    }
+    return d + "Z";
+}
+/** Polilínea abierta suave (para cejas, bocas, nervios). */
+function smoothOpen(pts) {
+    let d = `M${p2s(at(pts, 0))}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1];
+        const p3 = pts[Math.min(pts.length - 1, i + 2)];
+        const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+        const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+        d += `C${p2s(c1)} ${p2s(c2)} ${p2s(p2)}`;
+    }
+    return d;
+}
+/** Polígono cerrado con esquinas redondeadas de radio r (r grande = blando). */
+function roundedPoly(pts, r) {
+    let d = "";
+    for (let i = 0; i < pts.length; i++) {
+        const p0 = at(pts, i - 1), p1 = at(pts, i), p2 = at(pts, i + 1);
+        const d1 = Math.hypot(p0[0] - p1[0], p0[1] - p1[1]) || 1;
+        const d2 = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) || 1;
+        const rr = Math.min(r, d1 / 2, d2 / 2);
+        const a = [p1[0] + ((p0[0] - p1[0]) * rr) / d1, p1[1] + ((p0[1] - p1[1]) * rr) / d1];
+        const b = [p1[0] + ((p2[0] - p1[0]) * rr) / d2, p1[1] + ((p2[1] - p1[1]) * rr) / d2];
+        d += `${i === 0 ? "M" : "L"}${p2s(a)}Q${p2s(p1)} ${p2s(b)}`;
+    }
+    return d + "Z";
+}
+/** Rota p alrededor de c (grados). */
+function rot(p, c, deg) {
+    const a = (deg * Math.PI) / 180;
+    const cs = Math.cos(a), sn = Math.sin(a);
+    const x = p[0] - c[0], y = p[1] - c[1];
+    return [c[0] + x * cs - y * sn, c[1] + x * sn + y * cs];
+}
+/** Caja envolvente acumulada (para encajar la criatura en el lienzo). */
+class BBox {
+    minX = Infinity;
+    minY = Infinity;
+    maxX = -Infinity;
+    maxY = -Infinity;
+    add(x, y, r = 0) {
+        this.minX = Math.min(this.minX, x - r);
+        this.maxX = Math.max(this.maxX, x + r);
+        this.minY = Math.min(this.minY, y - r);
+        this.maxY = Math.max(this.maxY, y + r);
+    }
+    addPts(pts, r = 0) {
+        for (const p of pts)
+            this.add(p[0], p[1], r);
+    }
+}
+exports.BBox = BBox;
 
 };
 defs["client/combat/game.ts"]=function(module,exports,require){
@@ -5763,6 +6934,8 @@ const STATUS_ES = {
     prisa: "prisa",
     regenerar: "regenerar",
 };
+/** "(2/3)" para los movimientos de una secuencia de la última ánima. */
+const seqTxt = (q) => (q && q.of > 1 ? ` (${q.index}/${q.of})` : "");
 const statusName = (id) => STATUS_ES[id] ?? id;
 exports.statusName = statusName;
 /** `before` es el estado previo al turno (equipos y nombres); `names[side][pos-1]` = nombre. */
@@ -5806,7 +6979,7 @@ function narrate(before, events, names) {
                 const mv = e.move === 0 ? null : before.teams[idx(e.side)][e.actor - 1]?.moves[e.move - 1];
                 lastFamily = mv ? mv.family : (before.teams[idx(e.side)][e.actor - 1]?.family ?? null);
                 lastEff = null;
-                const parts = [nm(e.side, e.actor), ` usa ${moveName(e.side, e.actor, e.move)}`];
+                const parts = [nm(e.side, e.actor), ` usa ${moveName(e.side, e.actor, e.move)}${seqTxt(e.seq)}`];
                 if (e.targets.length === 0)
                     parts.push(", pero ya no queda objetivo");
                 else {
@@ -5820,9 +6993,13 @@ function narrate(before, events, names) {
                 lines.push({ kind: "act", parts });
                 break;
             }
-            case "cancel":
-                lines.push({ kind: "info", parts: [nm(e.side, e.actor), e.reason === "aturdido" ? " está aturdido y pierde su acción" : " ya está KO y no actúa", e.refund > 0 && e.side === "A" ? ` (se le devuelven ${e.refund} de energía)` : ""] });
+            case "cancel": {
+                const lost = e.lost ?? 0;
+                const what = e.seq && e.move !== undefined ? ` (${moveName(e.side, e.actor, e.move)}${seqTxt(e.seq)})` : "";
+                const why = e.reason === "aturdido" ? " está aturdido y pierde su acción" : e.lost !== undefined ? " cae antes de actuar" : " ya está KO y no actúa";
+                lines.push({ kind: "info", parts: [nm(e.side, e.actor), why + what, lost > 0 ? `: se pierden ${lost} de energía` : "", e.refund > 0 && e.side === "A" ? ` (se le devuelven ${e.refund} de energía)` : ""] });
                 break;
+            }
             case "lost":
                 lines.push({ kind: "info", parts: ["La acción de ", nm(e.side, e.actor), " se pierde: no queda objetivo válido."] });
                 break;
@@ -5898,6 +7075,7 @@ defs["client/combat/anim.ts"]=function(module,exports,require){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reducedMotion = void 0;
+exports.setMood = setMood;
 exports.chipText = chipText;
 exports.paintUnit = paintUnit;
 exports.viewFrom = viewFrom;
@@ -5908,6 +7086,31 @@ const narrate_ts_1 = require("./narrate.ts");
 const idx = (s) => (s === "A" ? 0 : 1);
 const reducedMotion = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 exports.reducedMotion = reducedMotion;
+/** Aplica `m` (o el estado base guardado por paintUnit) a la clase `m-*` del SVG del alma. */
+function setMood(u, m) {
+    const svg = u.ico.querySelector("svg.soul3");
+    if (!svg)
+        return;
+    const t = m ?? (u.unit.dataset["mood"] ?? "idle");
+    for (const c of Array.from(svg.classList))
+        if (c.startsWith("m-"))
+            svg.classList.remove(c);
+    svg.classList.add("m-" + t);
+}
+/** Reacción pasajera (ataque, golpe): se mantiene hasta `endReaction` o `ms`. */
+function react(u, m, ms) {
+    u.unit.dataset["react"] = m;
+    setMood(u, m);
+    if (ms !== undefined)
+        setTimeout(() => {
+            if (u.unit.dataset["react"] === m)
+                endReaction(u);
+        }, ms);
+}
+function endReaction(u) {
+    delete u.unit.dataset["react"];
+    setMood(u);
+}
 function chipText(s) {
     return `${(0, narrate_ts_1.statusName)(s.id)}${s.id === "quemadura" ? ` x${s.value}` : s.id === "escudo" ? ` ${s.value}` : ""}${s.turns > 0 ? ` ${s.turns}t` : ""}`;
 }
@@ -5950,6 +7153,11 @@ function paintUnit(u, v, pop) {
     u.hp.textContent = v.ko ? "KO" : `${Math.max(0, v.hp)}/${u.maxHp}${v.statuses.length ? " · " + v.statuses.map(chipText).join(", ") : ""}`;
     u.unit.classList.toggle("ko", v.ko);
     u.iw?.classList.toggle("ko", v.ko);
+    u.unit.dataset["mood"] = v.ko ? "ko" : v.hp / u.maxHp < 0.3 ? "low" : "idle";
+    if (v.ko)
+        delete u.unit.dataset["react"];
+    if (!u.unit.dataset["react"])
+        setMood(u);
     const old = new Set(Array.from(u.chips.children).map((c) => c.dataset["s"]));
     u.chips.replaceChildren();
     for (const s of v.statuses) {
@@ -6079,6 +7287,7 @@ function playTurn(field, before, after, events, names, subtitle, speed0, done) {
         if (!u || !fx())
             return;
         const d = dur(strong ? 340 : 300);
+        react(u, "hurt", Math.max(d, dur(520)));
         if (!reduced) {
             const k = strong ? 14 : 11;
             u.ico.animate([{ transform: "none" }, { transform: `translate(${dir.x * k}px,${dir.y * k}px) scale(1.12,.88)`, offset: 0.3 }, { transform: "translateX(-7px)", offset: 0.5 }, { transform: "translateX(6px)", offset: 0.7 }, { transform: "translateX(-3px)", offset: 0.85 }, { transform: "none" }], { duration: d });
@@ -6165,8 +7374,11 @@ function playTurn(field, before, after, events, names, subtitle, speed0, done) {
         let curColor = "#fff";
         let acting = null;
         const clearActing = () => {
-            if (acting)
+            if (acting) {
                 acting.unit.classList.remove("acting");
+                if (acting.unit.dataset["react"] === "atk")
+                    endReaction(acting);
+            }
             acting = null;
         };
         for (let i = 0; i < events.length; i++) {
@@ -6187,10 +7399,13 @@ function playTurn(field, before, after, events, names, subtitle, speed0, done) {
                     curFamily = m ? m.family : (before.teams[idx(e.side)][e.actor - 1]?.family ?? null);
                     curColor = (0, data_ts_1.palette)(curFamily ?? "sombra").main;
                     const mvName = m ? m.name : "golpe básico";
-                    say(e.targets.length === 0 ? `${who(names, e.side, e.actor)} usa ${mvName}, pero ya no queda objetivo.` : `${who(names, e.side, e.actor)} usa ${mvName} sobre ${e.targets.map((t) => who(names, e.targetSide, t)).join(" y ")}.`);
+                    const sq = e.seq && e.seq.of > 1 ? ` (${e.seq.index}/${e.seq.of})` : "";
+                    say(e.targets.length === 0 ? `${who(names, e.side, e.actor)} usa ${mvName}${sq}, pero ya no queda objetivo.` : `${who(names, e.side, e.actor)} usa ${mvName}${sq} sobre ${e.targets.map((t) => who(names, e.targetSide, t)).join(" y ")}.`);
                     const u = unitOf(e.side, e.actor);
-                    if (u)
+                    if (u) {
                         (acting = u).unit.classList.add("acting");
+                        react(u, "atk");
+                    }
                     const sb = bonus[e.side][e.actor - 1] ?? 0;
                     if (m && sb > 0)
                         floater(e.side, e.actor, `Sinergia +${Math.round(sb * 100)} %`, "syn");
@@ -6208,8 +7423,17 @@ function playTurn(field, before, after, events, names, subtitle, speed0, done) {
                     break;
                 }
                 case "cancel":
-                    say(`${who(names, e.side, e.actor)} ${e.reason === "aturdido" ? "está aturdido y pierde su acción" : "ya está KO y no actúa"}.`);
+                    say(`${who(names, e.side, e.actor)} ${e.reason === "aturdido" ? "está aturdido y pierde su acción" : e.lost !== undefined ? "cae antes de actuar" : "ya está KO y no actúa"}${e.lost ? `: se pierden ${e.lost} de energía` : ""}.`);
                     floater(e.side, e.actor, e.reason === "aturdido" ? "¡Aturdido!" : "KO", "info");
+                    if (e.lost) {
+                        floater(e.side, e.actor, `−${e.lost} energía`, "stat");
+                        if (e.side === "A")
+                            for (const el of [field.energy.A, ...Array.from(document.querySelectorAll(".energy"))]) {
+                                el.classList.remove("lostflash");
+                                void el.offsetWidth;
+                                el.classList.add("lostflash");
+                            }
+                    }
                     if (!(await sleepOrAbort(450)))
                         return;
                     break;
@@ -6319,6 +7543,10 @@ function playTurn(field, before, after, events, names, subtitle, speed0, done) {
                     v.hp = 0;
                     say(`${who(names, e.side, e.pos)} cae KO.`);
                     const u = unitOf(e.side, e.pos);
+                    if (u) {
+                        u.unit.dataset["mood"] = "ko";
+                        react(u, "ko");
+                    }
                     if (u && fx() && !reduced) {
                         // destello, parada, el alma se encoge y sube como un hilo de humo
                         u.ico.animate([
@@ -6379,8 +7607,10 @@ function playTurn(field, before, after, events, names, subtitle, speed0, done) {
             }
             paintEnergy(field.energy[side], after.energy[idx(side)]);
         }
-        for (const u of field.units.values())
+        for (const u of field.units.values()) {
             u.unit.classList.remove("acting");
+            endReaction(u);
+        }
         field.el.querySelectorAll(".float,.ring,.proj").forEach((n) => n.remove());
     }
     void run().then(() => {
