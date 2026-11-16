@@ -1,21 +1,50 @@
 {
-  "_doc": "Configuración de progresión v0.1 (Fase 2, paso 1): colección, encuentros, atrapar, experiencia y niveles, resonancia en el juego, guardado. Fuente: docs/spec/progresion-v0.1.md. Todo número de la spec está aquí; si no coinciden, manda este fichero. Probabilidades en [0,1]. Los textos para el jugador son provisionales (nombres: decide Miguel).",
+  "_doc": "Configuración de progresión v0.1 (Fase 2, paso 1): colección, encuentros, atrapar, experiencia y niveles, resonancia en el juego, guardado. Fuente: docs/spec/progresion-v0.1.md. Todo número de la spec está aquí; si no coinciden, manda este fichero. Probabilidades en [0,1]. Los textos para el jugador son provisionales (nombres: decide Miguel). Actualizada con D-068 (variantes, liberar, equipos de 1 a 3, nombres provisionales).",
   "version": "0.1",
   "depende_de": {
-    "_doc": "Configs vigentes que esta spec usa sin cambiarlas.",
+    "_doc": "Configs vigentes que esta spec usa sin cambiarlas. Movimientos: catálogo reequilibrado v0.5 (D-069), gramática de movimientos v0.2 + v0.4.",
     "genetica": "genetica.v0.2.json",
-    "movimientos": "movimientos.v0.4.json",
+    "movimientos": "movimientos.v0.5.json",
     "combate": "combate.v0.5.json"
   },
-
   "niveles": {
     "_doc": "§4. Nivel derivado de la experiencia total (instancia: anima.xp). xp_total[L-1] = experiencia total para estar en el nivel L. Fórmula de referencia: 5·(L−1)·(L+2) (subir de L a L+1 cuesta 10·L + 10). La tabla es la autoridad; el parser comprueba longitud = nivel_max, empieza en 0 y es estrictamente creciente.",
     "nivel_max": 30,
-    "xp_total": [0, 20, 50, 90, 140, 200, 270, 350, 440, 540, 650, 770, 900, 1040, 1190, 1350, 1520, 1700, 1890, 2090, 2300, 2520, 2750, 2990, 3240, 3500, 3770, 4050, 4340, 4640],
+    "xp_total": [
+      0,
+      20,
+      50,
+      90,
+      140,
+      200,
+      270,
+      350,
+      440,
+      540,
+      650,
+      770,
+      900,
+      1040,
+      1190,
+      1350,
+      1520,
+      1700,
+      1890,
+      2090,
+      2300,
+      2520,
+      2750,
+      2990,
+      3240,
+      3500,
+      3770,
+      4050,
+      4340,
+      4640
+    ],
     "nivel_eco_al_nacer": 1,
     "nivel_inicial": 1
   },
-
   "experiencia": {
     "_doc": "§4.2. Por cada ánima salvaje que se apaga: xp = base + por_nivel · nivel_salvaje. Victoria: cada ánima del equipo del jugador (también las apagadas) recibe la suma entera, sin dividir. Derrota: floor(fraccion_derrota · suma de las salvajes apagadas). Huida: 0. El acompañante no recibe nada.",
     "base": 15,
@@ -23,33 +52,98 @@
     "fraccion_derrota": 0.5,
     "reparto": "completo"
   },
-
   "desbloqueos": {
     "_doc": "§4.3 y §8. Huecos de movimiento: hueco 0 = gratis (siempre el gen de extremidades, nunca se cambia). Huecos 1..3 = de pago; nivel en que se abre cada uno y locus que lo ocupa por defecto al abrirse. D-067: se empieza con gratis + 1 de pago.",
     "hueco_gratis_locus": "extremidades",
     "huecos_pago": [
-      { "hueco": 1, "nivel": 1, "locus_por_defecto": "cola" },
-      { "hueco": 2, "nivel": 3, "locus_por_defecto": "cabeza" },
-      { "hueco": 3, "nivel": 10, "locus_por_defecto": "cuerpo" }
+      {
+        "hueco": 1,
+        "nivel": 1,
+        "locus_por_defecto": "cola"
+      },
+      {
+        "hueco": 2,
+        "nivel": 3,
+        "locus_por_defecto": "cabeza"
+      },
+      {
+        "hueco": 3,
+        "nivel": 10,
+        "locus_por_defecto": "cuerpo"
+      }
     ],
     "nivel_madurar": 5,
     "revelar_ocultos": {
       "_doc": "§4.4. Al alcanzar cada nivel de la lista se revela el gen oculto de la misma posición en 'orden'. Sin tiradas.",
-      "niveles": [8, 11, 14, 17, 20, 23, 26, 29],
-      "orden": ["cabeza.R1", "cuerpo.R1", "extremidades.R1", "cola.R1", "cabeza.R2", "cuerpo.R2", "extremidades.R2", "cola.R2"]
+      "niveles": [
+        8,
+        11,
+        14,
+        17,
+        20,
+        23,
+        26,
+        29
+      ],
+      "orden": [
+        "cabeza.R1",
+        "cuerpo.R1",
+        "extremidades.R1",
+        "cola.R1",
+        "cabeza.R2",
+        "cuerpo.R2",
+        "extremidades.R2",
+        "cola.R2"
+      ]
     }
   },
-
+  "variantes": {
+    "_doc": "§4.5 (D-068). En cada nivel de 'niveles' se elige una de dos variantes del movimiento de gen del locus indicado. Variante = una pieza cambiada (eje), mismo arquetipo, coste y presupuesto, potencia por objetivo <= original * potencia_max_relativa. 2 tiradas fijas por par, flujo createRng(prefijo_semilla + clave + '|' + nivel). Elección definitiva; conmutable con el original.",
+    "niveles": [
+      15,
+      20,
+      25,
+      30
+    ],
+    "locus_por_nivel": {
+      "15": "cola",
+      "20": "cabeza",
+      "25": "cuerpo",
+      "30": "extremidades"
+    },
+    "orden_respaldo": [
+      "cola",
+      "cabeza",
+      "cuerpo",
+      "extremidades"
+    ],
+    "ejes": [
+      "modificador",
+      "estado",
+      "condicion"
+    ],
+    "piezas_excluidas": [],
+    "_doc_piezas_excluidas": "Ids de pieza que nunca se usan en variantes (se rellena solo si la simulación encuentra variantes rotas).",
+    "potencia_max_relativa": 1,
+    "prefijo_semilla": "var|v0.1|",
+    "tiradas": 2,
+    "eleccion_definitiva": true,
+    "conmutar_con_original": true,
+    "heredable": false
+  },
   "recursos": {
     "_doc": "§3 y §5. Faroles y esencia: sin moneda ni compra. Topes de inventario.",
     "faroles_iniciales": 5,
     "faroles_por_victoria": 1,
     "faroles_max": 10,
     "esencia_inicial": 30,
-    "esencia_por_salvaje": { "_doc": "Por cada salvaje apagada, solo en victoria: base + floor(nivel / divisor_nivel).", "base": 4, "divisor_nivel": 2 },
+    "esencia_por_salvaje": {
+      "_doc": "Por cada salvaje apagada, solo en victoria: base + floor(nivel / divisor_nivel).",
+      "base": 4,
+      "divisor_nivel": 2
+    },
     "esencia_max": 999
   },
-
   "atrapar": {
     "_doc": "§3. p1 = clamp(base + bono_vida·fraccion_vida_equipo − penal_nivel·max(0, nivel_salvaje − nivel_max_equipo) − penal_pureza·pureza_salvaje, p_min, p_max); p2 = min(p_max, p1 + bono_reintento). Probabilidades redondeadas a 2 decimales (r2) antes de comparar; atrapada si u < p. 1 tirada por intento. pureza_salvaje ∈ [0,1] = (calidadCriatura − 85,5) / 9.",
     "base": 0.6,
@@ -62,35 +156,57 @@
     "intentos_max_por_salvaje": 2,
     "tiradas_por_intento": 1
   },
-
   "resonancia": {
     "_doc": "§5. Coste en esencia = base + por_eco_previo · (crias_A + crias_B). Límite de ecos por ánima y edad mínima: genetica.v0.2 limites_sim (5 y 1). Requisito extra: nivel ≥ desbloqueos.nivel_madurar en los dos padres.",
     "coste_base": 6,
     "coste_por_eco_previo": 1,
     "tiradas_por_resonancia": 280
   },
-
   "coleccion": {
     "_doc": "§6.",
     "tamano_max": 100,
     "equipo_max": 3,
     "equipo_min": 1,
     "liberar": {
-      "_doc": "§6.2. Pendiente de P-1 (Miguel). Recompensa en esencia = base + floor(nivel / divisor_nivel). No se puede liberar la última ánima ni una del equipo.",
+      "_doc": "§6.2 (D-068: sí). Esencia = esencia_base + floor(nivel / divisor_nivel): nivel 1–4 → 1, 30 → 7. Nunca supera el coste mínimo de resonancia salvo a nivel ≥ 25. No se puede liberar la última ánima ni una del equipo.",
       "activo": true,
-      "esencia_base": 2,
-      "divisor_nivel": 3
+      "esencia_base": 1,
+      "divisor_nivel": 5
     },
     "nombre_max_caracteres": 16
   },
-
   "nombres": {
     "_doc": "§1.4. Nombre por defecto = prefijo + sufijo (2 tiradas en el flujo |nombre|<nacimiento>). Sílabas originales; el jugador puede renombrar.",
-    "prefijos": ["Bri", "Cal", "Dro", "Fen", "Gur", "Isk", "Lum", "Mor", "Nix", "Pel", "Rua", "Sil", "Tov", "Vey", "Zan", "Ores"],
-    "sufijos": ["o", "a", "ix", "el", "un", "ra", "ek", "is"],
+    "prefijos": [
+      "Bri",
+      "Cal",
+      "Dro",
+      "Fen",
+      "Gur",
+      "Isk",
+      "Lum",
+      "Mor",
+      "Nix",
+      "Pel",
+      "Rua",
+      "Sil",
+      "Tov",
+      "Vey",
+      "Zan",
+      "Ores"
+    ],
+    "sufijos": [
+      "o",
+      "a",
+      "ix",
+      "el",
+      "un",
+      "ra",
+      "ek",
+      "is"
+    ],
     "tiradas": 2
   },
-
   "mundo": {
     "_doc": "§2. Datos de zonas, encuentros y personajes, separados de la presentación (D-062). La pantalla los muestra como lista (paso 1) o como escenas (paso 2) sin cambiar estos datos. Textos provisionales.",
     "zonas": [
@@ -99,27 +215,56 @@
         "nombre": "Prado de la Linde",
         "nivel_min": 1,
         "nivel_max": 3,
-        "grupo_pesos": [0.7, 0.3, 0.0],
-        "familias_pesos": { "brote": 1, "marea": 1, "llama": 1 },
-        "desbloqueo_nivel": 0
+        "grupo_pesos": [
+          0.7,
+          0.3,
+          0
+        ],
+        "familias_pesos": {
+          "brote": 1,
+          "marea": 1,
+          "llama": 1
+        },
+        "desbloqueo_nivel": 0,
+        "provisional": true
       },
       {
         "id": "marismas_quietas",
         "nombre": "Marismas Quietas",
         "nivel_min": 5,
         "nivel_max": 10,
-        "grupo_pesos": [0.3, 0.5, 0.2],
-        "familias_pesos": { "marea": 1, "roca": 1, "voltio": 1, "brote": 0.5 },
-        "desbloqueo_nivel": 5
+        "grupo_pesos": [
+          0.3,
+          0.5,
+          0.2
+        ],
+        "familias_pesos": {
+          "marea": 1,
+          "roca": 1,
+          "voltio": 1,
+          "brote": 0.5
+        },
+        "desbloqueo_nivel": 5,
+        "provisional": true
       },
       {
         "id": "cantil_farol_roto",
         "nombre": "Cantil del Farol Roto",
         "nivel_min": 10,
         "nivel_max": 16,
-        "grupo_pesos": [0.1, 0.6, 0.3],
-        "familias_pesos": { "sombra": 1, "voltio": 1, "roca": 1, "llama": 0.5 },
-        "desbloqueo_nivel": 10
+        "grupo_pesos": [
+          0.1,
+          0.6,
+          0.3
+        ],
+        "familias_pesos": {
+          "sombra": 1,
+          "voltio": 1,
+          "roca": 1,
+          "llama": 0.5
+        },
+        "desbloqueo_nivel": 10,
+        "provisional": true
       }
     ],
     "encuentro": {
@@ -131,7 +276,11 @@
     },
     "iniciales": {
       "_doc": "§1.3. Tres ánimas puras (todas sus genes de la familia), nivel 1, generadas del flujo |inicial|k (k = 0, 1, 2; 205 tiradas cada una).",
-      "familias": ["llama", "marea", "brote"],
+      "familias": [
+        "llama",
+        "marea",
+        "brote"
+      ],
       "puras": true
     },
     "acompanante": {
@@ -154,38 +303,66 @@
           "Sin un guardián se aburren. Y aburridas, muerden.",
           "Elige una. Te seguirá, te desobedecerá a ratos y, si la cuidas, resonará con otras y dejará ecos.",
           "Toma estos faroles. Lo demás lo aprenderás perdiendo."
-        ]
+        ],
+        "provisional": true
       }
-    ]
+    ],
+    "nombres_provisionales": {
+      "_doc": "D-068: nombres provisionales, se cambian sin tocar reglas.",
+      "gran_farol": "Gran Farol",
+      "provisional": true
+    }
   },
-
   "ia_salvaje": {
     "_doc": "§2.5. 'instinto': cada salvaje, en orden de equipo, usa el movimiento de pago más caro que pueda pagar con la energía que dejan las anteriores y que no esté descansando (empate: hueco menor); si no, el gratis. Nunca ahorra; la última ánima usa un solo movimiento. 'referencia': la IA de referencia de combate v0.5. Sin tiradas.",
     "modo": "instinto"
   },
-
   "combate_salvaje": {
-    "_doc": "§2.2. Extensión de tamaño de equipo (no cambia reglas para 3 contra 3). Formas de colocación permitidas por tamaño; la de 3 es la de combate.v0.5.",
+    "_doc": "§2.2 (D-068). Extensión de tamaño de equipo: cada bando 1..combate.equipo.tamano (que pasa a ser el máximo). No cambia reglas; 3 contra 3 debe dar hashes idénticos al motor anterior (criterios_sim.no_regresion_3v3).",
     "tamano_min": 1,
-    "colocaciones_por_tamano": { "1": ["1+0"], "2": ["2+0", "1+1"], "3": ["2+1", "1+2"] },
-    "colocacion_ia_por_tamano": { "1": [1], "2": [1, 2] },
+    "colocaciones_por_tamano": {
+      "1": [
+        "1+0"
+      ],
+      "2": [
+        "2+0",
+        "1+1"
+      ],
+      "3": [
+        "2+1",
+        "1+2"
+      ]
+    },
+    "colocacion_ia_por_tamano": {
+      "1": [
+        1
+      ],
+      "2": [
+        1,
+        2
+      ]
+    },
     "curacion_tras_combate": "completa"
   },
-
   "guardado": {
     "_doc": "§7. localStorage; una sola ranura.",
     "clave_almacen": "genoma.partida",
     "formato": "genoma-partida",
     "version_formato": 1,
-    "flujos_rng": ["inicial", "encuentro", "combate", "farol", "resonancia", "nombre"]
+    "flujos_rng": [
+      "inicial",
+      "encuentro",
+      "combate",
+      "farol",
+      "resonancia",
+      "nombre"
+    ]
   },
-
   "validacion_config": {
     "_doc": "§10.1. Comprobaciones del parser (sin tiradas).",
     "regex_ids": "^[a-z0-9_]+$",
     "formula_tiradas_encuentro": "1 + grupo_max * (tiradas_por_salvaje_extra + genetica.salvaje.tiradas_por_criatura)"
   },
-
   "escenarios_sim": {
     "_doc": "§9. Jugador modelo y montaje para el analista. Semillas NUEVAS (prefijo distinto de cualquiera usado al elegir estos números).",
     "semilla_prefijo": "prog01",
@@ -196,24 +373,71 @@
     "segundos_por_turno": 10,
     "segundos_fijos_por_combate": 30,
     "segundos_por_resonancia": 40,
-    "espejos_nivel_combates": 4000
+    "espejos_nivel_combates": 4000,
+    "variantes_genes_mutados": 500
   },
-
   "criterios_sim": {
     "_doc": "§9.2. Umbrales.",
-    "resonancias_3_sesiones": { "mediana_min": 20, "p10_min": 15 },
-    "resonancias_sesion_1": { "mediana_min": 2 },
-    "minutos_por_sesion": { "min": 10, "max": 20 },
-    "nivel_favorito_3_sesiones": { "mediana_min": 15, "mediana_max": 22 },
-    "combates_hasta_nivel_max": { "mediana_min": 35, "mediana_max": 70 },
-    "atrapar_primer_intento": { "min": 0.6, "max": 0.8 },
-    "atrapar_con_reintento": { "min": 0.85, "max": 0.97 },
-    "victorias_jugador_por_zona": { "prado_linde": 0.8, "marismas_quietas": 0.7, "cantil_farol_roto_min": 0.55, "cantil_farol_roto_max": 0.8 },
+    "resonancias_3_sesiones": {
+      "mediana_min": 20,
+      "p10_min": 15
+    },
+    "resonancias_sesion_1": {
+      "mediana_min": 2
+    },
+    "minutos_por_sesion": {
+      "min": 10,
+      "max": 20
+    },
+    "nivel_favorito_3_sesiones": {
+      "mediana_min": 15,
+      "mediana_max": 22
+    },
+    "combates_hasta_nivel_max": {
+      "mediana_min": 35,
+      "mediana_max": 70
+    },
+    "atrapar_primer_intento": {
+      "min": 0.6,
+      "max": 0.8
+    },
+    "atrapar_con_reintento": {
+      "min": 0.85,
+      "max": 0.97
+    },
+    "victorias_jugador_por_zona": {
+      "prado_linde": 0.8,
+      "marismas_quietas": 0.7,
+      "cantil_farol_roto_min": 0.55,
+      "cantil_farol_roto_max": 0.8
+    },
     "primer_combate_victoria_min": 0.9,
-    "espejo_4_vs_3_movimientos": { "min": 0.52, "max": 0.65 },
-    "espejo_4_vs_2_movimientos": { "min": 0.6, "max": 0.85 },
-    "turnos_salvaje": { "prado_linde_max": 6, "cantil_farol_roto_max": 9, "empates_max": 0.02 },
+    "espejo_4_vs_3_movimientos": {
+      "min": 0.52,
+      "max": 0.65
+    },
+    "espejo_4_vs_2_movimientos": {
+      "min": 0.6,
+      "max": 0.85
+    },
+    "turnos_salvaje": {
+      "prado_linde_max": 6,
+      "cantil_farol_roto_max": 9,
+      "empates_max": 0.02
+    },
     "bloqueo_por_esencia_max": 0.5,
-    "coleccion_llena_3_sesiones_max": 0.0
+    "coleccion_llena_3_sesiones_max": 0,
+    "variantes": {
+      "espejo_nivel30_min": 0.45,
+      "espejo_nivel30_max": 0.55,
+      "pieza_gratis_max": 0.58,
+      "sin_candidatos_max": 0.05,
+      "sin_candidatos_gratis_max": 0.15
+    },
+    "liberar_fraccion_esencia_max": 0.15,
+    "no_regresion_3v3": {
+      "partidas_min": 200,
+      "hashes_iguales": 1
+    }
   }
 }

@@ -52,3 +52,5 @@
 - Revisa qué supone el motor antes de proponer formatos nuevos: `teamSize` fijo a 3 obligó a especificar una extensión (bandos de 1–3) con vector dorado de 3 contra 3 intacto.
 - "Vida restante" del rival no sirve tras una victoria (siempre 0): cuando el encargo dé un parámetro, comprueba que tenga sentido en el momento en que se usa.
 - Estado del jugador (nivel, huecos, habilidades) fuera del genoma: así la herencia y "mismo gen ⇒ mismo movimiento" no se tocan.
+- Variantes "sin más fuerza": defínelas como enumeración de cambios de una pieza con el mismo presupuesto y potencia ≤ original, con respaldo total (n = 0 → otro locus; n = 1 → "mantener"); así son deterministas con tiradas fijas y no tocan el catálogo.
+- Cualquier recompensa por "deshacerse" de algo (liberar) se compara con el coste de producirlo y con la renta del bucle normal; escríbelo en la spec como argumento anti-explotación.
