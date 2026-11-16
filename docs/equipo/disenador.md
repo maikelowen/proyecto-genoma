@@ -57,3 +57,9 @@
 - "Mismo presupuesto" se mide en puntos efectivos (potencia final con tope y redondeo / potencia por punto), no en potencia: con topes u holguras, "potencia ≤ original" deja pasar piezas gratis (QA B-01).
 - Los criterios de ritmo se cumplen en todo el rango de victorias plausible (p. ej. 80/70/55 – 100 %), no solo en el caso medio; reutiliza el Monte Carlo del revisor si lee la config.
 - Probabilidades que ve el jugador: en enteros y en una sola función del núcleo, para que el % mostrado sea el usado.
+
+## Lecciones de mundo v0.1
+- Un mapa en config se valida con un script propio antes de entregar (dimensiones, leyenda, borde cerrado, alcanzabilidad por BFS, entidades con vecina libre); pide al parser lo mismo.
+- Encuentros por paso: 1 tirada fija por paso de hierba (también en gracia) en un flujo propio con contador guardado; el contenido del encuentro sale de otro flujo. Así recargar no re-tira y el mapa no altera las reglas de la zona.
+- Para no tocar la config de otro sistema, el estado nuevo va en una clave de guardado propia enlazada por semilla, con respaldo "rehacer sin borrar la partida".
+- Cuando el encargo pida arte "bonito", la spec fija acabado, capas de dibujo, escala por dpr y presupuesto de ms/frame; lo aleatorio visual, por hash de coordenada, nunca del rng de reglas.

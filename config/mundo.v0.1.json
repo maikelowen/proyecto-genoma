@@ -1,0 +1,529 @@
+{
+  "_doc": "Configuración del mundo caminable v0.1 (D-074): el Prado de la Linde como mapa en cuadrícula vista desde arriba. Fuente: docs/spec/mundo-v0.1.md. Todo número de la spec está aquí; si no coinciden, manda este fichero. Probabilidades en porcentaje entero. Datos del mapa separados de la presentación (D-062): el bloque 'presentacion' solo lo lee el cliente. Textos y nombres provisionales. No cambia ninguna regla de progresión v0.1 ni de combate v0.5.",
+  "version": "0.1",
+  "depende_de": {
+    "_doc": "Configs vigentes que esta spec usa sin cambiarlas.",
+    "progresion": "progresion.v0.1.json"
+  },
+  "casillas": {
+    "_doc": "§1.2. Leyenda del mapa: un carácter = un tipo de casilla. 'pisable': se puede estar encima. 'encuentro_pct': probabilidad entera (0..100) de encuentro por paso que TERMINA en esa casilla; > 0 solo en hierba alta. 'coste_ruta': coste entero del planificador de ruta táctil (§2.4). 'activa': casilla no pisable que dispara una acción al intentar entrar (puerta, salida).",
+    ".": {
+      "id": "hierba",
+      "pisable": true,
+      "encuentro_pct": 0,
+      "coste_ruta": 1
+    },
+    "*": {
+      "id": "flores",
+      "pisable": true,
+      "encuentro_pct": 0,
+      "coste_ruta": 1
+    },
+    "=": {
+      "id": "camino",
+      "pisable": true,
+      "encuentro_pct": 0,
+      "coste_ruta": 1
+    },
+    "+": {
+      "id": "puente",
+      "pisable": true,
+      "encuentro_pct": 0,
+      "coste_ruta": 1
+    },
+    ",": {
+      "id": "hierba_alta",
+      "pisable": true,
+      "encuentro_pct": 5,
+      "coste_ruta": 4
+    },
+    ";": {
+      "id": "hierba_espesa",
+      "pisable": true,
+      "encuentro_pct": 10,
+      "coste_ruta": 4
+    },
+    "~": {
+      "id": "agua",
+      "pisable": false,
+      "encuentro_pct": 0,
+      "coste_ruta": 0
+    },
+    "T": {
+      "id": "arbol",
+      "pisable": false,
+      "encuentro_pct": 0,
+      "coste_ruta": 0
+    },
+    "R": {
+      "id": "roca",
+      "pisable": false,
+      "encuentro_pct": 0,
+      "coste_ruta": 0
+    },
+    "H": {
+      "id": "muro_santuario",
+      "pisable": false,
+      "encuentro_pct": 0,
+      "coste_ruta": 0
+    },
+    "P": {
+      "id": "puerta_santuario",
+      "pisable": false,
+      "encuentro_pct": 0,
+      "coste_ruta": 1,
+      "activa": "puerta"
+    },
+    "S": {
+      "id": "salida",
+      "pisable": false,
+      "encuentro_pct": 0,
+      "coste_ruta": 1,
+      "activa": "salida"
+    }
+  },
+  "movimiento": {
+    "_doc": "§2. Paso de casilla en casilla (4 direcciones). ms_por_paso: duración de la animación de un paso (5 casillas/s); el núcleo no la usa. cola_entradas: direcciones que el cliente guarda mientras anima un paso. ruta_max_pasos: longitud máxima de una ruta táctil. orden_direcciones: desempate fijo del planificador.",
+    "ms_por_paso": 200,
+    "cola_entradas": 1,
+    "ruta_max_pasos": 80,
+    "orden_direcciones": [
+      "n",
+      "e",
+      "s",
+      "o"
+    ],
+    "direcciones": {
+      "n": {
+        "dx": 0,
+        "dy": -1
+      },
+      "e": {
+        "dx": 1,
+        "dy": 0
+      },
+      "s": {
+        "dx": 0,
+        "dy": 1
+      },
+      "o": {
+        "dx": -1,
+        "dy": 0
+      }
+    }
+  },
+  "encuentros": {
+    "_doc": "§3. Al terminar cada paso en una casilla con encuentro_pct > 0 se consume SIEMPRE 1 tirada del flujo createRng(semilla|paso|k), k = contadores.pasos_hierba (antes de incrementarlo). Hay encuentro si gracia_restante = 0 y (floor(u·100) < encuentro_pct o pasos_sin_encuentro + 1 >= pasos_max_sin_encuentro). El encuentro es rollEncounter(game, mapa.zona) de progresión §2.3 sin cambios.",
+    "flujo_rng": "paso",
+    "tiradas_por_paso_hierba": 1,
+    "escala_pct": 100,
+    "gracia_tras_encuentro": 4,
+    "gracia_al_salir_santuario": 6,
+    "gracia_al_volver_de_lista": 4,
+    "pasos_max_sin_encuentro": 40
+  },
+  "mapas": [
+    {
+      "id": "prado_linde",
+      "zona": "prado_linde",
+      "nombre": "Prado de la Linde",
+      "provisional": true,
+      "ancho": 30,
+      "alto": 24,
+      "_doc_filas": "Fila 0 arriba, columna 0 a la izquierda; (x, y) = (columna, fila).",
+      "filas": [
+        "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+        "T;;*;TTTT..THHHHHT...TT,,,,,TT",
+        "T;;;;;TTT...HHHHH....T,,;;;,,T",
+        "T*;;;;TTT...HHPHH..*.T,;;;;;,T",
+        "TTTT;TTT......=......,,;;;;,,T",
+        "T,,,,,,.......=.......,,;;;,,T",
+        "T,,,,,,,......=........,,,,,TT",
+        "T,,,,,,,..*...=.........,,,TTT",
+        "T,,,,,,..~~~..=..........RR..T",
+        "T.,,,,..~~~~~.=...*.......R..T",
+        "TR.,,..~~~~~~.=..............T",
+        "T.....~~~~~~..=..............T",
+        "T......~~~~...===============S",
+        "T.......~~....=..........R...T",
+        "T,,,,,,..~....=.....,,,,.....T",
+        "T,,,,,,,.~....=....,,,,,,....T",
+        "T,,,,,,,.+=====....,,;;,,,...T",
+        "T,,,,,,,.~.........,,;;;;,,..T",
+        "T,,,,,,..~..R......,,;;;;,,..T",
+        "T,,,,,,..~.........,,,;;,,,..T",
+        "T.,,,,...~..*.......,,,,,....T",
+        "T..,,....~...........,,.....RT",
+        "T........~..................TT",
+        "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
+      ],
+      "inicio": {
+        "x": 14,
+        "y": 4,
+        "mira": "e"
+      },
+      "salida_santuario": {
+        "x": 14,
+        "y": 4,
+        "mira": "s"
+      },
+      "llegada_desde_lista": {
+        "x": 28,
+        "y": 12,
+        "mira": "o"
+      },
+      "activadores": [
+        {
+          "_doc": "§4. Puerta: intentar entrar abre el santuario (pantallas de progresión).",
+          "x": 14,
+          "y": 3,
+          "tipo": "puerta",
+          "destino": "santuario"
+        },
+        {
+          "_doc": "§1.5. Salida: abre la lista de zonas (Marismas y Cantil siguen en lista, D-074). Cerrada hasta que la zona 'abre_con_zona' esté abierta (progresión §2.1).",
+          "x": 29,
+          "y": 12,
+          "tipo": "salida",
+          "destino": "lista_zonas",
+          "zonas": [
+            "marismas_quietas",
+            "cantil_farol_roto"
+          ],
+          "abre_con_zona": "marismas_quietas",
+          "texto_cerrada": "La niebla de las Marismas no deja pasar. Se levanta cuando una de tus ánimas llega a nivel 5."
+        }
+      ],
+      "entidades": [
+        {
+          "id": "arnal",
+          "tipo": "personaje",
+          "personaje": "hechicero",
+          "x": 15,
+          "y": 4,
+          "mira": "o",
+          "_doc": "§4.2. La primera vez (inicial.elegida = null) da progresion.mundo.personajes[hechicero].texto_inicio y la elección de inicial. Después, texto_despues en ciclo.",
+          "texto_sin_anima": "¡Eh! Sin un ánima no te metas en la hierba alta. Ven aquí primero.",
+          "texto_despues": [
+            "En la hierba alta saltan ánimas. En la espesa, el doble. Por el camino no te molestará nadie.",
+            "Cuando una de las tuyas llegue a nivel 5, la niebla del este se levantará.",
+            "Dentro del santuario puedes resonar, ver tu colección y cambiar el equipo."
+          ],
+          "provisional": true
+        },
+        {
+          "id": "tasia",
+          "tipo": "vecino",
+          "nombre": "Tasia",
+          "x": 16,
+          "y": 8,
+          "mira": "s",
+          "texto": [
+            "Si la hierba alta se mueve sin viento, no es el viento."
+          ],
+          "provisional": true
+        },
+        {
+          "id": "gorio",
+          "tipo": "vecino",
+          "nombre": "Gorio",
+          "x": 18,
+          "y": 18,
+          "mira": "e",
+          "texto": [
+            "En la hierba espesa salen el doble. Yo ya no paso por ahí: tengo una edad."
+          ],
+          "provisional": true
+        },
+        {
+          "id": "cartel_este",
+          "tipo": "cartel",
+          "x": 27,
+          "y": 11,
+          "texto": [
+            "Este: Marismas Quietas. Oeste: hierba alta, ánimas con mal genio."
+          ],
+          "provisional": true
+        },
+        {
+          "id": "cartel_rincon",
+          "tipo": "cartel",
+          "x": 1,
+          "y": 3,
+          "texto": [
+            "Aquí vivió un farolero. Dejó la luz encendida y se fue."
+          ],
+          "provisional": true
+        },
+        {
+          "id": "farol_perdido",
+          "tipo": "objeto",
+          "x": 3,
+          "y": 1,
+          "_doc": "§1.4. Una sola vez por partida: +1 farol respetando progresion.recursos.faroles_max. Si estás en el tope, no se recoge y sigue ahí.",
+          "da": {
+            "faroles": 1
+          },
+          "texto": [
+            "Un farol viejo entre las flores. Todavía tira."
+          ],
+          "texto_lleno": "Ya llevas todos los faroles que caben. Lo dejas donde estaba."
+        }
+      ]
+    }
+  ],
+  "guardado": {
+    "_doc": "§5. Clave propia en localStorage, separada de la partida de progresión (que no cambia). Se enlaza por la semilla.",
+    "clave_almacen": "genoma.mundo",
+    "formato": "genoma-mundo",
+    "version_formato": 1,
+    "flujos_rng": [
+      "paso"
+    ]
+  },
+  "validacion_config": {
+    "_doc": "§6.2. Comprobaciones del parser (sin tiradas).",
+    "regex_ids": "^[a-z0-9_]+$",
+    "borde_no_pisable": true,
+    "todo_pisable_alcanzable": true,
+    "ancho_max": 64,
+    "alto_max": 64
+  },
+  "presentacion": {
+    "_doc": "§7. Solo cliente; el núcleo no lo lee ni lo valida (se admite sin mirar dentro). Acabado cuidado, no provisional: ver spec §7. Colores en hex: [base, sombra, luz, acento…] por tipo de casilla. Todo lo aleatorio del dibujo es determinista por coordenada (hash entero de x, y y la semilla visual), nunca rng de reglas ni Math.random.",
+    "semilla_visual": "prado|v0.1",
+    "escala": {
+      "casilla_css_px": {
+        "movil": 32,
+        "escritorio": 48
+      },
+      "ancho_corte_css_px": 720,
+      "dpr_max": {
+        "movil": 2,
+        "escritorio": 2
+      },
+      "vista_casillas": {
+        "movil": [
+          11,
+          13
+        ],
+        "escritorio": [
+          17,
+          13
+        ]
+      },
+      "bloque_cache_casillas": 8
+    },
+    "rendimiento": {
+      "fps_objetivo": 60,
+      "ms_frame_max_movil": 8,
+      "particulas_max": 40,
+      "asomos_max_a_la_vez": 1,
+      "capas": [
+        "suelo_cache",
+        "agua_anim",
+        "hierba_anim",
+        "sombras",
+        "entidades_por_fila",
+        "copas",
+        "luz",
+        "particulas",
+        "ui"
+      ],
+      "pausar_si_oculta": true,
+      "modo_reducido_si_frame_ms_mayor_que": 14,
+      "respeta_prefers_reduced_motion": true
+    },
+    "fondo": "#12141c",
+    "luz_ambiente": {
+      "_doc": "Atardecer fijo (sin reloj): velo azulado multiplicado sobre el mapa y viñeta.",
+      "velo": "#2a2f55",
+      "velo_alfa": 0.28,
+      "vineta_alfa": 0.45
+    },
+    "casillas": {
+      "hierba": {
+        "colores": [
+          "#3d6a50",
+          "#33593f",
+          "#5a8a5e"
+        ],
+        "detalle": "matas de 2–4 briznas y puntos claros, 0–3 por casilla según hash"
+      },
+      "flores": {
+        "colores": [
+          "#3d6a50",
+          "#e8b04a",
+          "#d97a9b",
+          "#cfd8ff"
+        ],
+        "detalle": "3–6 flores de 2–3 px de 2 colores según hash"
+      },
+      "camino": {
+        "colores": [
+          "#a9855a",
+          "#8c6b46",
+          "#c8a477"
+        ],
+        "detalle": "tierra con 1–3 guijarros; borde irregular con la hierba (§7.2)"
+      },
+      "puente": {
+        "colores": [
+          "#7a5233",
+          "#553722",
+          "#9b6d46"
+        ],
+        "detalle": "tablones transversales, sombra sobre el agua"
+      },
+      "hierba_alta": {
+        "colores": [
+          "#2c5641",
+          "#1f4231",
+          "#6aa77a"
+        ],
+        "detalle": "5–7 briznas altas en V que sobresalen 1/3 de casilla por arriba y tapan los pies del jugador; se mecen"
+      },
+      "hierba_espesa": {
+        "colores": [
+          "#24443b",
+          "#182f2a",
+          "#5f8f6e",
+          "#7b63a3"
+        ],
+        "detalle": "como hierba_alta, más densa y con puntas violeta; mecido más lento"
+      },
+      "agua": {
+        "colores": [
+          "#1d3a63",
+          "#152a49",
+          "#4f86b8",
+          "#b9dcff"
+        ],
+        "detalle": "orilla con borde de arena y espuma; brillos de 1–2 px que aparecen y se apagan"
+      },
+      "arbol": {
+        "colores": [
+          "#1a3528",
+          "#24503a",
+          "#3c7a54",
+          "#0f1e17"
+        ],
+        "detalle": "tronco en la casilla, copa redonda en 3 capas que sube 1 casilla por encima y tapa al jugador; sombra elíptica"
+      },
+      "roca": {
+        "colores": [
+          "#58636f",
+          "#3c444e",
+          "#8a97a6"
+        ],
+        "detalle": "2–3 facetas planas, una arista clara, musgo opcional por hash"
+      },
+      "muro_santuario": {
+        "colores": [
+          "#655a6b",
+          "#433a49",
+          "#8a7f90",
+          "#2b2530"
+        ],
+        "detalle": "piedra en hiladas; tejado en 2 aguas que ocupa la fila de arriba; farol colgado junto a la puerta"
+      },
+      "puerta_santuario": {
+        "colores": [
+          "#3a2a22",
+          "#f2b54a",
+          "#ffe3a3"
+        ],
+        "detalle": "arco con luz cálida que respira (alfa 0,6–0,9)"
+      },
+      "salida": {
+        "colores": [
+          "#c9d3e0",
+          "#8a97a8"
+        ],
+        "detalle": "cerrada: niebla que se mueve hacia dentro; abierta: camino que se pierde en luz fría"
+      }
+    },
+    "personajes": {
+      "farolero": {
+        "capa": "#b4532f",
+        "capa_sombra": "#7e3420",
+        "capa_luz": "#d4744a",
+        "capucha_interior": "#1a1420",
+        "ojos": "#ffcf5a",
+        "baston": "#5e3e26",
+        "farol": "#ffcf5a",
+        "halo_radio_casillas": 2.5,
+        "frames_andar": 4,
+        "direcciones": 4
+      },
+      "arnal": {
+        "capa": "#4a3b6b",
+        "capa_sombra": "#2f2547",
+        "barba": "#d9d4c7",
+        "ojos": "#9fe3ff",
+        "farol": "#ffcf5a"
+      },
+      "vecinos": {
+        "tasia": {
+          "capa": "#3f6f9c",
+          "capa_sombra": "#2b4e70"
+        },
+        "gorio": {
+          "capa": "#7a8f3c",
+          "capa_sombra": "#56662a"
+        }
+      },
+      "aviso": "#ffcf5a"
+    },
+    "ambiente": {
+      "luciernagas": {
+        "max": 14,
+        "colores": [
+          "#ffe58a",
+          "#c9ff9a"
+        ],
+        "solo_cerca_de": [
+          "hierba_alta",
+          "hierba_espesa",
+          "agua"
+        ]
+      },
+      "motas_farol": {
+        "max": 6
+      },
+      "hojas": {
+        "max": 4
+      },
+      "hierba_mece_ms": 1400,
+      "hierba_espesa_mece_ms": 1900,
+      "agua_brillo_ms": 2200,
+      "puerta_respira_ms": 2600
+    },
+    "asomo": {
+      "_doc": "§7.5. Pista decorativa: unos ojos de luz asoman en una casilla de hierba alta visible a 2–5 casillas del jugador. No predice el siguiente encuentro.",
+      "cada_ms": [
+        6000,
+        11000
+      ],
+      "dura_ms": 900,
+      "distancia_casillas": [
+        2,
+        5
+      ]
+    },
+    "transicion_encuentro": {
+      "_doc": "§7.6. Pausa del paso, brizna que salta, ojos, destello, viñeta que se cierra.",
+      "temblor_ms": 180,
+      "ojos_ms": 350,
+      "destello_ms": 120,
+      "vineta_ms": 450,
+      "total_ms": 1100
+    },
+    "animacion": {
+      "andar_frames": 4,
+      "ms_por_paso": 200,
+      "giro_sin_paso_ms": 0,
+      "respirar_ms": 1800
+    }
+  }
+}
