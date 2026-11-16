@@ -18,3 +18,9 @@ Formato de cada pregunta: contexto en 2–3 líneas, opciones con su consecuenci
 
 ### P-06 · Pendientes menores del documento de diseño (sin prisa)
 Duración de temporadas y recompensas; si se puede liberar o fusionar ánimas para retirarlas de la economía; nombre y temática de la región. Antes de la Fase 3–4.
+
+### P-09 · Aspecto del farolero (sin prisa)
+- **Contexto:** el protagonista del mundo caminable es un farolero aprendiz con capucha, ojos de luz y farol; hoy tiene un aspecto fijo.
+- **Opciones:** a) fijo; b) elegir el color de la capa; c) nombre y aspecto a elegir.
+- **Recomendación:** a) por ahora; b) es barata si apetece personalizar.
+- **Bloquea:** nada.

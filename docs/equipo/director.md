@@ -41,3 +41,7 @@ Lecciones y convenciones de dirección. Se lee al empezar cada sesión y se ampl
 - Si el límite de uso corta a los agentes, al volver se reanudan con `SendMessage` (conservan su contexto); no relanzarlos desde cero.
 - El subagente `revisor` puede no cargarse en la sesión: usar un agente general (Opus) diciéndole que lea y siga `.claude/agents/revisor.md`.
 - Con varios agentes en paralelo en la misma carpeta, hacer commit por rutas (`git add sim/ …`) y no tocar firmas compartidas (p. ej. hacer obligatorio un parámetro) hasta que terminen.
+- **Antes de construir pantallas, confirma con Miguel la experiencia que imagina** (una frase o un boceto): el paso 1 se hizo como "lista de zonas" según D-028/D-062 y Miguel esperaba un mundo caminable; costó ~230 k de pantallas que se rehicieron.
+- Mientras haya agentes trabajando, nunca `git commit -a`: añade rutas concretas (dos veces se colaron ficheros a medias).
+- Playwright con Edge necesita ejecutarse fuera del sandbox; el script `smoke.cjs` del scratchpad abre las páginas a 380/1100 px y cuenta errores.
+- Si Miguel pide "bonito", dilo en el encargo con sus palabras y pide al agente que revise sus propias capturas; Opus para arte por código.

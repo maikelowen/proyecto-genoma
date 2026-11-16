@@ -1,12 +1,12 @@
 # ESTADO — Proyecto Genoma
 
-Actualizado: 2026-11-14. Fuente de verdad: este fichero (el repositorio).
+Actualizado: 2026-11-16. Fuente de verdad: este fichero (el repositorio).
 
 ## Situación
-- **Fase 1 cerrada (D-064)** sin feedback formal: a los amigos no les engancha el combate suelto; piden atrapar, subir de nivel, habilidades y apego. **Antes:** Combate v0.4 publicado en https://maikelowen.github.io/proyecto-genoma/ y con **reglas congeladas** hasta el feedback de los amigos (D-045).
-- **Arte v3 terminado y congelado** en la rama `arte-v3` (D-050); se fusiona tras la prueba.
+- **Fase 1 cerrada (D-064)** sin feedback formal: a los amigos no les engancha el combate suelto.
+- **Fase 2, paso 1 jugable** en https://maikelowen.github.io/proyecto-genoma/jugable/animas.html: **mundo caminable del Prado** (D-074) con arte por código, encuentros en hierba alta, farol para atrapar, niveles hasta 30 con movimientos que se desbloquean y variantes, resonancia, Codex y guardado local. Marismas y Cantil, en lista.
+- **Combate v0.5** con catálogo reequilibrado es el juego principal (D-060, D-069) y el arte v3 está en `main`. No quedan ramas pendientes.
 - **Desarrollo en Claude Code** (D-051); los chats del proyecto de Claude son para decisiones.
-- **Combate v0.5 terminado en la rama `combate-v0.5`** y en prueba solo por Miguel: https://maikelowen.github.io/proyecto-genoma/jugable/combate-v05.html. **Adoptado (D-060)**: llega a `main` tras el feedback, con un reequilibrio único.
 
 ## Hecho
 - **Fase 0:** genética v0.2 validada; gramática de movimientos, motor de combate, IA normal y de búsqueda, simuladores.
@@ -26,18 +26,21 @@ Actualizado: 2026-11-14. Fuente de verdad: este fichero (el repositorio).
   - Interfaz de varios pagos numerados y aviso de energía perdida; página `docs/jugable/combate-v05.html` (d46d99a; publicada sola en `main`, 61aa8c4). `combate.html` sin tocar.
   - Coste real: agentes ≈ 730 k (disenador 117 k, nucleo 226 k, revisor 128 k, analista Sonnet 143 k, cliente Sonnet 115 k) + director ≈ 100 k. Por encima de los ~650 k previstos (el corte por límite obligó a reanudar tres agentes).
 
-## Siguiente paso (punto de control 16 nov)
-- [x] v0.5 y `arte-v3` en `main`; juego principal en v0.5 con catálogo reequilibrado (D-064, D-069; QA aprobado).
-- [x] Spec `progresion-v0.1.md` + `config/progresion.v0.1.json` aceptada tras QA (D-067, D-068, D-070, D-071).
-- [x] **Núcleo de progresión** (e336c68; nucleo 304 k): 339 tests (~23 s, cerca del límite de 25 s); 200 partidas 3 contra 3 idénticas. Aviso: 7/72 genes con < 2 variantes (9,7 %, criterio ≤ 5 %).
-- [x] QA del núcleo (49ac604, aprobado con cambios), simulación con combate real (5cea644; normal 14/16) y ajustes D-072/D-073 (9555e10; 373 tests).
-- [ ] En marcha en paralelo: validación de v0.1.1 con semillas `prog04` (analista Sonnet → `docs/informes/progresion-v0.1.md`) y pantallas (cliente Sonnet → `npm run build:animas`, `docs/jugable/animas.html`). Si se corta: `git status`; reanudar con SendMessage.
-- [x] Pantallas del paso 1 en `jugable/animas.html` (2f50d46). Miguel: "esto no es el juego que esperaba" → **D-074 mundo caminable**.
-- [x] Spec mundo v0.1 (6b31f1d) y núcleo del mundo (320b596; 456 tests, ~24,5 s, en el límite).
-- [ ] En marcha: cliente del mundo con arte cuidado (Opus → `animas.html`) y QA corta del núcleo del mundo (→ `docs/revisiones/qa-mundo-v0.1.md`). Validación de progresión `prog04` del analista: sin noticia; comprobar `docs/informes/progresion-v0.1.md`.
-- [ ] Prueba del hito D-066 en el mundo caminable.
-- Vocabulario D-063 en los textos del combate: se hace con las pantallas nuevas.
+- **14–16 nov — Fase 1 cerrada y Fase 2 paso 1 + mundo:**
+  - Fusiones de `combate-v0.5` y `arte-v3` (a22e9b4, 078c758); reequilibrio v0.5 con 6 sales, 13/13 familias (8782112, QA aprobada); juego principal en v0.5 (91f0481).
+  - Spec de progresión v0.1 (2a836af → 5c8ddce, con QA y respuestas de Miguel D-067, D-068, D-070, D-071).
+  - Núcleo de progresión (e336c68) + QA (49ac604) + ajustes D-072/D-073 (9555e10). Simulación con combate real (5cea644; validación `prog04`: 15/16 criterios, 28/22 resonancias en 3 sesiones, nivel 30 en 36 combates; falla por poco el primer combate, 89,6 % frente a ≥ 90 %, D-075).
+  - Pantallas del paso 1 (2f50d46). Miguel: "esto no es el juego que esperaba" → **D-074 mundo caminable**.
+  - Spec del mundo (6b31f1d), núcleo del mundo (320b596, QA a754b33) y cliente del mundo con arte cuidado (8c3e5c6). 456 tests.
+  - **Coste real:** agentes ≈ 2,24 M (paso 1 ≈ 1,6 M: diseñador 250 k, núcleo 304 + 153 k, revisor 167 + 193 k, analista 100 + 185 k, cliente 232 k; mundo ≈ 0,65 M: diseñador 153 k, núcleo 148 k, revisor 86 k, cliente 267 k) + director ≈ 150 k. El paso 1 quedó en su tope (1,8 M); el mundo, por debajo de su presupuesto (0,8–1,1 M).
+
+## Siguiente paso
+1. **Miguel juega `animas.html`** (al menos una sesión) y dice qué le parece: luz del atardecer, hierba alta, transición al combate, ruta tocando en el móvil, santuario, si el arranque es justo, si engancha. Hito D-066: 3 sesiones, 20 resonancias, un ánima a nivel ~20, y 2 amigos 30 min sin pedírselo.
+2. Con su opinión: pulido del mundo (BACKLOG 13) y, si engancha, Marismas y Cantil caminables (BACKLOG 14).
+3. Antes de tocar el núcleo otra vez: separar tests lentos (`npm run check` está en ~18–24,5 s de 25).
 
 ## Pendientes menores
+- Mundo: ojos de la transición planos, orilla del estanque escalonada en diagonal, cabecera del santuario en móvil corta a Arnal, mucho margen vacío a 1100 px; QA mundo M-01 (farol perdido repetible borrando la clave) y M-04.
+- Progresión: textos de variantes casi en bruto; recargar a mitad de combate cuenta como huida; `battle.ts` duplica la UI de combate.
 - QA v0.5 M-01–M-05 (desempates de la IA, test de provocar en U10). QA R-01 (claves desconocidas en bloques antiguos de config) y R-02 (la IA de referencia no ve el provocar del turno); `placement.ts:61` con un 3 fijo; tests de provocador que cae a mitad de turno.
 - Arte (si se retoma): mueca altiva y boca cosida justas a 48 px; ojos de Sombra con poco contraste; grietas de Llama raras sobre cuerpos de otro color; cara quizá pequeña en combate; galería de 955 KB.
