@@ -12,7 +12,7 @@ Léelo con estas correcciones. Si algo de abajo choca con esta lista, manda la l
 | 4 | 4 movimientos + golpe básico; elegir objetivo; energía +3 | **4 botones por alma: 1 gratis (gen de extremidades) + 3 de pago** (D-033); **objetivo automático por fila y carril**, provocar desde cualquier fila (D-042, D-043); **energía 3/turno** (D-052); energía rival oculta (D-034); descanso de un turno (D-039). Spec: `docs/spec/combate-v0.4.md`. **Adoptado para después del feedback:** varios pagos de la última ánima y energía pagada al confirmar (D-053, D-054, D-060; `combate-v0.5.md`, rama `combate-v0.5`) |
 | 3.3 | Deriva genética activa | **Desactivada** por configuración (D-027) |
 | 3.3, 9 | "Criaturas"; arte con contorno grueso, tono 3 de 10 | **Ánimas** (D-046), concepto de almas "pequeños diablos" para 18–40 años (D-025); **arte v3** sin contorno, un gen = una zona, bocas, temperamentos (D-037, D-048, D-050). Ver `docs/arte/direccion-visual.md` |
-| 5 | Mapa de casillas | **Mapa de la región con zonas como escenas ilustradas con puntos tocables** (Fase 2, paso 2); el mapa caminable es decisión posterior (D-062, revisa D-028) |
+| 5 | Mapa de casillas | **Mundo caminable vista desde arriba en cuadrícula**, empezando por el Prado (D-074, sustituye a D-028 y adelanta lo de D-062) |
 | 3, 5, 6 | Criar, capturar, Genedex, cría | **Vocabulario D-063:** resonancia/resonar, eco, farol/atrapar, Codex, pureza, vida ("se apaga"), madurar, santuario, esencia (`vocabulario.md`) |
 | 8, 11 | Mercado en la Fase 4 de la beta | **Mercado fuera de la beta** (D-028) |
 | 11 | Fase 0 semana 3: simulador de economía | Sustituido por una **hoja de metas en días de juego** antes de la Fase 3 (D-032) |
