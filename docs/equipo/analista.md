@@ -66,3 +66,10 @@
 - `sim/v05/reequilibrio-buscar.ts` y `reequilibrio-validar.ts` reutilizan `sim/v04/salts.ts` con `SIM_COMBAT_CONFIG` + `SIM_MOVES_CONFIG` (el catálogo base se elige por variable de entorno) y `setBaseCombat` (parche `ambas` común a las variantes). Búsqueda de 6 sales ≈ 5 min con n-medida 200 / n-candidata 160; validación completa ≈ 2 min con 4 hilos.
 - Con n-medida 100 la búsqueda cambia de familia objetivo entre rondas (ruido); 200 converge antes. Las familias híbridas no se salan: se mueven solas al tocar sus componentes base (aquí llama sí es saltable).
 - El conteo "fuera de banda" de la base varía con N (3 en el informe v0.5 con 150/pareja, 4 con 300): cítalo con su N.
+
+## Lecciones (progresión v0.1)
+- `npm run sim:progresion` (`--quick` ≈ 8 s; completo 5 perfiles × 500 partidas ≈ 50 s con 4 hilos; `--propuesta CONFIG` añade la validación con `prog03`, ≈ 110 s; `--informe-desde DIR`). Combate real con `playEncounterBattle`; semillas `prog01` (medir), `prog02` (elegir), `prog03` (validar). Código en `sim/progresion/` (modelo, lote, worker, informe); test de determinismo ≈ 0,15 s.
+- El veredicto oficial es el del perfil «normal» (modelo de la spec); los demás perfiles miden sensibilidad. Un perfil inventado (cuidadoso, liberador) puede romper un criterio por cómo está definido, no por la economía: describirlo siempre en el informe.
+- **Estratificar por situación:** la victoria por zona agregada esconde celdas (Prado con 2 ánimas contra 2 salvajes ≈ 42 % cuando se va el acompañante); los combates de la última zona dominan la muestra porque el jugador se queda ahí tras el nivel 20. Dar también los 18 primeros combates.
+- Un criterio puede fallar por **facilidad** (Cantil 55–80 %): el arreglo es endurecer (IA de referencia + más grupos de 3), no subir niveles, que adelanta el nivel 30 y rompe el favorito 15–22.
+- Medir lo que se ve: «se queda sin faroles» = combates que empiezan con 0 y % de salvajes derrotadas a las que se lanza farol, no solo el mínimo.
