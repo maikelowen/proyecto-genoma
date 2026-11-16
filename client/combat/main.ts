@@ -251,11 +251,11 @@ const HELP: [string, string][] = [
 ];
 
 if (V05) {
-  HELP.push(["Última ánima (prueba v0.5)", "Cuando a un bando le queda una sola ánima viva, ese turno puede encadenar hasta 3 movimientos de pago distintos (sin descanso) o usar el gratis. Se ejecutan en el orden marcado."]);
-  HELP.push(["Energía pagada al confirmar (prueba v0.5)", "Al confirmar el turno la energía de tus acciones se gasta ya: si un ánima cae o es aturdida antes de actuar, esa energía se pierde."]);
+  HELP.push(["Última ánima", "Cuando a un bando le queda una sola ánima viva, ese turno puede encadenar hasta 3 movimientos de pago distintos (sin descanso) o usar el gratis. Se ejecutan en el orden marcado."]);
+  HELP.push(["Energía pagada al confirmar", "Al confirmar el turno la energía de tus acciones se gasta ya: si un ánima cae o es aturdida antes de actuar, esa energía se pierde."]);
 }
 function v05Tag(): HTMLElement | null {
-  return V05 ? h("div", { class: "v05tag" }, "Versión de prueba v0.5") : null;
+  return null; // v0.5 ya es el juego principal (D-064)
 }
 
 function glossaryNodes(): HTMLElement[] {

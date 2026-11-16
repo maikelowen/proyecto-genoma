@@ -28,7 +28,7 @@ function add(file) {
     return;
   }
   let src = readFileSync(file, "utf8");
-  if (V05 && file.endsWith("data.ts")) src = src.replace("combate.v0.4.json", "combate.v0.5.json");
+  // Desde D-064 data.ts ya usa v0.5; --v05 solo cambia la salida.
   const out = ts.transpileModule(src, {
     fileName: file,
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, isolatedModules: true, sourceMap: false },
