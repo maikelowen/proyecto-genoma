@@ -49,7 +49,14 @@ import {
   wildAi,
   xpForLevel,
   zoneUnlocked,
+  leaveSanctuary,
+  mapById,
+  newWorld,
+  parseWorldSave,
+  returnFromZoneList,
+  serializeWorld,
   LOCUS_IDS,
+  type WorldState,
   type Anima,
   type BattleReport,
   type BattleState,
@@ -66,7 +73,9 @@ import { cfg, familyLabel, gcfg, palette, soulName } from "../combat/data.ts";
 import { SOUL_CSS, soulSvg } from "../art/soul.ts";
 import type { Soul } from "../combat/game.ts";
 import { h, runBattle, stopBattle, type Kid } from "./battle.ts";
-import { ARNAL, COMPANION_NAME, ESSENCE_NOTE, HITO, ZONE_BLURB, pcfg } from "./data.ts";
+import { ARNAL, COMPANION_NAME, ESSENCE_NOTE, HITO, ZONE_BLURB, pcfg, wcfg } from "./data.ts";
+import { ESSENCE_ICON, LANTERN_ICON, mapMounted, mapStats, mountMap, tileToClient, goTo, unmountMap, updateHud, type Line, type MapHooks } from "./wmap.ts";
+import { portrait, sanctuaryArt } from "./wdraw.ts";
 
 // ------------------------------------------------------------------ utilidades
 const app = document.getElementById("app") as HTMLElement;
@@ -103,13 +112,20 @@ const MAX_ECOS = pcfg.genetics.limits.maxOffspring;
 
 // ------------------------------------------------------------------ estado de la aplicación
 type Els = (HTMLElement | "" | null)[];
-type Screen = "intro" | "starter" | "home" | "zones" | "prefight" | "battle" | "result" | "variants" | "collection" | "sheet" | "resonance" | "echo" | "codex" | "save" | "fatal";
+type Screen = "map" | "starter" | "home" | "zones" | "prefight" | "battle" | "result" | "variants" | "collection" | "sheet" | "resonance" | "echo" | "codex" | "save" | "fatal";
 let game: GameState = newGame(newSeed(), pcfg);
-let screen: Screen = "intro";
+let screen: Screen = "map";
+let world: WorldState = newWorld(game, wcfg);
+/** Pantalla base a la que vuelven Colección, Codex y Guardado: el mapa o el santuario. */
+let hub: "map" | "home" = "map";
+/** De dónde salió el encuentro en curso: andando por el mapa o desde la lista de zonas del este. */
+let encFrom: "map" | "list" = "map";
+let exitZones: readonly string[] = [];
+let mapGreet: Line[] | null = null;
+let mapOpen = true;
 let storageOk = true;
 let flash = "";
 let fatal = "";
-let introStep = 0;
 let starterPick: number | null = null;
 let draftName = "";
 let zoneId: string | null = null;
@@ -139,6 +155,32 @@ function persist(): void {
     storageOk = true;
   } catch {
     storageOk = false; // sin almacenamiento (file://, modo privado): solo en memoria; se puede exportar
+  }
+}
+/** Guarda el mundo (clave propia `genoma.mundo`). */
+function persistWorld(): void {
+  try {
+    localStorage.setItem(wcfg.save.storageKey, serializeWorld(world));
+  } catch {
+    storageOk = false;
+  }
+}
+function loadWorld(): void {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(wcfg.save.storageKey);
+  } catch {
+    raw = null;
+  }
+  const r = parseWorldSave(raw, game, wcfg);
+  world = r.world;
+  if (r.notes.length > 0) console.info("mundo:", r.notes.join(" "));
+}
+function clearWorld(): void {
+  try {
+    localStorage.removeItem(wcfg.save.storageKey);
+  } catch {
+    /* sin almacenamiento */
   }
 }
 function loadStored(): string | null {
@@ -175,8 +217,9 @@ function boot(): void {
   }
   countSession();
   persist();
-  screen = game.inicial.elegida === null ? "intro" : "home";
-  if (screen === "intro" && game.inicial.intro_vista) screen = "starter";
+  loadWorld();
+  persistWorld();
+  screen = "map";
 }
 
 // ------------------------------------------------------------------ cálculos de presentación
@@ -236,6 +279,9 @@ function go(s: Screen): void {
   flash = s === "home" ? flash : "";
   render(true);
 }
+function goHub(): void {
+  go(hub);
+}
 function guard(fn: () => void): void {
   try {
     fn();
@@ -260,34 +306,18 @@ function topBar(): HTMLElement {
   return h(
     "div",
     { class: "atop" },
-    h("div", { class: "arow" }, h("h1", null, "Ánimas"), h("span", { class: "res" }, h("span", { title: "Faroles" }, `🏮 ${game.recursos.faroles}`), h("span", { title: "Esencia" }, `✦ ${game.recursos.esencia}`))),
-    h("div", { class: "arow sub2" }, h("span", null, `Sesión ${r.sesiones} · ecos ${r.resonancias}`), screen !== "home" ? btn("← Santuario", () => go("home"), "sm") : btn("Guardado", () => go("save"), "sm")),
+    h("div", { class: "arow" }, h("h1", null, "Ánimas"), (() => { const r = h("span", { class: "res wres" }); r.innerHTML = `<span title="Faroles">${LANTERN_ICON}<b>${game.recursos.faroles}</b></span><span title="Esencia">${ESSENCE_ICON}<b>${game.recursos.esencia}</b></span>`; return r; })()),
+    h("div", { class: "arow sub2" }, h("span", null, `Sesión ${r.sesiones} · ecos ${r.resonancias}`), screen !== "home" ? btn(hub === "map" ? "← Prado" : "← Santuario", () => goHub(), "sm") : btn("Guardado", () => go("save"), "sm")),
     storageOk ? null : h("div", { class: "note warn" }, "Este navegador no deja guardar la partida. Usa «Guardado → Exportar» antes de cerrar."),
     flash ? h("div", { class: "note" }, flash) : null,
   );
 }
 
-// ------------------------------------------------------------------ 1. inicio: Arnal y las iniciales
-function renderIntro(): Els {
-  const lines = ARNAL.texto_inicio;
-  const last = introStep >= lines.length - 1;
-  return [
-    h("div", { class: "arnal" }, h("div", { class: "lantern", "aria-hidden": "true" }, "🏮"), h("div", null, h("b", null, ARNAL.nombre), h("small", null, ` · ${ARNAL.titulo}`)), h("div", { class: "speech" }, `«${lines[introStep]}»`)),
-    h("div", { class: "dotsrow" }, ...lines.map((_, i) => h("i", { class: i <= introStep ? "on" : "" }))),
-    h("div", { class: "actions" }, introStep > 0 ? btn("Atrás", () => ((introStep -= 1), render())) : null, btn(last ? "Elegir mi ánima" : "Siguiente", () => {
-      if (last) {
-        game = markIntroSeen(game);
-        persist();
-        go("starter");
-      } else {
-        introStep += 1;
-        render();
-      }
-    }, "primary grow")),
-    h("p", { class: "dim" }, "Recibes 6 faroles y 30 de esencia."),
-  ];
+// ------------------------------------------------------------------ 1. inicio: la intro de Arnal es en el mapa (al hablarle); aquí, la inicial
+/** Bocadillo de Arnal con su retrato dibujado (el mismo del mapa). */
+function arnalSays(text: string, small = false): HTMLElement {
+  return h("div", { class: "arnal" + (small ? " sm" : "") }, h("div", { class: "lantern", "aria-hidden": "true" }, portrait("arnal", small ? 40 : 52)), h("div", { class: "speech" }, h("b", { class: "aname" }, ARNAL.nombre), `«${text}»`));
 }
-
 function renderStarter(): Els {
   const opts = starterOptions(game, pcfg);
   const picked = starterPick !== null ? (opts[starterPick] as Creature) : null;
@@ -305,15 +335,17 @@ function renderStarter(): Els {
     );
   });
   return [
-    h("p", { class: "intro" }, h("b", null, ARNAL.nombre), ": «Elige una. No hay mala elección, solo malas costumbres.»"),
+    arnalSays("Elige una. No hay mala elección, solo malas costumbres."),
     h("div", { class: "grid2" }, ...cards),
     picked
       ? h("div", { class: "namebox" }, h("label", null, "Ponle nombre"), nameInput((v) => (draftName = v)), btn("Quedármela", () => guard(() => {
         game = chooseStarter(game, starterPick as number, pcfg, draftName);
         game = markIntroSeen(game);
         persist();
-        flash = "Ya tienes tu primera ánima. Sal a explorar el Prado de la Linde.";
-        go("home");
+        persistWorld();
+        mapGreet = [{ who: "arnal", name: ARNAL.nombre, text: "Ya tienes tu primera ánima. La hierba alta del oeste es buen sitio para empezar: allí saltan." }];
+        hub = "map";
+        go("map");
       }), "primary"))
       : h("p", { class: "dim" }, "Toca una para verla de cerca y ponerle nombre."),
   ];
@@ -326,6 +358,24 @@ const ARNAL_QUIPS = [
   "Mira los genes antes de lanzar el farol. Después ya es tarde para arrepentirse.",
   "Una variante para siempre... salvo que me pidas el original. No me lo tomo a mal.",
 ];
+const ICONS: Record<string, string> = {
+  prado: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 28V14a10 10 0 0 1 20 0v14z" fill="#3a2a22"/><path d="M10 28V15a6 6 0 0 1 12 0v13z" fill="#f2b54a"/><path d="M13 28v-9a3 3 0 0 1 6 0v9z" fill="#ffe3a3"/><path d="M3 28h26" stroke="#8a7f90" stroke-width="2" stroke-linecap="round"/></svg>',
+  resonar: '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="11" cy="17" r="7" fill="#d97a9b" opacity=".85"/><circle cx="21" cy="17" r="7" fill="#9fe3ff" opacity=".85"/><path d="M16 6l1.4 3.6L21 11l-3.6 1.4L16 16l-1.4-3.6L11 11l3.6-1.4z" fill="#ffe3a3"/></svg>',
+  coleccion: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="4" y="11" width="10" height="15" rx="4" fill="#3a2a22"/><rect x="6" y="14" width="6" height="9" rx="3" fill="#6fd08c"/><rect x="18" y="8" width="10" height="18" rx="4" fill="#3a2a22"/><rect x="20" y="11" width="6" height="12" rx="3" fill="#ff9a5a"/><path d="M5 8h8M19 5h8" stroke="#8a7f90" stroke-width="2" stroke-linecap="round"/></svg>',
+  codex: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8c4-2 8-2 12 1v17c-4-3-8-3-12-1z" fill="#8a6a44"/><path d="M28 8c-4-2-8-2-12 1v17c4-3 8-3 12-1z" fill="#6b4a33"/><path d="M7 12h6M7 16h6M19 12h6M19 16h4" stroke="#ffe3a3" stroke-width="1.6" stroke-linecap="round"/></svg>',
+};
+function placeBtn(label: string, sub: string, icon: string, onclick: () => void, cls = ""): HTMLElement {
+  const b = h("button", { class: "place " + cls, onclick }, h("span", { class: "pico" }), h("span", { class: "ptx" }, h("b", null, label), h("small", null, sub)));
+  (b.querySelector(".pico") as HTMLElement).innerHTML = ICONS[icon] ?? "";
+  return b;
+}
+function leaveToPrado(): void {
+  world = leaveSanctuary(world, wcfg);
+  persistWorld();
+  persist();
+  hub = "map";
+  go("map");
+}
 function renderHome(): Els {
   const r = game.registro;
   const top = topLevel(game);
@@ -334,22 +384,23 @@ function renderHome(): Els {
   const pend = totalPending();
   const eligible = animas().filter((a) => isMature(lvl(a), pcfg) && a.criatura.offspringCount < MAX_ECOS).length;
   return [
-    h("div", { class: "hito" }, h("b", null, "Progreso de la prueba (hito D-066)"), h("div", { class: "hrow" }, h("span", null, `${ok(r.sesiones >= HITO.sesiones)} Sesiones ${r.sesiones}/${HITO.sesiones}`), h("span", null, `${ok(r.resonancias >= HITO.resonancias)} Resonancias ${r.resonancias}/${HITO.resonancias}`), h("span", null, `${ok(top >= HITO.nivelAlto)} Mejor nivel ${top} (≈${HITO.nivelAlto})`)), h("small", null, `Combates ${r.combates} · victorias ${r.victorias} · capturas ${r.capturas}/${r.intentos} intentos`)),
-    h("div", { class: "arnal sm" }, h("div", { class: "lantern", "aria-hidden": "true" }, "🏮"), h("div", { class: "speech" }, `«${ARNAL_QUIPS[r.combates % ARNAL_QUIPS.length]}»`)),
+    h("div", { class: "sanct" }, sanctuaryArt(), h("div", { class: "sanct-t" }, h("h2", null, "Santuario"), h("small", null, "Cera, piedra y ánimas que no se están quietas."))),
+    arnalSays(ARNAL_QUIPS[r.combates % ARNAL_QUIPS.length] as string, true),
     pend > 0 ? h("div", { class: "note ok" }, `${pend === 1 ? "Una ánima tiene" : `${pend} elecciones de variante pendientes:`} una variante por elegir. `, btn("Elegir", () => {
       const a = animas().find((x) => pendingOf(x) > 0) as Anima;
       variantId = a.id;
       variantBack = "home";
       go("variants");
     }, "sm primary")) : null,
+    h("div", { class: "places" },
+      placeBtn("Salir al Prado", "Volver a la puerta", "prado", leaveToPrado, "go"),
+      placeBtn("Resonar", eligible >= 2 ? `${eligible} maduras listas` : "Hacen falta 2 maduras", "resonar", () => ((resA = null), (resB = null), go("resonance"))),
+      placeBtn("Colección", `${animas().length} ánimas · equipo`, "coleccion", () => go("collection")),
+      placeBtn("Codex", `${game.codex.genes.length} genes vistos`, "codex", () => go("codex")),
+    ),
     h("h2", null, "Tu equipo"),
     h("div", { class: "teamstrip" }, ...team.map((a) => h("div", { class: "tchip", style: `--fam:${palette(a.criatura.family).main}`, onclick: () => ((sheetId = a.id), go("sheet")) }, art(a.criatura, 44), h("span", null, h("b", null, a.nombre), h("small", null, `Nivel ${lvl(a)}`))))),
-    h("div", { class: "menu" },
-      btn("Salir a explorar", () => go("zones"), "primary big"),
-      btn(`Resonar${eligible >= 2 ? "" : " (hacen falta 2 maduras)"}`, () => ((resA = null), (resB = null), go("resonance")), "big"),
-      btn(`Colección (${animas().length})`, () => go("collection"), "big"),
-      btn(`Codex (${game.codex.genes.length} genes)`, () => go("codex"), "big"),
-    ),
+    h("div", { class: "hito" }, h("b", null, "Progreso de la prueba (hito D-066)"), h("div", { class: "hrow" }, h("span", null, `${ok(r.sesiones >= HITO.sesiones)} Sesiones ${r.sesiones}/${HITO.sesiones}`), h("span", null, `${ok(r.resonancias >= HITO.resonancias)} Resonancias ${r.resonancias}/${HITO.resonancias}`), h("span", null, `${ok(top >= HITO.nivelAlto)} Mejor nivel ${top} (≈${HITO.nivelAlto})`)), h("small", null, `Combates ${r.combates} · victorias ${r.victorias} · capturas ${r.capturas}/${r.intentos} intentos`)),
     h("p", { class: "dim" }, ESSENCE_NOTE),
   ];
 }
@@ -360,9 +411,9 @@ function groupText(w: readonly number[]): string {
 }
 function renderZones(): Els {
   return [
-    h("h2", null, "Salir a explorar"),
-    h("p", { class: "intro" }, "Cada encuentro es un combate de tu equipo contra un grupo salvaje. Si ganas, puedes lanzar faroles para atraparlas."),
-    ...pcfg.world.zones.map((z) => {
+    h("h2", null, "Camino del este"),
+    h("p", { class: "intro" }, "Más allá de la niebla. Cada encuentro es un combate de tu equipo contra un grupo salvaje; si ganas, puedes lanzar faroles para atraparlas."),
+    ...pcfg.world.zones.filter((z) => exitZones.includes(z.id)).map((z) => {
       const open = zoneUnlocked(game, z.id, pcfg);
       return h(
         "div",
@@ -374,8 +425,23 @@ function renderZones(): Els {
         open ? btn("Entrar", () => startEncounter(z.id), "primary") : h("div", { class: "lockmsg" }, `🔒 Se abre cuando un ánima tuya llegue a nivel ${z.unlockLevel}.`),
       );
     }),
-    btn("Volver al santuario", () => go("home")),
+    btn("Volver al Prado", () => backFromList(), "primary big"),
   ];
+}
+function backFromList(): void {
+  world = returnFromZoneList(world, wcfg);
+  persistWorld();
+  persist();
+  hub = "map";
+  go("map");
+}
+/** Fin de un encuentro (huida o resultado): vuelve al mapa o a la lista, según de dónde salió. */
+function afterEncounter(): void {
+  enc = null;
+  if (encFrom === "map") {
+    hub = "map";
+    go("map");
+  } else go("zones");
 }
 function startEncounter(zid: string): void {
   guard(() => {
@@ -383,6 +449,7 @@ function startEncounter(zid: string): void {
     game = r.game;
     enc = r.encounter;
     zoneId = zid;
+    encFrom = "list";
     persist(); // el contador del encuentro ya está gastado: recargar no repite ni deja elegir
     go("prefight");
   });
@@ -436,9 +503,8 @@ function renderPrefight(): Els {
     h("div", { class: "actions" }, btn("Huir", () => {
       const r = applyBattleResult(game, e, "huida", pcfg);
       game = r.game;
-      enc = null;
       persist();
-      go("zones");
+      afterEncounter();
     }), btn("¡Combatir!", () => startBattle((opts[shapeIdx] as { place: number[] }).place), "primary grow")),
   ];
 }
@@ -477,9 +543,8 @@ function startBattle(place: number[]): void {
       stopBattle();
       const r = applyBattleResult(game, e, "huida", pcfg);
       game = r.game;
-      enc = null;
       persist();
-      go("zones");
+      afterEncounter();
     },
   });
 }
@@ -570,7 +635,9 @@ function renderResult(): Els {
       }), "primary")));
     }
   }
-  out.push(h("div", { class: "actions" }, btn("Otro encuentro aquí", () => { if (zoneId) startEncounter(zoneId); }, "primary grow"), btn("Mapa", () => go("zones")), btn("Santuario", () => go("home"))));
+  out.push(encFrom === "map"
+    ? h("div", { class: "actions" }, btn("Volver al Prado", () => afterEncounter(), "primary grow"))
+    : h("div", { class: "actions" }, btn("Otro encuentro aquí", () => { if (zoneId) startEncounter(zoneId); }, "primary grow"), btn("Camino del este", () => go("zones")), btn("Volver al Prado", () => ((enc = null), backFromList()))));
   return out;
 }
 
@@ -606,7 +673,7 @@ function renderCollection(): Els {
         btn(inTeam >= 0 ? `Equipo ${inTeam + 1} ✔` : "Al equipo", () => teamToggle(a), "sm" + (inTeam >= 0 ? " on" : "")),
       );
     })),
-    h("div", { class: "actions" }, back ? btn("Volver al encuentro", () => go("prefight"), "primary grow") : null, btn("Santuario", () => go("home"))),
+    h("div", { class: "actions" }, back ? btn("Volver al encuentro", () => go("prefight"), "primary grow") : null, btn(hub === "map" ? "Volver al Prado" : "Santuario", () => goHub())),
   ];
 }
 
@@ -667,12 +734,12 @@ function renderCodex(): Els {
   const fams = [...gcfg.baseFamilies, ...gcfg.hybrids.map((x) => x.id)];
   const body: HTMLElement[] = [h("h2", null, `Codex · ${base}/${gcfg.catalog.length} genes del catálogo`), h("p", { class: "dim" }, "Un gen entra aquí cuando lo ves como D en un ánima tuya o se revela como oculto."), h("div", { class: "fams" }, ...fams.map((f) => h("span", { class: "fam" + (game.codex.familias.includes(f) ? "" : " off"), style: `--fam:${palette(f).main}` }, game.codex.familias.includes(f) ? familyLabel(f) : "?")))];
   for (const f of gcfg.baseFamilies) {
-    const cells = LOCUS_IDS.map((Lc) => h("div", { class: "cxcol" }, h("div", { class: "gl" }, LOCUS_NAME[Lc]), ...gcfg.catalog.filter((g) => g.family === f && g.locus === Lc).map((g) => seen.has(geneKey(g)) ? h("div", { class: "cxc on" }, generateMoveForKey(geneKey(g), pcfg.battle.moves).name) : h("div", { class: "cxc" }, "?"))));
+    const cells = LOCUS_IDS.map((Lc) => h("div", { class: "cxcol" }, h("div", { class: "gl" }, LOCUS_NAME[Lc]), ...gcfg.catalog.filter((g) => g.family === f && g.locus === Lc).map((g) => seen.has(geneKey(g)) ? h("div", { class: "cxc on", style: `--fam:${palette(f).main}` }, generateMoveForKey(geneKey(g), pcfg.battle.moves).name) : h("div", { class: "cxc" }, "?"))));
     body.push(h("div", { class: "cxfam", style: `--fam:${palette(f).main}` }, h("b", null, familyLabel(f)), h("div", { class: "cxgrid" }, ...cells)));
   }
   body.push(h("h2", null, "Mutaciones descubiertas por ti"));
   body.push(game.codex.mutaciones.length === 0 ? h("p", { class: "dim" }, "Todavía ninguna. Aparecen al resonar, de vez en cuando.") : h("div", null, ...game.codex.mutaciones.map((m) => h("div", { class: "mut" }, h("b", null, generateMoveForKey(m.clave, pcfg.battle.moves).name), h("small", null, ` · ${m.clave} · resonancia ${m.resonancia}`)))));
-  body.push(btn("Santuario", () => go("home")));
+  body.push(btn(hub === "map" ? "Volver al Prado" : "Santuario", () => goHub()));
   return body;
 }
 
@@ -697,7 +764,7 @@ function renderResonance(): Els {
   return [
     h("h2", null, "Resonancia"),
     h("p", { class: "intro" }, "Dos ánimas maduras resuenan y prenden un eco que hereda de las dos... o se sale del guion."),
-    h("div", { class: "rpair" }, sel(A, "Primera ánima"), h("span", { class: "plus" }, "+"), sel(B, "Segunda ánima")),
+    h("div", { class: "rpair" + (A && B ? " both" : "") }, sel(A, "Primera ánima"), h("span", { class: "plus" }, "+"), sel(B, "Segunda ánima")),
     A && B ? h("div", { class: "rinfo" }, h("div", null, h("b", null, `Coste: ${resonanceCost(A, B, pcfg)} de esencia`), h("small", null, ` (tienes ${game.recursos.esencia})`)), h("div", { class: "odds" }, `Para cada zona del cuerpo: ≈ ${pct1(odds.fromA)} de ${A.nombre} · ≈ ${pct1(odds.fromB)} de ${B.nombre} · ≈ ${pct1(odds.surprise)} sorpresa (gen oculto o mutación).`), why ? h("div", { class: "note warn" }, why) : null) : null,
     h("div", { class: "actions" }, btn("Resonar", () => doResonate(), "primary big", !A || !B || why !== null)),
     h("h3", null, `Ánimas que pueden resonar (${ok.length})`),
@@ -752,7 +819,7 @@ function changeText(c: VariantCandidate): string {
 function renderVariants(): Els {
   const a = findAnima(game, variantId ?? "");
   const offers = a ? animaPendingVariants(game, a.id, pcfg) : [];
-  const back = (): void => (variantBack === "sheet" ? ((sheetId = a?.id ?? null), go("sheet")) : variantBack === "result" && enc ? go("result") : go("home"));
+  const back = (): void => (variantBack === "sheet" ? ((sheetId = a?.id ?? null), go("sheet")) : variantBack === "result" && enc ? go("result") : goHub());
   if (!a || offers.length === 0) return [h("p", null, "No hay variantes pendientes."), btn("Volver", back, "primary")];
   const o = offers[0]!;
   const col = (title: string, m: Move, extra: Kid, pickBtn?: HTMLElement): HTMLElement => h("div", { class: "vcol" }, h("div", { class: "vt" }, title), moveBox(m), extra ?? null, pickBtn ?? null);
@@ -821,7 +888,10 @@ function renderSave(): Els {
         importMsg = "";
         flash = "Partida cargada." + (r.notes.length ? " " + r.notes.join(" ") : "");
         enc = null;
-        go(game.inicial.elegida === null ? "intro" : "home");
+        loadWorld();
+        persistWorld();
+        hub = "map";
+        go("map");
       } catch (e) {
         importMsg = e instanceof Error ? e.message : String(e);
         render();
@@ -834,12 +904,15 @@ function renderSave(): Els {
       game = newGame(newSeed(), pcfg);
       countSession();
       persist();
+      clearWorld(); // §5.2: partida nueva, mundo nuevo
+      world = newWorld(game, wcfg);
+      persistWorld();
       confirmNew = false;
       enc = null;
-      introStep = 0;
       starterPick = null;
       flash = "";
-      go("intro");
+      hub = "map";
+      go("map");
     }, () => ((confirmNew = false), render())) : "",
   ];
 }
@@ -855,7 +928,9 @@ function renderFatal(): Els {
         const r = parseSave(((document.getElementById("imp") as HTMLTextAreaElement).value ?? "").trim(), pcfg);
         game = r.game;
         persist();
-        screen = "home";
+        loadWorld();
+        persistWorld();
+        screen = "map";
         render();
       } catch (e) {
         fatal = e instanceof Error ? e.message : String(e);
@@ -865,19 +940,84 @@ function renderFatal(): Els {
       game = newGame(newSeed(), pcfg);
       countSession();
       persist();
-      screen = "intro";
+      clearWorld();
+      world = newWorld(game, wcfg);
+      persistWorld();
+      screen = "map";
       render();
     }, "danger")),
   ];
 }
 
+// ------------------------------------------------------------------ mapa
+const mapHooks: MapHooks = {
+  game: () => game,
+  world: () => world,
+  commit(w, g, save) {
+    world = w;
+    game = g;
+    if (save === "world" || save === "both") persistWorld(); // §3.4: primero el mundo
+    if (save === "both") persist(); // y después la partida
+  },
+  onDoor() {
+    // §4.1: entrar y salir del santuario guarda las dos claves
+    persistWorld();
+    persist();
+    hub = "home";
+    go("home");
+  },
+  onExit(zones) {
+    persistWorld();
+    persist();
+    exitZones = zones;
+    go("zones");
+  },
+  onEncounter(e) {
+    enc = e;
+    zoneId = mapById(wcfg, world.mapa).zone;
+    encFrom = "map";
+    shapeIdx = 0;
+    go("prefight");
+  },
+  onArnalIntro() {
+    if (!game.inicial.intro_vista) {
+      game = markIntroSeen(game);
+      persist();
+    }
+    starterPick = null;
+    go("starter");
+  },
+  menu: () => [
+    { label: `Colección y equipo (${animas().length})`, fn: () => ((hub = "map"), go("collection")) },
+    { label: `Codex (${game.codex.genes.length} genes)`, fn: () => ((hub = "map"), go("codex")) },
+    { label: "Guardado", fn: () => ((hub = "map"), go("save")) },
+  ],
+};
+
 // ------------------------------------------------------------------ render
+let lastShown: Screen | null = null;
 function render(top = false): void {
   const y = window.scrollY;
-  if (screen === "battle") return; // lo pinta battle.ts
-  app.className = "ani";
-  const body: Record<Exclude<Screen, "battle">, () => Els> = {
-    intro: renderIntro,
+  if (screen === "battle") {
+    if (mapMounted()) unmountMap();
+    lastShown = "battle";
+    return; // lo pinta battle.ts
+  }
+  if (screen === "map") {
+    if (!mapMounted()) {
+      const greet = mapGreet;
+      mapGreet = null;
+      mountMap(app, mapHooks, { open: mapOpen, ...(greet ? { greet } : {}) });
+      mapOpen = true;
+    } else updateHud();
+    lastShown = "map";
+    window.scrollTo(0, 0);
+    return;
+  }
+  if (mapMounted()) unmountMap();
+  app.className = "ani" + (lastShown !== screen ? " fadein" : "");
+  lastShown = screen;
+  const body: Record<Exclude<Screen, "battle" | "map">, () => Els> = {
     starter: renderStarter,
     home: renderHome,
     zones: renderZones,
@@ -892,13 +1032,13 @@ function render(top = false): void {
     save: renderSave,
     fatal: renderFatal,
   };
-  const noTop = screen === "intro" || screen === "starter" || screen === "fatal";
+  const noTop = screen === "starter" || screen === "fatal";
   app.replaceChildren(...(noTop ? [h("div", { class: "atop" }, h("div", { class: "arow" }, h("h1", null, "Ánimas")), flash ? h("div", { class: "note" }, flash) : null)] : [topBar()]), ...(body[screen]().filter((x) => !!x) as HTMLElement[]));
   window.scrollTo(0, top ? 0 : y);
 }
 
 // hooks para pruebas (Playwright): no los usa el juego
-(window as unknown as { __genoma?: unknown }).__genoma = { get game() { return game; }, get screen() { return screen; } };
+(window as unknown as { __genoma?: unknown }).__genoma = { get game() { return game; }, get world() { return world; }, get screen() { return screen; }, stats: mapStats, tile: tileToClient, goTo };
 
 boot();
 render(true);

@@ -28,3 +28,38 @@ export const ZONE_BLURB: Record<string, string> = {
 };
 
 export const ESSENCE_NOTE = "La esencia es lo que cuesta resonar; se gana al apagar salvajes y al liberar ánimas maduras.";
+
+// ------------------------------------------------------------------ mundo caminable (D-074, spec mundo v0.1)
+import rawW from "../../config/mundo.v0.1.json" with { type: "json" };
+import { parseWorldConfig, type WorldConfig } from "../../packages/core/src/index.ts";
+
+export const wcfg: WorldConfig = parseWorldConfig(rawW, pcfg, mundo.personajes.map((p) => p.id));
+
+/** Bloque `presentacion` del JSON del mundo: solo lo lee el cliente (el núcleo no lo valida). */
+export interface WorldLook {
+  readonly semilla_visual: string;
+  readonly fondo: string;
+  readonly luz_ambiente: { readonly velo: string; readonly velo_alfa: number; readonly vineta_alfa: number };
+  readonly casillas: Readonly<Record<string, { readonly colores: readonly string[] }>>;
+  readonly personajes: {
+    readonly farolero: Readonly<Record<string, string | number>>;
+    readonly arnal: Readonly<Record<string, string>>;
+    readonly vecinos: Readonly<Record<string, Readonly<Record<string, string>>>>;
+    readonly aviso: string;
+  };
+  readonly ambiente: {
+    readonly luciernagas: { readonly max: number; readonly colores: readonly string[] };
+    readonly motas_farol: { readonly max: number };
+    readonly hojas: { readonly max: number };
+    readonly hierba_mece_ms: number;
+    readonly hierba_espesa_mece_ms: number;
+    readonly agua_brillo_ms: number;
+    readonly puerta_respira_ms: number;
+  };
+  readonly asomo: { readonly cada_ms: readonly [number, number]; readonly dura_ms: number; readonly distancia_casillas: readonly [number, number] };
+  readonly transicion_encuentro: { readonly temblor_ms: number; readonly ojos_ms: number; readonly destello_ms: number; readonly vineta_ms: number; readonly total_ms: number };
+  readonly rendimiento: { readonly particulas_max: number; readonly modo_reducido_si_frame_ms_mayor_que: number };
+  readonly escala: { readonly casilla_css_px: { readonly movil: number; readonly escritorio: number }; readonly ancho_corte_css_px: number; readonly bloque_cache_casillas: number; readonly vista_casillas: { readonly movil: readonly number[]; readonly escritorio: readonly number[] } };
+  readonly animacion: { readonly respirar_ms: number };
+}
+export const LOOK: WorldLook = (rawW as unknown as { presentacion: WorldLook }).presentacion;

@@ -285,6 +285,60 @@ dl.glos{margin:4px 0;font-size:13px}dl.glos dt{font-weight:700;color:var(--acc);
 .vcol{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px}.vcol.empty{border-style:dashed;justify-content:center;text-align:center}.vt{font-weight:700;color:var(--acc);font-size:13px}.chg{color:var(--warn)}.vcol .mv{border:0;padding:2px;margin:0}
 .ta{width:100%;background:#10131c;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px;font:12px/1.3 ui-monospace,Consolas,monospace;word-break:break-all}
 @media (max-width:480px){.rpair{grid-template-columns:1fr 1fr}.plus{display:none}.grow2{grid-template-columns:56px repeat(3,minmax(0,1fr))}.orow{grid-template-columns:78px 1fr auto}}
+/* ---- mundo caminable (spec mundo v0.1 §7) y pulido de pantallas (§7.9) ---- */
+body{background:#12141c}
+#app.wmap{max-width:none;margin:0;padding:8px 8px 6px;height:100vh;height:100dvh;display:flex;flex-direction:column;gap:6px;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 45%,#1d2030 0%,#12141c 60%,#0b0c12 100%);user-select:none;-webkit-user-select:none}
+.whud{display:flex;align-items:center;gap:10px;max-width:820px;width:100%;margin:0 auto;padding:0 4px}
+.wzone{display:flex;flex-direction:column;line-height:1.1;flex:1;min-width:0}.wzone b{font-size:15px;letter-spacing:.02em;color:#f3e6cf}.wzone small{font-size:11px;color:#a99bb3;text-transform:uppercase;letter-spacing:.14em}
+.wres{display:flex;gap:12px}.wres span{display:flex;align-items:center;gap:4px;font-weight:700;font-size:15px;color:#f3e6cf}.wres svg{display:block}
+.wmenu{width:40px;height:36px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;background:#2a2431;border:1px solid #4a4052;border-radius:10px;padding:0}
+.wmenu i{display:block;width:16px;height:2px;border-radius:2px;background:#e9dcc6}
+.wstage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.wframe{position:relative;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px #3a3242,0 10px 40px rgba(0,0,0,.55),0 0 80px rgba(255,190,90,.05);line-height:0}
+.wcv{display:block;touch-action:none;cursor:pointer}
+.whint{text-align:center;color:#a99bb3;font-size:12.5px;min-height:18px}
+.dlg{position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:10px;align-items:flex-start;line-height:1.4;background:rgba(20,16,26,.94);border:1px solid var(--spk,#c9a46a);
+  border-radius:12px;padding:10px 12px 10px 10px;box-shadow:0 6px 24px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.03);animation:dlgIn .18s ease-out;cursor:pointer}
+.dlg.nosp{border-color:#8a6a44;background:rgba(36,27,20,.95)}
+.dpic{flex:none;width:44px;height:44px;border-radius:10px;background:#0f0c14;border:1px solid rgba(255,255,255,.06);overflow:hidden}
+.dpic canvas{display:block}
+.dbody{flex:1;min-width:0;position:relative;padding-right:14px}
+.dname{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--spk,#c9a46a);margin-bottom:1px}.dname:empty{display:none}
+.dtx{font-size:15px;color:#f1e8da;min-height:42px}
+.dmore{position:absolute;right:0;bottom:0;font-size:11px;color:var(--spk,#c9a46a);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.2}}@keyframes dlgIn{from{opacity:0;transform:translateY(8px)}}
+.wmenuov{position:fixed;inset:0;background:rgba(6,6,12,.55);display:flex;align-items:center;justify-content:center;z-index:20;animation:fin .2s}
+.wmenup{background:#2a2431;border:1px solid #5a4f60;border-radius:14px;padding:14px;display:grid;gap:8px;width:min(320px,calc(100vw - 32px));box-shadow:0 10px 40px rgba(0,0,0,.6)}
+.wmenup b{color:#f3e6cf;font-size:15px;margin-bottom:2px}
+@media (min-width:720px){.dtx{font-size:16px}.dlg{left:14px;right:14px;bottom:14px;padding:12px 16px 12px 12px}.whint{font-size:13px}}
+/* pantallas: misma luz que el mapa */
+.ani{--panel:#2e2836;--panel2:#3d3445;--line:#574c5e;--acc:#ffcf5a;--dim:#ab9fb3}
+#app.ani{background:radial-gradient(ellipse 70% 260px at 50% 0,rgba(255,190,90,.13),transparent 70%);min-height:100vh}
+.ani.fadein>*{animation:fin .22s ease-out}@keyframes fin{from{opacity:0}}
+.ani h1{color:#f3e6cf;letter-spacing:.02em}.ani h2{color:#f3e6cf}
+.ani .btn{background:#352d3d;border-color:#5a4f60}.ani .btn.primary{background:#ffcf5a;border-color:#ffcf5a;color:#20160c}
+.arnal .lantern{display:flex;justify-content:center;align-items:center}.arnal .lantern canvas{border-radius:10px;background:#15111b}
+.arnal{background:linear-gradient(180deg,#2e2836,#272130);border-color:#574c5e}.aname{display:block;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:#9fe3ff;font-style:normal}
+.sanct{position:relative;border-radius:14px;overflow:hidden;border:1px solid #574c5e;margin:4px 0 10px;line-height:0}
+.sanct-art{display:block;width:100%;height:auto;min-height:120px;object-fit:cover}
+.sanct-t{position:absolute;left:0;right:0;bottom:0;padding:10px 14px;line-height:1.3;background:linear-gradient(transparent,rgba(16,12,20,.85))}
+.sanct-t h2{margin:0;font-size:20px;letter-spacing:.03em}.sanct-t small{color:#cbbfd3}
+.places{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+@media (min-width:640px){.places{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.place{display:flex;align-items:center;gap:10px;text-align:left;background:linear-gradient(180deg,#352d3d,#2b2433);border:1px solid #5a4f60;border-radius:12px;padding:10px;min-height:64px;transition:transform .12s,border-color .12s}
+.place:hover{border-color:#ffcf5a;transform:translateY(-1px)}.place.go{border-color:#ffcf5a;background:linear-gradient(180deg,#4a3a2a,#33281f)}
+.pico{flex:none;width:36px;height:36px;display:block}.pico svg{width:36px;height:36px;display:block}
+.ptx{display:flex;flex-direction:column;line-height:1.2;min-width:0}.ptx b{font-size:14.5px;color:#f3e6cf}.ptx small{color:#ab9fb3;font-size:11.5px}
+.cxc.on{border-color:var(--fam);border-left:3px solid var(--fam);background:color-mix(in srgb,var(--fam) 16%,#2e2836)}
+.cxc{background:#252b33;border-color:#3b4450;color:#6f7c8c;text-align:center}
+.rpar{background:radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--fam) 22%,transparent),#1a1520 70%)}.rpar svg{filter:drop-shadow(0 0 10px var(--fam))}
+.rpair.both .plus{color:#ffcf5a;text-shadow:0 0 10px #ffcf5a}
+.rpair.both{position:relative}.rpair.both::before{content:"";position:absolute;left:20%;right:20%;top:50%;height:2px;background:linear-gradient(90deg,transparent,#ffe3a3,transparent);box-shadow:0 0 10px #ffcf5a;animation:thread 1.6s ease-in-out infinite}
+@keyframes thread{50%{opacity:.4}}
+.echo{position:relative;overflow:hidden;background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--fam) 25%,transparent),#1a1520 70%)}
+.echo::after{content:"";position:absolute;inset:0;background:#fff6dc;pointer-events:none;animation:flash .7s ease-out forwards}
+@keyframes flash{0%{opacity:.9}100%{opacity:0}}
 </style></head>
 <body><div id="app"></div>
 <script>"use strict";
@@ -302,6 +356,8 @@ const data_ts_1 = require("../combat/data.ts");
 const soul_ts_1 = require("../art/soul.ts");
 const battle_ts_1 = require("./battle.ts");
 const data_ts_2 = require("./data.ts");
+const wmap_ts_1 = require("./wmap.ts");
+const wdraw_ts_1 = require("./wdraw.ts");
 // ------------------------------------------------------------------ utilidades
 const app = document.getElementById("app");
 const svgNS = "http://www.w3.org/2000/svg";
@@ -333,11 +389,18 @@ const pct1 = (x) => `${Math.round(x * 100)} %`;
 const LOCUS_NAME = { cabeza: "Cabeza", cuerpo: "Cuerpo", extremidades: "Extremidades", cola: "Cola" };
 const MAX_ECOS = data_ts_2.pcfg.genetics.limits.maxOffspring;
 let game = (0, index_ts_1.newGame)(newSeed(), data_ts_2.pcfg);
-let screen = "intro";
+let screen = "map";
+let world = (0, index_ts_1.newWorld)(game, data_ts_2.wcfg);
+/** Pantalla base a la que vuelven Colección, Codex y Guardado: el mapa o el santuario. */
+let hub = "map";
+/** De dónde salió el encuentro en curso: andando por el mapa o desde la lista de zonas del este. */
+let encFrom = "map";
+let exitZones = [];
+let mapGreet = null;
+let mapOpen = true;
 let storageOk = true;
 let flash = "";
 let fatal = "";
-let introStep = 0;
 let starterPick = null;
 let draftName = "";
 let zoneId = null;
@@ -367,6 +430,36 @@ function persist() {
     }
     catch {
         storageOk = false; // sin almacenamiento (file://, modo privado): solo en memoria; se puede exportar
+    }
+}
+/** Guarda el mundo (clave propia `genoma.mundo`). */
+function persistWorld() {
+    try {
+        localStorage.setItem(data_ts_2.wcfg.save.storageKey, (0, index_ts_1.serializeWorld)(world));
+    }
+    catch {
+        storageOk = false;
+    }
+}
+function loadWorld() {
+    let raw = null;
+    try {
+        raw = localStorage.getItem(data_ts_2.wcfg.save.storageKey);
+    }
+    catch {
+        raw = null;
+    }
+    const r = (0, index_ts_1.parseWorldSave)(raw, game, data_ts_2.wcfg);
+    world = r.world;
+    if (r.notes.length > 0)
+        console.info("mundo:", r.notes.join(" "));
+}
+function clearWorld() {
+    try {
+        localStorage.removeItem(data_ts_2.wcfg.save.storageKey);
+    }
+    catch {
+        /* sin almacenamiento */
     }
 }
 function loadStored() {
@@ -410,9 +503,9 @@ function boot() {
     }
     countSession();
     persist();
-    screen = game.inicial.elegida === null ? "intro" : "home";
-    if (screen === "intro" && game.inicial.intro_vista)
-        screen = "starter";
+    loadWorld();
+    persistWorld();
+    screen = "map";
 }
 // ------------------------------------------------------------------ cálculos de presentación
 const animas = () => game.animas;
@@ -470,6 +563,9 @@ function go(s) {
     flash = s === "home" ? flash : "";
     render(true);
 }
+function goHub() {
+    go(hub);
+}
 function guard(fn) {
     try {
         fn();
@@ -493,28 +589,12 @@ function confirmBox(title, text, ok, onOk, onNo) {
 }
 function topBar() {
     const r = game.registro;
-    return (0, battle_ts_1.h)("div", { class: "atop" }, (0, battle_ts_1.h)("div", { class: "arow" }, (0, battle_ts_1.h)("h1", null, "Ánimas"), (0, battle_ts_1.h)("span", { class: "res" }, (0, battle_ts_1.h)("span", { title: "Faroles" }, `🏮 ${game.recursos.faroles}`), (0, battle_ts_1.h)("span", { title: "Esencia" }, `✦ ${game.recursos.esencia}`))), (0, battle_ts_1.h)("div", { class: "arow sub2" }, (0, battle_ts_1.h)("span", null, `Sesión ${r.sesiones} · ecos ${r.resonancias}`), screen !== "home" ? btn("← Santuario", () => go("home"), "sm") : btn("Guardado", () => go("save"), "sm")), storageOk ? null : (0, battle_ts_1.h)("div", { class: "note warn" }, "Este navegador no deja guardar la partida. Usa «Guardado → Exportar» antes de cerrar."), flash ? (0, battle_ts_1.h)("div", { class: "note" }, flash) : null);
+    return (0, battle_ts_1.h)("div", { class: "atop" }, (0, battle_ts_1.h)("div", { class: "arow" }, (0, battle_ts_1.h)("h1", null, "Ánimas"), (() => { const r = (0, battle_ts_1.h)("span", { class: "res wres" }); r.innerHTML = `<span title="Faroles">${wmap_ts_1.LANTERN_ICON}<b>${game.recursos.faroles}</b></span><span title="Esencia">${wmap_ts_1.ESSENCE_ICON}<b>${game.recursos.esencia}</b></span>`; return r; })()), (0, battle_ts_1.h)("div", { class: "arow sub2" }, (0, battle_ts_1.h)("span", null, `Sesión ${r.sesiones} · ecos ${r.resonancias}`), screen !== "home" ? btn(hub === "map" ? "← Prado" : "← Santuario", () => goHub(), "sm") : btn("Guardado", () => go("save"), "sm")), storageOk ? null : (0, battle_ts_1.h)("div", { class: "note warn" }, "Este navegador no deja guardar la partida. Usa «Guardado → Exportar» antes de cerrar."), flash ? (0, battle_ts_1.h)("div", { class: "note" }, flash) : null);
 }
-// ------------------------------------------------------------------ 1. inicio: Arnal y las iniciales
-function renderIntro() {
-    const lines = data_ts_2.ARNAL.texto_inicio;
-    const last = introStep >= lines.length - 1;
-    return [
-        (0, battle_ts_1.h)("div", { class: "arnal" }, (0, battle_ts_1.h)("div", { class: "lantern", "aria-hidden": "true" }, "🏮"), (0, battle_ts_1.h)("div", null, (0, battle_ts_1.h)("b", null, data_ts_2.ARNAL.nombre), (0, battle_ts_1.h)("small", null, ` · ${data_ts_2.ARNAL.titulo}`)), (0, battle_ts_1.h)("div", { class: "speech" }, `«${lines[introStep]}»`)),
-        (0, battle_ts_1.h)("div", { class: "dotsrow" }, ...lines.map((_, i) => (0, battle_ts_1.h)("i", { class: i <= introStep ? "on" : "" }))),
-        (0, battle_ts_1.h)("div", { class: "actions" }, introStep > 0 ? btn("Atrás", () => ((introStep -= 1), render())) : null, btn(last ? "Elegir mi ánima" : "Siguiente", () => {
-            if (last) {
-                game = (0, index_ts_1.markIntroSeen)(game);
-                persist();
-                go("starter");
-            }
-            else {
-                introStep += 1;
-                render();
-            }
-        }, "primary grow")),
-        (0, battle_ts_1.h)("p", { class: "dim" }, "Recibes 6 faroles y 30 de esencia."),
-    ];
+// ------------------------------------------------------------------ 1. inicio: la intro de Arnal es en el mapa (al hablarle); aquí, la inicial
+/** Bocadillo de Arnal con su retrato dibujado (el mismo del mapa). */
+function arnalSays(text, small = false) {
+    return (0, battle_ts_1.h)("div", { class: "arnal" + (small ? " sm" : "") }, (0, battle_ts_1.h)("div", { class: "lantern", "aria-hidden": "true" }, (0, wdraw_ts_1.portrait)("arnal", small ? 40 : 52)), (0, battle_ts_1.h)("div", { class: "speech" }, (0, battle_ts_1.h)("b", { class: "aname" }, data_ts_2.ARNAL.nombre), `«${text}»`));
 }
 function renderStarter() {
     const opts = (0, index_ts_1.starterOptions)(game, data_ts_2.pcfg);
@@ -528,15 +608,17 @@ function renderStarter() {
             } }, (0, battle_ts_1.h)("div", { class: "fhead" }, art(c, 84), (0, battle_ts_1.h)("div", { class: "fname" }, chip(c.family), (0, battle_ts_1.h)("small", null, `Pureza ${pureza(c)}`))), (0, battle_ts_1.h)("ul", { class: "moves" }, ...cb.moves.map((m) => (0, battle_ts_1.h)("li", null, (0, battle_ts_1.h)("b", null, m.name), (0, battle_ts_1.h)("span", { class: "cost" }, m.cost === 0 ? " gratis" : ` ${m.cost}⚡`), (0, battle_ts_1.h)("div", { class: "mdesc" }, (0, index_ts_1.describeMoveShort)(m, data_ts_1.cfg.moves))))));
     });
     return [
-        (0, battle_ts_1.h)("p", { class: "intro" }, (0, battle_ts_1.h)("b", null, data_ts_2.ARNAL.nombre), ": «Elige una. No hay mala elección, solo malas costumbres.»"),
+        arnalSays("Elige una. No hay mala elección, solo malas costumbres."),
         (0, battle_ts_1.h)("div", { class: "grid2" }, ...cards),
         picked
             ? (0, battle_ts_1.h)("div", { class: "namebox" }, (0, battle_ts_1.h)("label", null, "Ponle nombre"), nameInput((v) => (draftName = v)), btn("Quedármela", () => guard(() => {
                 game = (0, index_ts_1.chooseStarter)(game, starterPick, data_ts_2.pcfg, draftName);
                 game = (0, index_ts_1.markIntroSeen)(game);
                 persist();
-                flash = "Ya tienes tu primera ánima. Sal a explorar el Prado de la Linde.";
-                go("home");
+                persistWorld();
+                mapGreet = [{ who: "arnal", name: data_ts_2.ARNAL.nombre, text: "Ya tienes tu primera ánima. La hierba alta del oeste es buen sitio para empezar: allí saltan." }];
+                hub = "map";
+                go("map");
             }), "primary"))
             : (0, battle_ts_1.h)("p", { class: "dim" }, "Toca una para verla de cerca y ponerle nombre."),
     ];
@@ -548,6 +630,24 @@ const ARNAL_QUIPS = [
     "Mira los genes antes de lanzar el farol. Después ya es tarde para arrepentirse.",
     "Una variante para siempre... salvo que me pidas el original. No me lo tomo a mal.",
 ];
+const ICONS = {
+    prado: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 28V14a10 10 0 0 1 20 0v14z" fill="#3a2a22"/><path d="M10 28V15a6 6 0 0 1 12 0v13z" fill="#f2b54a"/><path d="M13 28v-9a3 3 0 0 1 6 0v9z" fill="#ffe3a3"/><path d="M3 28h26" stroke="#8a7f90" stroke-width="2" stroke-linecap="round"/></svg>',
+    resonar: '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="11" cy="17" r="7" fill="#d97a9b" opacity=".85"/><circle cx="21" cy="17" r="7" fill="#9fe3ff" opacity=".85"/><path d="M16 6l1.4 3.6L21 11l-3.6 1.4L16 16l-1.4-3.6L11 11l3.6-1.4z" fill="#ffe3a3"/></svg>',
+    coleccion: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="4" y="11" width="10" height="15" rx="4" fill="#3a2a22"/><rect x="6" y="14" width="6" height="9" rx="3" fill="#6fd08c"/><rect x="18" y="8" width="10" height="18" rx="4" fill="#3a2a22"/><rect x="20" y="11" width="6" height="12" rx="3" fill="#ff9a5a"/><path d="M5 8h8M19 5h8" stroke="#8a7f90" stroke-width="2" stroke-linecap="round"/></svg>',
+    codex: '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 8c4-2 8-2 12 1v17c-4-3-8-3-12-1z" fill="#8a6a44"/><path d="M28 8c-4-2-8-2-12 1v17c4-3 8-3 12-1z" fill="#6b4a33"/><path d="M7 12h6M7 16h6M19 12h6M19 16h4" stroke="#ffe3a3" stroke-width="1.6" stroke-linecap="round"/></svg>',
+};
+function placeBtn(label, sub, icon, onclick, cls = "") {
+    const b = (0, battle_ts_1.h)("button", { class: "place " + cls, onclick }, (0, battle_ts_1.h)("span", { class: "pico" }), (0, battle_ts_1.h)("span", { class: "ptx" }, (0, battle_ts_1.h)("b", null, label), (0, battle_ts_1.h)("small", null, sub)));
+    b.querySelector(".pico").innerHTML = ICONS[icon] ?? "";
+    return b;
+}
+function leaveToPrado() {
+    world = (0, index_ts_1.leaveSanctuary)(world, data_ts_2.wcfg);
+    persistWorld();
+    persist();
+    hub = "map";
+    go("map");
+}
 function renderHome() {
     const r = game.registro;
     const top = topLevel(game);
@@ -556,17 +656,18 @@ function renderHome() {
     const pend = totalPending();
     const eligible = animas().filter((a) => (0, index_ts_1.isMature)(lvl(a), data_ts_2.pcfg) && a.criatura.offspringCount < MAX_ECOS).length;
     return [
-        (0, battle_ts_1.h)("div", { class: "hito" }, (0, battle_ts_1.h)("b", null, "Progreso de la prueba (hito D-066)"), (0, battle_ts_1.h)("div", { class: "hrow" }, (0, battle_ts_1.h)("span", null, `${ok(r.sesiones >= data_ts_2.HITO.sesiones)} Sesiones ${r.sesiones}/${data_ts_2.HITO.sesiones}`), (0, battle_ts_1.h)("span", null, `${ok(r.resonancias >= data_ts_2.HITO.resonancias)} Resonancias ${r.resonancias}/${data_ts_2.HITO.resonancias}`), (0, battle_ts_1.h)("span", null, `${ok(top >= data_ts_2.HITO.nivelAlto)} Mejor nivel ${top} (≈${data_ts_2.HITO.nivelAlto})`)), (0, battle_ts_1.h)("small", null, `Combates ${r.combates} · victorias ${r.victorias} · capturas ${r.capturas}/${r.intentos} intentos`)),
-        (0, battle_ts_1.h)("div", { class: "arnal sm" }, (0, battle_ts_1.h)("div", { class: "lantern", "aria-hidden": "true" }, "🏮"), (0, battle_ts_1.h)("div", { class: "speech" }, `«${ARNAL_QUIPS[r.combates % ARNAL_QUIPS.length]}»`)),
+        (0, battle_ts_1.h)("div", { class: "sanct" }, (0, wdraw_ts_1.sanctuaryArt)(), (0, battle_ts_1.h)("div", { class: "sanct-t" }, (0, battle_ts_1.h)("h2", null, "Santuario"), (0, battle_ts_1.h)("small", null, "Cera, piedra y ánimas que no se están quietas."))),
+        arnalSays(ARNAL_QUIPS[r.combates % ARNAL_QUIPS.length], true),
         pend > 0 ? (0, battle_ts_1.h)("div", { class: "note ok" }, `${pend === 1 ? "Una ánima tiene" : `${pend} elecciones de variante pendientes:`} una variante por elegir. `, btn("Elegir", () => {
             const a = animas().find((x) => pendingOf(x) > 0);
             variantId = a.id;
             variantBack = "home";
             go("variants");
         }, "sm primary")) : null,
+        (0, battle_ts_1.h)("div", { class: "places" }, placeBtn("Salir al Prado", "Volver a la puerta", "prado", leaveToPrado, "go"), placeBtn("Resonar", eligible >= 2 ? `${eligible} maduras listas` : "Hacen falta 2 maduras", "resonar", () => ((resA = null), (resB = null), go("resonance"))), placeBtn("Colección", `${animas().length} ánimas · equipo`, "coleccion", () => go("collection")), placeBtn("Codex", `${game.codex.genes.length} genes vistos`, "codex", () => go("codex"))),
         (0, battle_ts_1.h)("h2", null, "Tu equipo"),
         (0, battle_ts_1.h)("div", { class: "teamstrip" }, ...team.map((a) => (0, battle_ts_1.h)("div", { class: "tchip", style: `--fam:${(0, data_ts_1.palette)(a.criatura.family).main}`, onclick: () => ((sheetId = a.id), go("sheet")) }, art(a.criatura, 44), (0, battle_ts_1.h)("span", null, (0, battle_ts_1.h)("b", null, a.nombre), (0, battle_ts_1.h)("small", null, `Nivel ${lvl(a)}`))))),
-        (0, battle_ts_1.h)("div", { class: "menu" }, btn("Salir a explorar", () => go("zones"), "primary big"), btn(`Resonar${eligible >= 2 ? "" : " (hacen falta 2 maduras)"}`, () => ((resA = null), (resB = null), go("resonance")), "big"), btn(`Colección (${animas().length})`, () => go("collection"), "big"), btn(`Codex (${game.codex.genes.length} genes)`, () => go("codex"), "big")),
+        (0, battle_ts_1.h)("div", { class: "hito" }, (0, battle_ts_1.h)("b", null, "Progreso de la prueba (hito D-066)"), (0, battle_ts_1.h)("div", { class: "hrow" }, (0, battle_ts_1.h)("span", null, `${ok(r.sesiones >= data_ts_2.HITO.sesiones)} Sesiones ${r.sesiones}/${data_ts_2.HITO.sesiones}`), (0, battle_ts_1.h)("span", null, `${ok(r.resonancias >= data_ts_2.HITO.resonancias)} Resonancias ${r.resonancias}/${data_ts_2.HITO.resonancias}`), (0, battle_ts_1.h)("span", null, `${ok(top >= data_ts_2.HITO.nivelAlto)} Mejor nivel ${top} (≈${data_ts_2.HITO.nivelAlto})`)), (0, battle_ts_1.h)("small", null, `Combates ${r.combates} · victorias ${r.victorias} · capturas ${r.capturas}/${r.intentos} intentos`)),
         (0, battle_ts_1.h)("p", { class: "dim" }, data_ts_2.ESSENCE_NOTE),
     ];
 }
@@ -576,14 +677,31 @@ function groupText(w) {
 }
 function renderZones() {
     return [
-        (0, battle_ts_1.h)("h2", null, "Salir a explorar"),
-        (0, battle_ts_1.h)("p", { class: "intro" }, "Cada encuentro es un combate de tu equipo contra un grupo salvaje. Si ganas, puedes lanzar faroles para atraparlas."),
-        ...data_ts_2.pcfg.world.zones.map((z) => {
+        (0, battle_ts_1.h)("h2", null, "Camino del este"),
+        (0, battle_ts_1.h)("p", { class: "intro" }, "Más allá de la niebla. Cada encuentro es un combate de tu equipo contra un grupo salvaje; si ganas, puedes lanzar faroles para atraparlas."),
+        ...data_ts_2.pcfg.world.zones.filter((z) => exitZones.includes(z.id)).map((z) => {
             const open = (0, index_ts_1.zoneUnlocked)(game, z.id, data_ts_2.pcfg);
             return (0, battle_ts_1.h)("div", { class: "zone" + (open ? "" : " locked"), "data-zone": z.id }, (0, battle_ts_1.h)("div", { class: "zh" }, (0, battle_ts_1.h)("b", null, z.name), (0, battle_ts_1.h)("span", { class: "lv" }, `nivel ${z.minLevel}–${z.maxLevel}`)), (0, battle_ts_1.h)("p", { class: "dim" }, data_ts_2.ZONE_BLURB[z.id] ?? ""), (0, battle_ts_1.h)("div", { class: "fams" }, ...z.families.map((f) => chip(f))), (0, battle_ts_1.h)("small", null, `Grupos: ${groupText(z.groupWeights)}`), open ? btn("Entrar", () => startEncounter(z.id), "primary") : (0, battle_ts_1.h)("div", { class: "lockmsg" }, `🔒 Se abre cuando un ánima tuya llegue a nivel ${z.unlockLevel}.`));
         }),
-        btn("Volver al santuario", () => go("home")),
+        btn("Volver al Prado", () => backFromList(), "primary big"),
     ];
+}
+function backFromList() {
+    world = (0, index_ts_1.returnFromZoneList)(world, data_ts_2.wcfg);
+    persistWorld();
+    persist();
+    hub = "map";
+    go("map");
+}
+/** Fin de un encuentro (huida o resultado): vuelve al mapa o a la lista, según de dónde salió. */
+function afterEncounter() {
+    enc = null;
+    if (encFrom === "map") {
+        hub = "map";
+        go("map");
+    }
+    else
+        go("zones");
 }
 function startEncounter(zid) {
     guard(() => {
@@ -591,6 +709,7 @@ function startEncounter(zid) {
         game = r.game;
         enc = r.encounter;
         zoneId = zid;
+        encFrom = "list";
         persist(); // el contador del encuentro ya está gastado: recargar no repite ni deja elegir
         go("prefight");
     });
@@ -645,9 +764,8 @@ function renderPrefight() {
         (0, battle_ts_1.h)("div", { class: "actions" }, btn("Huir", () => {
             const r = (0, index_ts_1.applyBattleResult)(game, e, "huida", data_ts_2.pcfg);
             game = r.game;
-            enc = null;
             persist();
-            go("zones");
+            afterEncounter();
         }), btn("¡Combatir!", () => startBattle(opts[shapeIdx].place), "primary grow")),
     ];
 }
@@ -686,9 +804,8 @@ function startBattle(place) {
             (0, battle_ts_1.stopBattle)();
             const r = (0, index_ts_1.applyBattleResult)(game, e, "huida", data_ts_2.pcfg);
             game = r.game;
-            enc = null;
             persist();
-            go("zones");
+            afterEncounter();
         },
     });
 }
@@ -778,8 +895,10 @@ function renderResult() {
             }), "primary")));
         }
     }
-    out.push((0, battle_ts_1.h)("div", { class: "actions" }, btn("Otro encuentro aquí", () => { if (zoneId)
-        startEncounter(zoneId); }, "primary grow"), btn("Mapa", () => go("zones")), btn("Santuario", () => go("home"))));
+    out.push(encFrom === "map"
+        ? (0, battle_ts_1.h)("div", { class: "actions" }, btn("Volver al Prado", () => afterEncounter(), "primary grow"))
+        : (0, battle_ts_1.h)("div", { class: "actions" }, btn("Otro encuentro aquí", () => { if (zoneId)
+            startEncounter(zoneId); }, "primary grow"), btn("Camino del este", () => go("zones")), btn("Volver al Prado", () => ((enc = null), backFromList()))));
     return out;
 }
 // ------------------------------------------------------------------ 6. colección y ficha
@@ -812,7 +931,7 @@ function renderCollection() {
             const inTeam = game.equipo.indexOf(a.id);
             return (0, battle_ts_1.h)("div", { class: "crow" + (inTeam >= 0 ? " inteam" : ""), style: `--fam:${(0, data_ts_1.palette)(a.criatura.family).main}`, "data-anima": a.id }, (0, battle_ts_1.h)("div", { class: "cmain", onclick: () => ((sheetId = a.id), go("sheet")) }, art(a.criatura, 48), (0, battle_ts_1.h)("div", { class: "ci" }, (0, battle_ts_1.h)("b", null, a.nombre), (0, battle_ts_1.h)("small", null, `${(0, data_ts_1.familyLabel)(a.criatura.family)} · nivel ${lvl(a)}${(0, index_ts_1.isMature)(lvl(a), data_ts_2.pcfg) ? "" : " · inmadura"}`), xpBar(a, true), (0, battle_ts_1.h)("small", { class: "dim" }, `Pureza ${pureza(a.criatura)} · ecos ${dots(a.criatura.offspringCount, MAX_ECOS)}${pendingOf(a) > 0 ? " · variante pendiente" : ""}`))), btn(inTeam >= 0 ? `Equipo ${inTeam + 1} ✔` : "Al equipo", () => teamToggle(a), "sm" + (inTeam >= 0 ? " on" : "")));
         })),
-        (0, battle_ts_1.h)("div", { class: "actions" }, back ? btn("Volver al encuentro", () => go("prefight"), "primary grow") : null, btn("Santuario", () => go("home"))),
+        (0, battle_ts_1.h)("div", { class: "actions" }, back ? btn("Volver al encuentro", () => go("prefight"), "primary grow") : null, btn(hub === "map" ? "Volver al Prado" : "Santuario", () => goHub())),
     ];
 }
 function geneCell(c, locus, slot, shown) {
@@ -871,12 +990,12 @@ function renderCodex() {
     const fams = [...data_ts_1.gcfg.baseFamilies, ...data_ts_1.gcfg.hybrids.map((x) => x.id)];
     const body = [(0, battle_ts_1.h)("h2", null, `Codex · ${base}/${data_ts_1.gcfg.catalog.length} genes del catálogo`), (0, battle_ts_1.h)("p", { class: "dim" }, "Un gen entra aquí cuando lo ves como D en un ánima tuya o se revela como oculto."), (0, battle_ts_1.h)("div", { class: "fams" }, ...fams.map((f) => (0, battle_ts_1.h)("span", { class: "fam" + (game.codex.familias.includes(f) ? "" : " off"), style: `--fam:${(0, data_ts_1.palette)(f).main}` }, game.codex.familias.includes(f) ? (0, data_ts_1.familyLabel)(f) : "?")))];
     for (const f of data_ts_1.gcfg.baseFamilies) {
-        const cells = index_ts_1.LOCUS_IDS.map((Lc) => (0, battle_ts_1.h)("div", { class: "cxcol" }, (0, battle_ts_1.h)("div", { class: "gl" }, LOCUS_NAME[Lc]), ...data_ts_1.gcfg.catalog.filter((g) => g.family === f && g.locus === Lc).map((g) => seen.has((0, index_ts_1.geneKey)(g)) ? (0, battle_ts_1.h)("div", { class: "cxc on" }, (0, index_ts_1.generateMoveForKey)((0, index_ts_1.geneKey)(g), data_ts_2.pcfg.battle.moves).name) : (0, battle_ts_1.h)("div", { class: "cxc" }, "?"))));
+        const cells = index_ts_1.LOCUS_IDS.map((Lc) => (0, battle_ts_1.h)("div", { class: "cxcol" }, (0, battle_ts_1.h)("div", { class: "gl" }, LOCUS_NAME[Lc]), ...data_ts_1.gcfg.catalog.filter((g) => g.family === f && g.locus === Lc).map((g) => seen.has((0, index_ts_1.geneKey)(g)) ? (0, battle_ts_1.h)("div", { class: "cxc on", style: `--fam:${(0, data_ts_1.palette)(f).main}` }, (0, index_ts_1.generateMoveForKey)((0, index_ts_1.geneKey)(g), data_ts_2.pcfg.battle.moves).name) : (0, battle_ts_1.h)("div", { class: "cxc" }, "?"))));
         body.push((0, battle_ts_1.h)("div", { class: "cxfam", style: `--fam:${(0, data_ts_1.palette)(f).main}` }, (0, battle_ts_1.h)("b", null, (0, data_ts_1.familyLabel)(f)), (0, battle_ts_1.h)("div", { class: "cxgrid" }, ...cells)));
     }
     body.push((0, battle_ts_1.h)("h2", null, "Mutaciones descubiertas por ti"));
     body.push(game.codex.mutaciones.length === 0 ? (0, battle_ts_1.h)("p", { class: "dim" }, "Todavía ninguna. Aparecen al resonar, de vez en cuando.") : (0, battle_ts_1.h)("div", null, ...game.codex.mutaciones.map((m) => (0, battle_ts_1.h)("div", { class: "mut" }, (0, battle_ts_1.h)("b", null, (0, index_ts_1.generateMoveForKey)(m.clave, data_ts_2.pcfg.battle.moves).name), (0, battle_ts_1.h)("small", null, ` · ${m.clave} · resonancia ${m.resonancia}`)))));
-    body.push(btn("Santuario", () => go("home")));
+    body.push(btn(hub === "map" ? "Volver al Prado" : "Santuario", () => goHub()));
     return body;
 }
 // ------------------------------------------------------------------ 8. resonancia
@@ -904,7 +1023,7 @@ function renderResonance() {
     return [
         (0, battle_ts_1.h)("h2", null, "Resonancia"),
         (0, battle_ts_1.h)("p", { class: "intro" }, "Dos ánimas maduras resuenan y prenden un eco que hereda de las dos... o se sale del guion."),
-        (0, battle_ts_1.h)("div", { class: "rpair" }, sel(A, "Primera ánima"), (0, battle_ts_1.h)("span", { class: "plus" }, "+"), sel(B, "Segunda ánima")),
+        (0, battle_ts_1.h)("div", { class: "rpair" + (A && B ? " both" : "") }, sel(A, "Primera ánima"), (0, battle_ts_1.h)("span", { class: "plus" }, "+"), sel(B, "Segunda ánima")),
         A && B ? (0, battle_ts_1.h)("div", { class: "rinfo" }, (0, battle_ts_1.h)("div", null, (0, battle_ts_1.h)("b", null, `Coste: ${(0, index_ts_1.resonanceCost)(A, B, data_ts_2.pcfg)} de esencia`), (0, battle_ts_1.h)("small", null, ` (tienes ${game.recursos.esencia})`)), (0, battle_ts_1.h)("div", { class: "odds" }, `Para cada zona del cuerpo: ≈ ${pct1(odds.fromA)} de ${A.nombre} · ≈ ${pct1(odds.fromB)} de ${B.nombre} · ≈ ${pct1(odds.surprise)} sorpresa (gen oculto o mutación).`), why ? (0, battle_ts_1.h)("div", { class: "note warn" }, why) : null) : null,
         (0, battle_ts_1.h)("div", { class: "actions" }, btn("Resonar", () => doResonate(), "primary big", !A || !B || why !== null)),
         (0, battle_ts_1.h)("h3", null, `Ánimas que pueden resonar (${ok.length})`),
@@ -959,7 +1078,7 @@ function changeText(c) {
 function renderVariants() {
     const a = (0, index_ts_1.findAnima)(game, variantId ?? "");
     const offers = a ? (0, index_ts_1.animaPendingVariants)(game, a.id, data_ts_2.pcfg) : [];
-    const back = () => (variantBack === "sheet" ? ((sheetId = a?.id ?? null), go("sheet")) : variantBack === "result" && enc ? go("result") : go("home"));
+    const back = () => (variantBack === "sheet" ? ((sheetId = a?.id ?? null), go("sheet")) : variantBack === "result" && enc ? go("result") : goHub());
     if (!a || offers.length === 0)
         return [(0, battle_ts_1.h)("p", null, "No hay variantes pendientes."), btn("Volver", back, "primary")];
     const o = offers[0];
@@ -1028,7 +1147,10 @@ function renderSave() {
                 importMsg = "";
                 flash = "Partida cargada." + (r.notes.length ? " " + r.notes.join(" ") : "");
                 enc = null;
-                go(game.inicial.elegida === null ? "intro" : "home");
+                loadWorld();
+                persistWorld();
+                hub = "map";
+                go("map");
             }
             catch (e) {
                 importMsg = e instanceof Error ? e.message : String(e);
@@ -1042,12 +1164,15 @@ function renderSave() {
             game = (0, index_ts_1.newGame)(newSeed(), data_ts_2.pcfg);
             countSession();
             persist();
+            clearWorld(); // §5.2: partida nueva, mundo nuevo
+            world = (0, index_ts_1.newWorld)(game, data_ts_2.wcfg);
+            persistWorld();
             confirmNew = false;
             enc = null;
-            introStep = 0;
             starterPick = null;
             flash = "";
-            go("intro");
+            hub = "map";
+            go("map");
         }, () => ((confirmNew = false), render())) : "",
     ];
 }
@@ -1062,7 +1187,9 @@ function renderFatal() {
                 const r = (0, index_ts_1.parseSave)((document.getElementById("imp").value ?? "").trim(), data_ts_2.pcfg);
                 game = r.game;
                 persist();
-                screen = "home";
+                loadWorld();
+                persistWorld();
+                screen = "map";
                 render();
             }
             catch (e) {
@@ -1073,19 +1200,88 @@ function renderFatal() {
             game = (0, index_ts_1.newGame)(newSeed(), data_ts_2.pcfg);
             countSession();
             persist();
-            screen = "intro";
+            clearWorld();
+            world = (0, index_ts_1.newWorld)(game, data_ts_2.wcfg);
+            persistWorld();
+            screen = "map";
             render();
         }, "danger")),
     ];
 }
+// ------------------------------------------------------------------ mapa
+const mapHooks = {
+    game: () => game,
+    world: () => world,
+    commit(w, g, save) {
+        world = w;
+        game = g;
+        if (save === "world" || save === "both")
+            persistWorld(); // §3.4: primero el mundo
+        if (save === "both")
+            persist(); // y después la partida
+    },
+    onDoor() {
+        // §4.1: entrar y salir del santuario guarda las dos claves
+        persistWorld();
+        persist();
+        hub = "home";
+        go("home");
+    },
+    onExit(zones) {
+        persistWorld();
+        persist();
+        exitZones = zones;
+        go("zones");
+    },
+    onEncounter(e) {
+        enc = e;
+        zoneId = (0, index_ts_1.mapById)(data_ts_2.wcfg, world.mapa).zone;
+        encFrom = "map";
+        shapeIdx = 0;
+        go("prefight");
+    },
+    onArnalIntro() {
+        if (!game.inicial.intro_vista) {
+            game = (0, index_ts_1.markIntroSeen)(game);
+            persist();
+        }
+        starterPick = null;
+        go("starter");
+    },
+    menu: () => [
+        { label: `Colección y equipo (${animas().length})`, fn: () => ((hub = "map"), go("collection")) },
+        { label: `Codex (${game.codex.genes.length} genes)`, fn: () => ((hub = "map"), go("codex")) },
+        { label: "Guardado", fn: () => ((hub = "map"), go("save")) },
+    ],
+};
 // ------------------------------------------------------------------ render
+let lastShown = null;
 function render(top = false) {
     const y = window.scrollY;
-    if (screen === "battle")
+    if (screen === "battle") {
+        if ((0, wmap_ts_1.mapMounted)())
+            (0, wmap_ts_1.unmountMap)();
+        lastShown = "battle";
         return; // lo pinta battle.ts
-    app.className = "ani";
+    }
+    if (screen === "map") {
+        if (!(0, wmap_ts_1.mapMounted)()) {
+            const greet = mapGreet;
+            mapGreet = null;
+            (0, wmap_ts_1.mountMap)(app, mapHooks, { open: mapOpen, ...(greet ? { greet } : {}) });
+            mapOpen = true;
+        }
+        else
+            (0, wmap_ts_1.updateHud)();
+        lastShown = "map";
+        window.scrollTo(0, 0);
+        return;
+    }
+    if ((0, wmap_ts_1.mapMounted)())
+        (0, wmap_ts_1.unmountMap)();
+    app.className = "ani" + (lastShown !== screen ? " fadein" : "");
+    lastShown = screen;
     const body = {
-        intro: renderIntro,
         starter: renderStarter,
         home: renderHome,
         zones: renderZones,
@@ -1100,12 +1296,12 @@ function render(top = false) {
         save: renderSave,
         fatal: renderFatal,
     };
-    const noTop = screen === "intro" || screen === "starter" || screen === "fatal";
+    const noTop = screen === "starter" || screen === "fatal";
     app.replaceChildren(...(noTop ? [(0, battle_ts_1.h)("div", { class: "atop" }, (0, battle_ts_1.h)("div", { class: "arow" }, (0, battle_ts_1.h)("h1", null, "Ánimas")), flash ? (0, battle_ts_1.h)("div", { class: "note" }, flash) : null)] : [topBar()]), ...body[screen]().filter((x) => !!x));
     window.scrollTo(0, top ? 0 : y);
 }
 // hooks para pruebas (Playwright): no los usa el juego
-window.__genoma = { get game() { return game; }, get screen() { return screen; } };
+window.__genoma = { get game() { return game; }, get world() { return world; }, get screen() { return screen; }, stats: wmap_ts_1.mapStats, tile: wmap_ts_1.tileToClient, goTo: wmap_ts_1.goTo };
 boot();
 render(true);
 
@@ -1137,6 +1333,7 @@ __exportStar(require("./genetics/index.ts"), exports);
 __exportStar(require("./moves/index.ts"), exports);
 __exportStar(require("./combat/index.ts"), exports);
 __exportStar(require("./progression/index.ts"), exports);
+__exportStar(require("./world/index.ts"), exports);
 
 };
 defs["packages/core/src/rng.ts"]=function(module,exports,require){
@@ -7921,6 +8118,809 @@ function parseAnima(v, p, births, cfg, notes) {
 }
 
 };
+defs["packages/core/src/world/index.ts"]=function(module,exports,require){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.serializeWorld = exports.parseWorldSave = exports.worldHash = exports.step = exports.returnFromZoneList = exports.planRoute = exports.newWorld = exports.leaveSanctuary = exports.interact = exports.facingTarget = exports.exitOpen = exports.entityAt = exports.activeEntities = exports.activatorAt = exports.tileAt = exports.parseWorldConfig = exports.mapById = exports.DIRS = void 0;
+/** API pública del mundo caminable v0.1 (docs/spec/mundo-v0.1.md; notas en docs/spec/notas-implementacion-mundo-v0.1.md). */
+var config_ts_1 = require("./config.ts");
+Object.defineProperty(exports, "DIRS", { enumerable: true, get: function () { return config_ts_1.DIRS; } });
+Object.defineProperty(exports, "mapById", { enumerable: true, get: function () { return config_ts_1.mapById; } });
+Object.defineProperty(exports, "parseWorldConfig", { enumerable: true, get: function () { return config_ts_1.parseWorldConfig; } });
+Object.defineProperty(exports, "tileAt", { enumerable: true, get: function () { return config_ts_1.tileAt; } });
+var world_ts_1 = require("./world.ts");
+Object.defineProperty(exports, "activatorAt", { enumerable: true, get: function () { return world_ts_1.activatorAt; } });
+Object.defineProperty(exports, "activeEntities", { enumerable: true, get: function () { return world_ts_1.activeEntities; } });
+Object.defineProperty(exports, "entityAt", { enumerable: true, get: function () { return world_ts_1.entityAt; } });
+Object.defineProperty(exports, "exitOpen", { enumerable: true, get: function () { return world_ts_1.exitOpen; } });
+Object.defineProperty(exports, "facingTarget", { enumerable: true, get: function () { return world_ts_1.facingTarget; } });
+Object.defineProperty(exports, "interact", { enumerable: true, get: function () { return world_ts_1.interact; } });
+Object.defineProperty(exports, "leaveSanctuary", { enumerable: true, get: function () { return world_ts_1.leaveSanctuary; } });
+Object.defineProperty(exports, "newWorld", { enumerable: true, get: function () { return world_ts_1.newWorld; } });
+Object.defineProperty(exports, "planRoute", { enumerable: true, get: function () { return world_ts_1.planRoute; } });
+Object.defineProperty(exports, "returnFromZoneList", { enumerable: true, get: function () { return world_ts_1.returnFromZoneList; } });
+Object.defineProperty(exports, "step", { enumerable: true, get: function () { return world_ts_1.step; } });
+Object.defineProperty(exports, "worldHash", { enumerable: true, get: function () { return world_ts_1.worldHash; } });
+var save_ts_1 = require("./save.ts");
+Object.defineProperty(exports, "parseWorldSave", { enumerable: true, get: function () { return save_ts_1.parseWorldSave; } });
+Object.defineProperty(exports, "serializeWorld", { enumerable: true, get: function () { return save_ts_1.serializeWorld; } });
+
+};
+defs["packages/core/src/world/config.ts"]=function(module,exports,require){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DIRS = void 0;
+exports.parseWorldConfig = parseWorldConfig;
+exports.mapById = mapById;
+exports.tileAt = tileAt;
+/**
+ * Carga y validación de `config/mundo.v0.1.json` (spec mundo v0.1 §1, §6.2).
+ * Función pura: recibe el JSON ya parseado y la config de progresión; no lee ficheros.
+ * Claves desconocidas = error; `presentacion` y los `_doc*` se admiten sin mirar dentro.
+ */
+const parse_ts_1 = require("../combat/parse.ts");
+exports.DIRS = ["n", "e", "s", "o"];
+const isDir = (s) => exports.DIRS.includes(s);
+function dirOf(v, path) {
+    const s = (0, parse_ts_1.str)(v, path);
+    if (!isDir(s))
+        (0, parse_ts_1.fail)(path, "se esperaba n, e, s u o");
+    return s;
+}
+function texts(v, path) {
+    const l = (0, parse_ts_1.arr)(v, path).map((x, i) => (0, parse_ts_1.str)(x, `${path}[${i}]`));
+    if (l.length === 0)
+        (0, parse_ts_1.fail)(path, "lista no vacía");
+    return l;
+}
+function spawn(v, path, w, h) {
+    const o = (0, parse_ts_1.obj)(v, path);
+    (0, parse_ts_1.onlyKeys)(o, ["x", "y", "mira"], path);
+    return { x: (0, parse_ts_1.int)(o["x"], `${path}.x`, 0, w - 1), y: (0, parse_ts_1.int)(o["y"], `${path}.y`, 0, h - 1), facing: dirOf(o["mira"], `${path}.mira`) };
+}
+/** mundo §6.2 — `characterIds`: ids de `progresion.mundo.personajes` (el núcleo de progresión no los conserva); si se omite no se comprueban. */
+function parseWorldConfig(raw, prog, characterIds) {
+    const r = (0, parse_ts_1.obj)(raw, "mundo");
+    (0, parse_ts_1.onlyKeys)(r, ["version", "depende_de", "casillas", "movimiento", "encuentros", "mapas", "guardado", "validacion_config", "presentacion"], "mundo");
+    const version = (0, parse_ts_1.str)(r["version"], "version");
+    const dep = (0, parse_ts_1.obj)(r["depende_de"], "depende_de");
+    (0, parse_ts_1.onlyKeys)(dep, ["progresion"], "depende_de");
+    const m = /\.v(\d+\.\d+)\.json$/.exec((0, parse_ts_1.str)(dep["progresion"], "depende_de.progresion"));
+    if (!m)
+        (0, parse_ts_1.fail)("depende_de.progresion", "se esperaba '<nombre>.vX.Y.json'");
+    if (m[1] !== prog.version)
+        (0, parse_ts_1.fail)("depende_de.progresion", `la progresión cargada es v${prog.version}`);
+    const vc = (0, parse_ts_1.obj)(r["validacion_config"], "validacion_config");
+    (0, parse_ts_1.onlyKeys)(vc, ["regex_ids", "borde_no_pisable", "todo_pisable_alcanzable", "ancho_max", "alto_max"], "validacion_config");
+    const idRe = new RegExp((0, parse_ts_1.str)(vc["regex_ids"], "validacion_config.regex_ids"));
+    const borderSolid = vc["borde_no_pisable"] === true;
+    const allReachable = vc["todo_pisable_alcanzable"] === true;
+    const wMax = (0, parse_ts_1.int)(vc["ancho_max"], "validacion_config.ancho_max", 1);
+    const hMax = (0, parse_ts_1.int)(vc["alto_max"], "validacion_config.alto_max", 1);
+    const checkIdRe = (s, p) => {
+        if (!idRe.test(s))
+            (0, parse_ts_1.fail)(p, `id '${s}' no cumple ${idRe.source}`);
+        (0, parse_ts_1.checkId)(s, p);
+    };
+    // §1.2 leyenda
+    const cs = (0, parse_ts_1.obj)(r["casillas"], "casillas");
+    const tiles = {};
+    const tileIds = new Set();
+    for (const ch of (0, parse_ts_1.dataKeys)(cs)) {
+        const p = `casillas.${ch}`;
+        if ([...ch].length !== 1)
+            (0, parse_ts_1.fail)(p, "la clave debe ser un solo carácter");
+        const t = (0, parse_ts_1.obj)(cs[ch], p);
+        (0, parse_ts_1.onlyKeys)(t, ["id", "pisable", "encuentro_pct", "coste_ruta", "activa"], p);
+        const id = (0, parse_ts_1.str)(t["id"], `${p}.id`);
+        checkIdRe(id, `${p}.id`);
+        if (tileIds.has(id))
+            (0, parse_ts_1.fail)(`${p}.id`, `id repetido '${id}'`);
+        tileIds.add(id);
+        if (typeof t["pisable"] !== "boolean")
+            (0, parse_ts_1.fail)(`${p}.pisable`, "se esperaba un booleano");
+        const walkable = t["pisable"];
+        const pct = (0, parse_ts_1.int)(t["encuentro_pct"], `${p}.encuentro_pct`, 0, 100);
+        if (pct > 0 && !walkable)
+            (0, parse_ts_1.fail)(`${p}.encuentro_pct`, "solo una casilla pisable tiene encuentros");
+        let active = null;
+        if (t["activa"] !== undefined) {
+            const a = (0, parse_ts_1.str)(t["activa"], `${p}.activa`);
+            if (a !== "puerta" && a !== "salida")
+                (0, parse_ts_1.fail)(`${p}.activa`, "se esperaba puerta o salida");
+            if (walkable)
+                (0, parse_ts_1.fail)(`${p}.activa`, "una casilla activa no es pisable");
+            active = a;
+        }
+        const cost = (0, parse_ts_1.int)(t["coste_ruta"], `${p}.coste_ruta`, 0);
+        if ((walkable || active !== null) && cost < 1)
+            (0, parse_ts_1.fail)(`${p}.coste_ruta`, "debe ser ≥ 1 en casillas pisables o activas");
+        tiles[ch] = Object.freeze({ char: ch, id, walkable, encounterPct: pct, routeCost: cost, active });
+    }
+    if (Object.keys(tiles).length === 0)
+        (0, parse_ts_1.fail)("casillas", "leyenda vacía");
+    // §2 movimiento
+    const mv = (0, parse_ts_1.obj)(r["movimiento"], "movimiento");
+    (0, parse_ts_1.onlyKeys)(mv, ["ms_por_paso", "cola_entradas", "ruta_max_pasos", "orden_direcciones", "direcciones"], "movimiento");
+    const dirOrder = (0, parse_ts_1.arr)(mv["orden_direcciones"], "movimiento.orden_direcciones").map((x, i) => dirOf(x, `movimiento.orden_direcciones[${i}]`));
+    if (dirOrder.length !== 4 || new Set(dirOrder).size !== 4)
+        (0, parse_ts_1.fail)("movimiento.orden_direcciones", "debe ser una permutación de n, e, s, o");
+    const dv = (0, parse_ts_1.obj)(mv["direcciones"], "movimiento.direcciones");
+    (0, parse_ts_1.onlyKeys)(dv, [...exports.DIRS], "movimiento.direcciones");
+    const vec = {};
+    const seenVec = new Set();
+    for (const d of exports.DIRS) {
+        const o = (0, parse_ts_1.obj)(dv[d], `movimiento.direcciones.${d}`);
+        (0, parse_ts_1.onlyKeys)(o, ["dx", "dy"], `movimiento.direcciones.${d}`);
+        const dx = (0, parse_ts_1.int)(o["dx"], `movimiento.direcciones.${d}.dx`, -1, 1);
+        const dy = (0, parse_ts_1.int)(o["dy"], `movimiento.direcciones.${d}.dy`, -1, 1);
+        if (Math.abs(dx) + Math.abs(dy) !== 1)
+            (0, parse_ts_1.fail)(`movimiento.direcciones.${d}`, "vector unitario (un solo eje)");
+        seenVec.add(`${dx},${dy}`);
+        vec[d] = { dx, dy };
+    }
+    if (seenVec.size !== 4)
+        (0, parse_ts_1.fail)("movimiento.direcciones", "vectores repetidos");
+    const movement = {
+        msPerStep: (0, parse_ts_1.int)(mv["ms_por_paso"], "movimiento.ms_por_paso", 1),
+        queue: (0, parse_ts_1.int)(mv["cola_entradas"], "movimiento.cola_entradas", 0),
+        routeMaxSteps: (0, parse_ts_1.int)(mv["ruta_max_pasos"], "movimiento.ruta_max_pasos", 1),
+        dirOrder,
+        vec,
+    };
+    // §3.2 encuentros
+    const en = (0, parse_ts_1.obj)(r["encuentros"], "encuentros");
+    (0, parse_ts_1.onlyKeys)(en, ["flujo_rng", "tiradas_por_paso_hierba", "escala_pct", "gracia_tras_encuentro", "gracia_al_salir_santuario", "gracia_al_volver_de_lista", "pasos_max_sin_encuentro"], "encuentros");
+    if (en["flujo_rng"] !== "paso")
+        (0, parse_ts_1.fail)("encuentros.flujo_rng", "solo se admite \"paso\" (§3.1)");
+    if (en["tiradas_por_paso_hierba"] !== 1)
+        (0, parse_ts_1.fail)("encuentros.tiradas_por_paso_hierba", "solo se admite 1 (§3.1)");
+    if (en["escala_pct"] !== 100)
+        (0, parse_ts_1.fail)("encuentros.escala_pct", "solo se admite 100 (§1.2)");
+    const encounters = {
+        flow: "paso",
+        scale: 100,
+        graceAfterEncounter: (0, parse_ts_1.int)(en["gracia_tras_encuentro"], "encuentros.gracia_tras_encuentro", 0),
+        graceLeavingSanctuary: (0, parse_ts_1.int)(en["gracia_al_salir_santuario"], "encuentros.gracia_al_salir_santuario", 0),
+        graceReturningFromList: (0, parse_ts_1.int)(en["gracia_al_volver_de_lista"], "encuentros.gracia_al_volver_de_lista", 0),
+        maxStepsWithoutEncounter: (0, parse_ts_1.int)(en["pasos_max_sin_encuentro"], "encuentros.pasos_max_sin_encuentro", 1),
+    };
+    // §5 guardado
+    const gu = (0, parse_ts_1.obj)(r["guardado"], "guardado");
+    (0, parse_ts_1.onlyKeys)(gu, ["clave_almacen", "formato", "version_formato", "flujos_rng"], "guardado");
+    const flows = (0, parse_ts_1.arr)(gu["flujos_rng"], "guardado.flujos_rng");
+    if (flows.length !== 1 || flows[0] !== "paso")
+        (0, parse_ts_1.fail)("guardado.flujos_rng", "debe ser [\"paso\"]");
+    const save = {
+        storageKey: (0, parse_ts_1.str)(gu["clave_almacen"], "guardado.clave_almacen"),
+        format: (0, parse_ts_1.str)(gu["formato"], "guardado.formato"),
+        formatVersion: (0, parse_ts_1.int)(gu["version_formato"], "guardado.version_formato", 1),
+    };
+    // §1.1 mapas
+    const zoneIds = new Set(prog.world.zones.map((z) => z.id));
+    const mapsRaw = (0, parse_ts_1.arr)(r["mapas"], "mapas");
+    if (mapsRaw.length === 0)
+        (0, parse_ts_1.fail)("mapas", "al menos un mapa");
+    const maps = [];
+    const mapIds = new Set();
+    mapsRaw.forEach((mr, mi) => {
+        const p = `mapas[${mi}]`;
+        const o = (0, parse_ts_1.obj)(mr, p);
+        (0, parse_ts_1.onlyKeys)(o, ["id", "zona", "nombre", "provisional", "ancho", "alto", "filas", "inicio", "salida_santuario", "llegada_desde_lista", "activadores", "entidades"], p);
+        const id = (0, parse_ts_1.str)(o["id"], `${p}.id`);
+        checkIdRe(id, `${p}.id`);
+        if (mapIds.has(id))
+            (0, parse_ts_1.fail)(`${p}.id`, "mapa repetido");
+        mapIds.add(id);
+        const zone = (0, parse_ts_1.str)(o["zona"], `${p}.zona`);
+        if (!zoneIds.has(zone))
+            (0, parse_ts_1.fail)(`${p}.zona`, `zona '${zone}' inexistente en progresión`);
+        const width = (0, parse_ts_1.int)(o["ancho"], `${p}.ancho`, 1, wMax);
+        const height = (0, parse_ts_1.int)(o["alto"], `${p}.alto`, 1, hMax);
+        const rows = (0, parse_ts_1.arr)(o["filas"], `${p}.filas`).map((x, i) => (0, parse_ts_1.str)(x, `${p}.filas[${i}]`));
+        if (rows.length !== height)
+            (0, parse_ts_1.fail)(`${p}.filas`, `${rows.length} filas ≠ alto ${height}`);
+        const cells = [];
+        rows.forEach((row, y) => {
+            const chars = [...row];
+            if (chars.length !== width)
+                (0, parse_ts_1.fail)(`${p}.filas[${y}]`, `longitud ${chars.length} ≠ ancho ${width}`);
+            chars.forEach((ch, x) => {
+                const t = tiles[ch];
+                if (t === undefined)
+                    (0, parse_ts_1.fail)(`${p}.filas[${y}]`, `carácter '${ch}' (columna ${x}) fuera de la leyenda`);
+                cells.push(t);
+            });
+        });
+        const at = (x, y) => cells[y * width + x];
+        if (borderSolid) {
+            for (let x = 0; x < width; x++)
+                for (const y of [0, height - 1])
+                    if (at(x, y).walkable)
+                        (0, parse_ts_1.fail)(`${p}.filas`, `borde pisable en (${x}, ${y})`);
+            for (let y = 0; y < height; y++)
+                for (const x of [0, width - 1])
+                    if (at(x, y).walkable)
+                        (0, parse_ts_1.fail)(`${p}.filas`, `borde pisable en (${x}, ${y})`);
+        }
+        const start = spawn(o["inicio"], `${p}.inicio`, width, height);
+        const sanctuaryExit = spawn(o["salida_santuario"], `${p}.salida_santuario`, width, height);
+        const arrivalFromList = spawn(o["llegada_desde_lista"], `${p}.llegada_desde_lista`, width, height);
+        // activadores
+        const activators = (0, parse_ts_1.arr)(o["activadores"], `${p}.activadores`).map((ar, i) => {
+            const q = `${p}.activadores[${i}]`;
+            const a = (0, parse_ts_1.obj)(ar, q);
+            const kind = (0, parse_ts_1.str)(a["tipo"], `${q}.tipo`);
+            if (kind !== "puerta" && kind !== "salida")
+                (0, parse_ts_1.fail)(`${q}.tipo`, "se esperaba puerta o salida");
+            if (kind === "puerta")
+                (0, parse_ts_1.onlyKeys)(a, ["x", "y", "tipo", "destino"], q);
+            else
+                (0, parse_ts_1.onlyKeys)(a, ["x", "y", "tipo", "destino", "zonas", "abre_con_zona", "texto_cerrada"], q);
+            const x = (0, parse_ts_1.int)(a["x"], `${q}.x`, 0, width - 1);
+            const y = (0, parse_ts_1.int)(a["y"], `${q}.y`, 0, height - 1);
+            if (at(x, y).active !== kind)
+                (0, parse_ts_1.fail)(q, `la casilla (${x}, ${y}) '${at(x, y).char}' no es de tipo '${kind}'`);
+            const destination = (0, parse_ts_1.str)(a["destino"], `${q}.destino`);
+            if (kind === "puerta") {
+                if (destination !== "santuario")
+                    (0, parse_ts_1.fail)(`${q}.destino`, "la puerta lleva a 'santuario'");
+                return { x, y, kind, destination, zones: [], opensWithZone: null, closedText: null };
+            }
+            if (destination !== "lista_zonas")
+                (0, parse_ts_1.fail)(`${q}.destino`, "la salida lleva a 'lista_zonas'");
+            const zones = (0, parse_ts_1.arr)(a["zonas"], `${q}.zonas`).map((z, k) => {
+                const zs = (0, parse_ts_1.str)(z, `${q}.zonas[${k}]`);
+                if (!zoneIds.has(zs))
+                    (0, parse_ts_1.fail)(`${q}.zonas[${k}]`, `zona '${zs}' inexistente en progresión`);
+                return zs;
+            });
+            if (zones.length === 0)
+                (0, parse_ts_1.fail)(`${q}.zonas`, "lista no vacía");
+            const opens = (0, parse_ts_1.str)(a["abre_con_zona"], `${q}.abre_con_zona`);
+            if (!zoneIds.has(opens))
+                (0, parse_ts_1.fail)(`${q}.abre_con_zona`, `zona '${opens}' inexistente en progresión`);
+            return { x, y, kind, destination, zones, opensWithZone: opens, closedText: (0, parse_ts_1.str)(a["texto_cerrada"], `${q}.texto_cerrada`) };
+        });
+        const actKeys = new Set();
+        for (const a of activators) {
+            if (actKeys.has(`${a.x},${a.y}`))
+                (0, parse_ts_1.fail)(`${p}.activadores`, `activador repetido en (${a.x}, ${a.y})`);
+            actKeys.add(`${a.x},${a.y}`);
+        }
+        for (let y = 0; y < height; y++)
+            for (let x = 0; x < width; x++)
+                if (at(x, y).active !== null && !actKeys.has(`${x},${y}`))
+                    (0, parse_ts_1.fail)(`${p}.activadores`, `la casilla activa (${x}, ${y}) no tiene activador`);
+        // entidades
+        const entities = (0, parse_ts_1.arr)(o["entidades"], `${p}.entidades`).map((er, i) => {
+            const q = `${p}.entidades[${i}]`;
+            const e = (0, parse_ts_1.obj)(er, q);
+            const kind = (0, parse_ts_1.str)(e["tipo"], `${q}.tipo`);
+            const common = ["id", "tipo", "x", "y", "mira", "provisional"];
+            const base = () => {
+                const eid = (0, parse_ts_1.str)(e["id"], `${q}.id`);
+                checkIdRe(eid, `${q}.id`);
+                const x = (0, parse_ts_1.int)(e["x"], `${q}.x`, 0, width - 1);
+                const y = (0, parse_ts_1.int)(e["y"], `${q}.y`, 0, height - 1);
+                if (!at(x, y).walkable)
+                    (0, parse_ts_1.fail)(q, `la entidad '${eid}' está en una casilla no pisable (${x}, ${y})`);
+                return { id: eid, x, y, facing: e["mira"] === undefined ? null : dirOf(e["mira"], `${q}.mira`) };
+            };
+            switch (kind) {
+                case "personaje": {
+                    (0, parse_ts_1.onlyKeys)(e, [...common, "personaje", "texto_sin_anima", "texto_despues"], q);
+                    const character = (0, parse_ts_1.str)(e["personaje"], `${q}.personaje`);
+                    if (characterIds !== undefined && !characterIds.includes(character))
+                        (0, parse_ts_1.fail)(`${q}.personaje`, `personaje '${character}' inexistente en progresión.mundo.personajes`);
+                    return { ...base(), kind, character, noStarterText: (0, parse_ts_1.str)(e["texto_sin_anima"], `${q}.texto_sin_anima`), afterTexts: texts(e["texto_despues"], `${q}.texto_despues`) };
+                }
+                case "vecino":
+                    (0, parse_ts_1.onlyKeys)(e, [...common, "nombre", "texto"], q);
+                    return { ...base(), kind, name: (0, parse_ts_1.str)(e["nombre"], `${q}.nombre`), texts: texts(e["texto"], `${q}.texto`) };
+                case "cartel":
+                    (0, parse_ts_1.onlyKeys)(e, [...common, "texto"], q);
+                    return { ...base(), kind, texts: texts(e["texto"], `${q}.texto`) };
+                case "objeto": {
+                    (0, parse_ts_1.onlyKeys)(e, [...common, "da", "texto", "texto_lleno"], q);
+                    const da = (0, parse_ts_1.obj)(e["da"], `${q}.da`);
+                    (0, parse_ts_1.onlyKeys)(da, ["faroles"], `${q}.da`);
+                    return { ...base(), kind, gives: { faroles: (0, parse_ts_1.int)(da["faroles"], `${q}.da.faroles`, 1) }, texts: texts(e["texto"], `${q}.texto`), fullText: (0, parse_ts_1.str)(e["texto_lleno"], `${q}.texto_lleno`) };
+                }
+                default:
+                    return (0, parse_ts_1.fail)(`${q}.tipo`, `tipo desconocido '${kind}'`);
+            }
+        });
+        const entIds = new Set();
+        const entPos = new Set();
+        for (const e of entities) {
+            if (entIds.has(e.id))
+                (0, parse_ts_1.fail)(`${p}.entidades`, `id repetido '${e.id}'`);
+            if (entPos.has(`${e.x},${e.y}`))
+                (0, parse_ts_1.fail)(`${p}.entidades`, `dos entidades en (${e.x}, ${e.y})`);
+            entIds.add(e.id);
+            entPos.add(`${e.x},${e.y}`);
+        }
+        // puntos de aparición libres y pisables
+        for (const [name, pl] of [["inicio", start], ["salida_santuario", sanctuaryExit], ["llegada_desde_lista", arrivalFromList]]) {
+            if (!at(pl.x, pl.y).walkable)
+                (0, parse_ts_1.fail)(`${p}.${name}`, `(${pl.x}, ${pl.y}) no es pisable`);
+            if (entPos.has(`${pl.x},${pl.y}`))
+                (0, parse_ts_1.fail)(`${p}.${name}`, `(${pl.x}, ${pl.y}) está ocupada por una entidad`);
+        }
+        // alcanzabilidad (entidades bloquean, como en el juego)
+        const reach = new Uint8Array(width * height);
+        const queue = [start.y * width + start.x];
+        reach[queue[0]] = 1;
+        for (let qi = 0; qi < queue.length; qi++) {
+            const c = queue[qi];
+            const cx = c % width;
+            const cy = (c - cx) / width;
+            for (const d of exports.DIRS) {
+                const nx = cx + vec[d].dx;
+                const ny = cy + vec[d].dy;
+                if (nx < 0 || ny < 0 || nx >= width || ny >= height)
+                    continue;
+                const ni = ny * width + nx;
+                if (reach[ni] === 1 || !at(nx, ny).walkable || entPos.has(`${nx},${ny}`))
+                    continue;
+                reach[ni] = 1;
+                queue.push(ni);
+            }
+        }
+        const reachable = (x, y) => x >= 0 && y >= 0 && x < width && y < height && reach[y * width + x] === 1;
+        const hasReachableNeighbor = (x, y) => exports.DIRS.some((d) => reachable(x + vec[d].dx, y + vec[d].dy));
+        if (allReachable) {
+            for (let y = 0; y < height; y++)
+                for (let x = 0; x < width; x++) {
+                    if (at(x, y).walkable && !entPos.has(`${x},${y}`) && !reachable(x, y))
+                        (0, parse_ts_1.fail)(`${p}.filas`, `casilla pisable inalcanzable desde el inicio: (${x}, ${y})`);
+                }
+        }
+        for (const e of entities)
+            if (!hasReachableNeighbor(e.x, e.y))
+                (0, parse_ts_1.fail)(`${p}.entidades`, `la entidad '${e.id}' no tiene casilla vecina alcanzable`);
+        for (const a of activators)
+            if (!hasReachableNeighbor(a.x, a.y))
+                (0, parse_ts_1.fail)(`${p}.activadores`, `el activador (${a.x}, ${a.y}) no tiene casilla vecina alcanzable`);
+        maps.push({ id, zone, name: (0, parse_ts_1.str)(o["nombre"], `${p}.nombre`), width, height, rows, cells, start, sanctuaryExit, arrivalFromList, activators, entities });
+    });
+    return { version, tiles, movement, encounters, maps, save };
+}
+function mapById(wcfg, id) {
+    const m = wcfg.maps.find((x) => x.id === id);
+    if (m === undefined)
+        throw new Error(`mapa desconocido '${id}'`);
+    return m;
+}
+/** Casilla del mapa; `null` fuera de él. */
+function tileAt(wcfg, mapId, x, y) {
+    const m = mapById(wcfg, mapId);
+    if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= m.width || y >= m.height)
+        return null;
+    return m.cells[y * m.width + x];
+}
+
+};
+defs["packages/core/src/world/world.ts"]=function(module,exports,require){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.worldHash = worldHash;
+exports.newWorld = newWorld;
+exports.activeEntities = activeEntities;
+exports.entityAt = entityAt;
+exports.activatorAt = activatorAt;
+exports.exitOpen = exitOpen;
+exports.facingTarget = facingTarget;
+exports.step = step;
+exports.leaveSanctuary = leaveSanctuary;
+exports.returnFromZoneList = returnFromZoneList;
+exports.interact = interact;
+exports.planRoute = planRoute;
+/**
+ * Estado del mundo caminable, paso, interacción y ruta (spec mundo v0.1 §2–§4).
+ * Funciones puras: devuelven estados nuevos. Único azar: `createRng(semilla|paso|k)` (1 tirada por paso de hierba).
+ */
+const rng_ts_1 = require("../rng.ts");
+const game_ts_1 = require("../progression/game.ts");
+const config_ts_1 = require("./config.ts");
+function worldHash(world) {
+    return (0, rng_ts_1.cyrb128)(JSON.stringify(world)).map((w) => w.toString(16).padStart(8, "0")).join("");
+}
+/** mundo §5.2 — mundo nuevo: en `inicio`, contadores a 0, gracia de salir del santuario, nada recogido. El mapa inicial es el primero de la config. */
+function newWorld(game, wcfg) {
+    const map = wcfg.maps[0];
+    return {
+        formato: wcfg.save.format,
+        version: wcfg.save.formatVersion,
+        semilla: game.semilla,
+        config: { mundo: wcfg.version },
+        mapa: map.id,
+        pos: { x: map.start.x, y: map.start.y },
+        mira: map.start.facing,
+        contadores: { pasos_hierba: 0, pasos_totales: 0 },
+        gracia_restante: wcfg.encounters.graceLeavingSanctuary,
+        pasos_sin_encuentro: 0,
+        recogidos: [],
+        charlas: {},
+    };
+}
+// ---------------------------------------------------------------- consultas
+/** Entidades presentes ahora (un objeto recogido desaparece). */
+function activeEntities(world, wcfg) {
+    return (0, config_ts_1.mapById)(wcfg, world.mapa).entities.filter((e) => !(e.kind === "objeto" && world.recogidos.includes(e.id)));
+}
+function entityAt(world, wcfg, x, y) {
+    return activeEntities(world, wcfg).find((e) => e.x === x && e.y === y) ?? null;
+}
+function activatorAt(wcfg, mapId, x, y) {
+    return (0, config_ts_1.mapById)(wcfg, mapId).activators.find((a) => a.x === x && a.y === y) ?? null;
+}
+/** ¿Está abierta la salida? (`zoneUnlocked` de progresión, §1.5). */
+function exitOpen(game, a, prog) {
+    return a.kind !== "salida" || a.opensWithZone === null || (0, game_ts_1.zoneUnlocked)(game, a.opensWithZone, prog);
+}
+/** Casilla hacia la que mira el jugador, con lo que hay en ella. */
+function facingTarget(world, wcfg) {
+    const v = wcfg.movement.vec[world.mira];
+    const x = world.pos.x + v.dx;
+    const y = world.pos.y + v.dy;
+    const map = (0, config_ts_1.mapById)(wcfg, world.mapa);
+    const inside = x >= 0 && y >= 0 && x < map.width && y < map.height;
+    return {
+        x,
+        y,
+        tile: inside ? map.cells[y * map.width + x] : null,
+        entity: inside ? entityAt(world, wcfg, x, y) : null,
+        activator: inside ? activatorAt(wcfg, world.mapa, x, y) : null,
+    };
+}
+function sameSeed(world, game) {
+    if (world.semilla !== game.semilla)
+        throw new game_ts_1.GameRuleError("el mundo y la partida tienen semillas distintas");
+}
+/**
+ * mundo §2.1 — un paso. La orientación pasa a `dir` siempre. Orden de comprobación: borde, entidad,
+ * activador, no pisable, hierba sin inicial, mover. Bloquear no consume tiradas ni toca contadores.
+ */
+function step(world, game, dir, wcfg, prog) {
+    sameSeed(world, game);
+    const map = (0, config_ts_1.mapById)(wcfg, world.mapa);
+    const turned = world.mira === dir ? world : { ...world, mira: dir };
+    const v = wcfg.movement.vec[dir];
+    const x = world.pos.x + v.dx;
+    const y = world.pos.y + v.dy;
+    const blocked = (reason, text) => ({
+        world: turned,
+        game,
+        outcome: (text === undefined ? { kind: "blocked", reason } : { kind: "blocked", reason, text }),
+    });
+    if (x < 0 || y < 0 || x >= map.width || y >= map.height)
+        return blocked("edge"); // 1
+    if (entityAt(world, wcfg, x, y) !== null)
+        return blocked("entity"); // 2
+    const act = activatorAt(wcfg, world.mapa, x, y);
+    if (act !== null) { // 3
+        if (act.kind === "puerta")
+            return { world: turned, game, outcome: { kind: "door", to: act.destination } };
+        if (!exitOpen(game, act, prog))
+            return blocked("exit_locked", act.closedText ?? undefined);
+        return { world: turned, game, outcome: { kind: "exit", zones: act.zones } };
+    }
+    const tile = map.cells[y * map.width + x];
+    if (!tile.walkable)
+        return blocked("solid"); // 4
+    if (tile.encounterPct > 0 && game.inicial.elegida === null)
+        return blocked("no_starter"); // 5
+    // 6: se mueve
+    const moved = { ...turned, pos: { x, y }, contadores: { ...world.contadores, pasos_totales: world.contadores.pasos_totales + 1 } };
+    if (tile.encounterPct === 0)
+        return { world: moved, game, outcome: { kind: "moved", tile } };
+    return grassStep(moved, game, tile, map, wcfg, prog);
+}
+/** mundo §3.1 — 1 tirada fija por paso de hierba, también en gracia. */
+function grassStep(moved, game, tile, map, wcfg, prog) {
+    const E = wcfg.encounters;
+    const k = moved.contadores.pasos_hierba; // valor ANTES de incrementar
+    const u = (0, rng_ts_1.createRng)(`${game.semilla}|${E.flow}|${k}`).next();
+    const counters = { ...moved.contadores, pasos_hierba: k + 1 };
+    if (moved.gracia_restante > 0) {
+        // en gracia nunca hay encuentro; pasos_sin_encuentro no cambia
+        return { world: { ...moved, contadores: counters, gracia_restante: moved.gracia_restante - 1 }, game, outcome: { kind: "moved", tile } };
+    }
+    const hit = Math.floor(u * E.scale) < tile.encounterPct || moved.pasos_sin_encuentro + 1 >= E.maxStepsWithoutEncounter;
+    if (hit) {
+        try {
+            const r = (0, game_ts_1.rollEncounter)(game, map.zone, prog); // progresión §2.3, sin cambios
+            const w = { ...moved, contadores: counters, gracia_restante: Math.max(moved.gracia_restante, E.graceAfterEncounter), pasos_sin_encuentro: 0 };
+            return { world: w, game: r.game, outcome: { kind: "encounter", tile, encounter: r.encounter } };
+        }
+        catch (e) {
+            // §3.1: si rollEncounter lanza GameRuleError el paso queda hecho sin encuentro
+            if (!(e instanceof game_ts_1.GameRuleError))
+                throw e;
+            return { world: { ...moved, contadores: counters, pasos_sin_encuentro: moved.pasos_sin_encuentro + 1 }, game, outcome: { kind: "moved", tile, error: e.message } };
+        }
+    }
+    return { world: { ...moved, contadores: counters, pasos_sin_encuentro: moved.pasos_sin_encuentro + 1 }, game, outcome: { kind: "moved", tile } };
+}
+/** mundo §4.1 — al salir del santuario: `salida_santuario` y gracia (nunca baja la que hubiera). */
+function leaveSanctuary(world, wcfg) {
+    const p = (0, config_ts_1.mapById)(wcfg, world.mapa).sanctuaryExit;
+    return { ...world, pos: { x: p.x, y: p.y }, mira: p.facing, gracia_restante: Math.max(world.gracia_restante, wcfg.encounters.graceLeavingSanctuary) };
+}
+/** mundo §1.5 — al volver de la lista de zonas: `llegada_desde_lista` y gracia. */
+function returnFromZoneList(world, wcfg) {
+    const p = (0, config_ts_1.mapById)(wcfg, world.mapa).arrivalFromList;
+    return { ...world, pos: { x: p.x, y: p.y }, mira: p.facing, gracia_restante: Math.max(world.gracia_restante, wcfg.encounters.graceReturningFromList) };
+}
+/** mundo §6.3 — «usar» sobre la casilla a la que se mira. */
+function interact(world, game, wcfg, prog) {
+    sameSeed(world, game);
+    const t = facingTarget(world, wcfg);
+    const out = (outcome, w = world, g = game) => ({ world: w, game: g, outcome });
+    if (t.activator !== null) {
+        if (t.activator.kind === "puerta")
+            return out({ kind: "door", to: t.activator.destination });
+        if (!exitOpen(game, t.activator, prog))
+            return out({ kind: "exit_locked", text: t.activator.closedText ?? "" });
+        return out({ kind: "exit", zones: t.activator.zones });
+    }
+    const e = t.entity;
+    if (e === null)
+        return out({ kind: "nothing" });
+    switch (e.kind) {
+        case "personaje": {
+            // §4.2: la primera vez (sin inicial) la intro; después, texto_despues en ciclo (índice charlas mod nº de textos)
+            if (game.inicial.elegida === null)
+                return out({ kind: "arnal_intro", id: e.id, character: e.character });
+            const n = world.charlas[e.id] ?? 0;
+            const w = { ...world, charlas: { ...world.charlas, [e.id]: n + 1 } };
+            return out({ kind: "talk", id: e.id, name: null, text: [e.afterTexts[n % e.afterTexts.length]] }, w);
+        }
+        case "vecino":
+            return out({ kind: "talk", id: e.id, name: e.name, text: e.texts });
+        case "cartel":
+            return out({ kind: "sign", id: e.id, text: e.texts });
+        case "objeto": {
+            // §1.4: una vez por partida; con el tope de faroles no se recoge y queda ahí
+            const max = prog.resources.lanternsMax;
+            if (game.recursos.faroles >= max)
+                return out({ kind: "pickup_full", id: e.id, text: e.fullText });
+            const gained = Math.min(e.gives.faroles, max - game.recursos.faroles);
+            const g = { ...game, recursos: { ...game.recursos, faroles: game.recursos.faroles + gained } };
+            const w = { ...world, recogidos: [...world.recogidos, e.id] };
+            return out({ kind: "pickup", id: e.id, text: e.texts, faroles: gained }, w, g);
+        }
+    }
+}
+// ---------------------------------------------------------------- ruta táctil (§2.4)
+/**
+ * mundo §2.4 — Dijkstra con coste entero por casilla de entrada (`coste_ruta`). Desempate: menor coste,
+ * menos pasos, y después el orden de inserción (que sigue `orden_direcciones` al expandir). Determinista.
+ * - Destino pisable libre: ruta hasta él (sin inicial elegida la hierba alta cuenta como cerrada, como en `step`).
+ * - Destino entidad o activador: ruta a la vecina pisable de menor coste (desempate por `orden_direcciones`),
+ *   más un último giro hacia el destino si hace falta. Ese último `step` queda bloqueado (entidad) o dispara
+ *   el evento (puerta/salida): el cliente ejecuta «usar» al llegar.
+ * - Sin ruta o más de `ruta_max_pasos` → `null`.
+ */
+function planRoute(world, game, target, wcfg) {
+    const map = (0, config_ts_1.mapById)(wcfg, world.mapa);
+    const { width: W, height: H } = map;
+    if (!Number.isInteger(target.x) || !Number.isInteger(target.y) || target.x < 0 || target.y < 0 || target.x >= W || target.y >= H)
+        return null;
+    const order = wcfg.movement.dirOrder;
+    const vec = wcfg.movement.vec;
+    const ents = new Set(activeEntities(world, wcfg).map((e) => e.y * W + e.x));
+    const noStarter = game.inicial.elegida === null;
+    const passable = (i) => {
+        const t = map.cells[i];
+        return t.walkable && !ents.has(i) && !(noStarter && t.encounterPct > 0);
+    };
+    const dist = new Array(W * H).fill(Infinity);
+    const steps = new Array(W * H).fill(Infinity);
+    const prev = new Array(W * H).fill(-1);
+    const prevDir = new Array(W * H).fill(null);
+    const done = new Array(W * H).fill(false);
+    const start = world.pos.y * W + world.pos.x;
+    dist[start] = 0;
+    steps[start] = 0;
+    // frontera: [coste, pasos, secuencia, casilla]
+    const frontier = [[0, 0, 0, start]];
+    let seq = 1;
+    while (frontier.length > 0) {
+        let bi = 0;
+        for (let i = 1; i < frontier.length; i++) {
+            const a = frontier[i];
+            const b = frontier[bi];
+            if (a[0] < b[0] || (a[0] === b[0] && (a[1] < b[1] || (a[1] === b[1] && a[2] < b[2]))))
+                bi = i;
+        }
+        const [, , , c] = frontier.splice(bi, 1)[0];
+        if (done[c])
+            continue;
+        done[c] = true;
+        const cx = c % W;
+        const cy = (c - cx) / W;
+        for (const d of order) {
+            const nx = cx + vec[d].dx;
+            const ny = cy + vec[d].dy;
+            if (nx < 0 || ny < 0 || nx >= W || ny >= H)
+                continue;
+            const ni = ny * W + nx;
+            if (done[ni] || !passable(ni))
+                continue;
+            const nd = dist[c] + map.cells[ni].routeCost;
+            const ns = steps[c] + 1;
+            if (nd < dist[ni] || (nd === dist[ni] && ns < steps[ni])) {
+                dist[ni] = nd;
+                steps[ni] = ns;
+                prev[ni] = c;
+                prevDir[ni] = d;
+                frontier.push([nd, ns, seq++, ni]);
+            }
+        }
+    }
+    const pathTo = (i) => {
+        const p = [];
+        for (let c = i; c !== start; c = prev[c])
+            p.push(prevDir[c]);
+        return p.reverse();
+    };
+    const ti = target.y * W + target.x;
+    let path;
+    if (passable(ti)) {
+        if (!done[ti])
+            return null;
+        path = pathTo(ti);
+    }
+    else if (ents.has(ti) || activatorAt(wcfg, world.mapa, target.x, target.y) !== null) {
+        // vecina alcanzable de menor coste (después, menos pasos, después orden de direcciones)
+        let best = null;
+        for (const d of order) {
+            // la vecina n del destino se alcanza mirando hacia el destino con la dirección opuesta
+            const nx = target.x - vec[d].dx;
+            const ny = target.y - vec[d].dy;
+            if (nx < 0 || ny < 0 || nx >= W || ny >= H)
+                continue;
+            const ni = ny * W + nx;
+            if (!done[ni])
+                continue;
+            if (best === null || dist[ni] < dist[best.i] || (dist[ni] === dist[best.i] && steps[ni] < steps[best.i]))
+                best = { i: ni, d };
+        }
+        if (best === null)
+            return null;
+        path = pathTo(best.i);
+        const last = path.length > 0 ? path[path.length - 1] : world.mira;
+        if (last !== best.d)
+            path.push(best.d); // giro final hacia el destino
+    }
+    else
+        return null;
+    return path.length > wcfg.movement.routeMaxSteps ? null : path;
+}
+
+};
+defs["packages/core/src/world/save.ts"]=function(module,exports,require){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.serializeWorld = serializeWorld;
+exports.parseWorldSave = parseWorldSave;
+const config_ts_1 = require("./config.ts");
+const world_ts_1 = require("./world.ts");
+/** mundo §5.1 — texto del guardado (JSON; el orden de claves es el de construcción). */
+function serializeWorld(world) {
+    return JSON.stringify(world);
+}
+class WorldSaveError extends Error {
+}
+const bad = (p, m) => {
+    throw new WorldSaveError(`${p}: ${m}`);
+};
+function o(v, p, keys) {
+    if (typeof v !== "object" || v === null || Array.isArray(v))
+        bad(p, "se esperaba un objeto");
+    for (const k of Object.keys(v))
+        if (!keys.includes(k))
+            bad(`${p}.${k}`, "clave desconocida");
+    for (const k of keys)
+        if (!(k in v))
+            bad(`${p}.${k}`, "falta la clave");
+    return v;
+}
+function n(v, p, min, max) {
+    if (typeof v !== "number" || !Number.isInteger(v) || v < min || v > max)
+        bad(p, `se esperaba un entero en [${min}, ${max}]`);
+    return v;
+}
+/**
+ * mundo §5.1 — carga sin tiradas. `text` null/undefined (sin clave) = mundo nuevo sin aviso.
+ * Valida formato y versión, semilla igual a la de la partida, mapa, posición pisable y sin entidad,
+ * orientación, rangos de contadores, `recogidos` ⊂ objetos del mapa y `charlas` ⊂ entidades.
+ */
+function parseWorldSave(text, game, wcfg) {
+    if (text === null || text === undefined)
+        return { world: (0, world_ts_1.newWorld)(game, wcfg), notes: [] };
+    try {
+        return { world: parseStrict(text, game, wcfg), notes: [] };
+    }
+    catch (e) {
+        if (!(e instanceof WorldSaveError) && !(e instanceof SyntaxError))
+            throw e;
+        return { world: (0, world_ts_1.newWorld)(game, wcfg), notes: [`Guardado del mundo descartado (${e.message}): empiezas delante del santuario. La partida no cambia.`] };
+    }
+}
+function parseStrict(text, game, wcfg) {
+    const raw = JSON.parse(text);
+    const r = o(raw, "mundo", ["formato", "version", "semilla", "config", "mapa", "pos", "mira", "contadores", "gracia_restante", "pasos_sin_encuentro", "recogidos", "charlas"]);
+    if (r["formato"] !== wcfg.save.format)
+        bad("formato", `se esperaba '${wcfg.save.format}'`);
+    if (r["version"] !== wcfg.save.formatVersion)
+        bad("version", `versión no soportada: ${String(r["version"])}`);
+    if (r["semilla"] !== game.semilla)
+        bad("semilla", "no es la de la partida cargada");
+    const cfg = o(r["config"], "config", ["mundo"]);
+    if (cfg["mundo"] !== wcfg.version)
+        bad("config.mundo", `se esperaba '${wcfg.version}'`);
+    const map = wcfg.maps.find((m) => m.id === r["mapa"]);
+    if (map === undefined)
+        return bad("mapa", "el mapa no existe");
+    const pos = o(r["pos"], "pos", ["x", "y"]);
+    const x = n(pos["x"], "pos.x", 0, map.width - 1);
+    const y = n(pos["y"], "pos.y", 0, map.height - 1);
+    const mira = r["mira"];
+    if (typeof mira !== "string" || !config_ts_1.DIRS.includes(mira))
+        bad("mira", "orientación inválida");
+    const c = o(r["contadores"], "contadores", ["pasos_hierba", "pasos_totales"]);
+    const E = wcfg.encounters;
+    const graceMax = Math.max(E.graceAfterEncounter, E.graceLeavingSanctuary, E.graceReturningFromList);
+    const gracia = n(r["gracia_restante"], "gracia_restante", 0, graceMax);
+    const sin = n(r["pasos_sin_encuentro"], "pasos_sin_encuentro", 0, E.maxStepsWithoutEncounter - 1);
+    if (!Array.isArray(r["recogidos"]))
+        bad("recogidos", "se esperaba una lista");
+    const objects = new Set(map.entities.filter((e) => e.kind === "objeto").map((e) => e.id));
+    const recogidos = r["recogidos"].map((id, i) => {
+        if (typeof id !== "string" || !objects.has(id))
+            bad(`recogidos[${i}]`, "no es un objeto del mapa");
+        return id;
+    });
+    if (new Set(recogidos).size !== recogidos.length)
+        bad("recogidos", "elementos repetidos");
+    const ch = r["charlas"];
+    if (typeof ch !== "object" || ch === null || Array.isArray(ch))
+        bad("charlas", "se esperaba un objeto");
+    const ids = new Set(map.entities.map((e) => e.id));
+    const charlas = {};
+    for (const [k, v] of Object.entries(ch)) {
+        if (!ids.has(k))
+            bad(`charlas.${k}`, "no es una entidad del mapa");
+        charlas[k] = n(v, `charlas.${k}`, 0, Number.MAX_SAFE_INTEGER);
+    }
+    const world = {
+        formato: wcfg.save.format,
+        version: wcfg.save.formatVersion,
+        semilla: game.semilla,
+        config: { mundo: wcfg.version },
+        mapa: map.id,
+        pos: { x, y },
+        mira: mira,
+        contadores: { pasos_hierba: n(c["pasos_hierba"], "contadores.pasos_hierba", 0, Number.MAX_SAFE_INTEGER), pasos_totales: n(c["pasos_totales"], "contadores.pasos_totales", 0, Number.MAX_SAFE_INTEGER) },
+        gracia_restante: gracia,
+        pasos_sin_encuentro: sin,
+        recogidos,
+        charlas,
+    };
+    // posición pisable, sin entidad y sin ser un activador
+    const tile = (0, config_ts_1.mapById)(wcfg, map.id).cells[y * map.width + x];
+    if (tile === undefined || !tile.walkable)
+        bad("pos", `(${x}, ${y}) no es pisable`);
+    if ((0, world_ts_1.activeEntities)(world, wcfg).some((e) => e.x === x && e.y === y))
+        bad("pos", `(${x}, ${y}) está ocupada por una entidad`);
+    return world;
+}
+
+};
 defs["client/combat/data.ts"]=function(module,exports,require){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -10171,7 +11171,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ESSENCE_NOTE = exports.ZONE_BLURB = exports.HITO = exports.COMPANION_NAME = exports.ARNAL = exports.pcfg = void 0;
+exports.LOOK = exports.wcfg = exports.ESSENCE_NOTE = exports.ZONE_BLURB = exports.HITO = exports.COMPANION_NAME = exports.ARNAL = exports.pcfg = void 0;
 /** Config de progresión y textos del juego de ánimas. Solo usa la API pública del núcleo. */
 const progresion_v0_1_json_1 = __importDefault(require("../../config/progresion.v0.1.json"));
 const index_ts_1 = require("../../packages/core/src/index.ts");
@@ -10190,10 +11190,2099 @@ exports.ZONE_BLURB = {
     cantil_farol_roto: "El borde donde se rompió el Gran Farol. Grupos grandes y de mucho carácter.",
 };
 exports.ESSENCE_NOTE = "La esencia es lo que cuesta resonar; se gana al apagar salvajes y al liberar ánimas maduras.";
+// ------------------------------------------------------------------ mundo caminable (D-074, spec mundo v0.1)
+const mundo_v0_1_json_1 = __importDefault(require("../../config/mundo.v0.1.json"));
+const index_ts_2 = require("../../packages/core/src/index.ts");
+exports.wcfg = (0, index_ts_2.parseWorldConfig)(mundo_v0_1_json_1.default, exports.pcfg, mundo.personajes.map((p) => p.id));
+exports.LOOK = mundo_v0_1_json_1.default.presentacion;
 
 };
 defs["config/progresion.v0.1.json"]=function(module,exports,require){
 module.exports = {"_doc":"Configuración de progresión v0.1 (Fase 2, paso 1): colección, encuentros, atrapar, experiencia y niveles, resonancia en el juego, guardado. Fuente: docs/spec/progresion-v0.1.md. Todo número de la spec está aquí; si no coinciden, manda este fichero. Probabilidades en [0,1]. Los textos para el jugador son provisionales (nombres: decide Miguel). Actualizada con D-068 (variantes, liberar, equipos de 1 a 3, nombres provisionales). Revisada con D-070 y QA (docs/revisiones/qa-progresion-v0.1.md). D-072/D-073: tolerancia de variantes, IA salvaje de referencia, Cantil 5/50/45 y acompañante hasta 3 ánimas.","version":"0.1","depende_de":{"_doc":"Configs vigentes que esta spec usa sin cambiarlas. Movimientos: catálogo reequilibrado v0.5 (D-069), gramática de movimientos v0.2 + v0.4.","genetica":"genetica.v0.2.json","movimientos":"movimientos.v0.5.json","combate":"combate.v0.5.json"},"niveles":{"_doc":"§4. Nivel derivado de la experiencia total (instancia: anima.xp). xp_total[L-1] = experiencia total para estar en el nivel L. Fórmula de referencia: 5·(L−1)·(L+2) (subir de L a L+1 cuesta 10·L + 10). La tabla es la autoridad; el parser comprueba longitud = nivel_max, empieza en 0 y es estrictamente creciente.","nivel_max":30,"xp_total":[0,20,50,90,140,200,270,350,440,540,650,770,900,1040,1190,1350,1520,1700,1890,2090,2300,2520,2750,2990,3240,3500,3770,4050,4340,4640],"nivel_eco_al_nacer":1,"nivel_inicial":1},"experiencia":{"_doc":"§4.2. Por cada ánima salvaje que se apaga: xp = base + por_nivel · nivel_salvaje. Victoria: cada ánima del equipo del jugador (también las apagadas) recibe la suma entera, sin dividir. Derrota: floor(suma de las salvajes apagadas / divisor_derrota). Huida: 0. El acompañante no recibe nada.","base":15,"por_nivel":5,"reparto":"completo","divisor_derrota":2},"desbloqueos":{"_doc":"§4.3 y §8. Huecos de movimiento: hueco 0 = gratis (siempre el gen de extremidades, nunca se cambia). Huecos 1..3 = de pago; nivel en que se abre cada uno y locus que lo ocupa por defecto al abrirse. D-067: se empieza con gratis + 1 de pago.","hueco_gratis_locus":"extremidades","huecos_pago":[{"hueco":1,"nivel":1,"locus_por_defecto":"cola"},{"hueco":2,"nivel":3,"locus_por_defecto":"cabeza"},{"hueco":3,"nivel":10,"locus_por_defecto":"cuerpo"}],"nivel_madurar":5,"revelar_ocultos":{"_doc":"§4.4. Al alcanzar cada nivel de la lista se revela el gen oculto de la misma posición en 'orden'. Sin tiradas.","niveles":[8,11,14,17,20,23,26,29],"orden":["cabeza.R1","cuerpo.R1","extremidades.R1","cola.R1","cabeza.R2","cuerpo.R2","extremidades.R2","cola.R2"]}},"variantes":{"_doc":"§4.5 (D-068, D-070). En cada nivel de 'niveles' se elige una de dos variantes del movimiento de gen del locus indicado. Variante = una pieza cambiada (tabla de ejes de la spec), mismo arquetipo y coste; válida si puntosEf(M) − holgura_puntos <= puntosEf(variante) <= puntosEf(M) + tolerancia_puntos (D-072: un paso de redondeo), con puntosEf contando topes y redondeos, y si no añade una pieza sin perder potencia; `tolerancia` es solo el épsilon de comparación. 2 tiradas fijas, flujo createRng(prefijo_semilla + clave + '|' + nivel). n < 2 → respaldo. Elección definitiva, guardada como {eje, pieza}; conmutable con el original.","niveles":[15,20,25,30],"locus_por_nivel":{"15":"cola","20":"cabeza","25":"cuerpo","30":"extremidades"},"orden_respaldo":["cola","cabeza","cuerpo","extremidades"],"ejes":["modificador","estado","condicion"],"piezas_excluidas":[],"_doc_piezas_excluidas":"Ids de pieza que nunca se usan en variantes (se rellena solo si la simulación encuentra variantes rotas).","prefijo_semilla":"var|v0.1|","tiradas":2,"eleccion_definitiva":true,"conmutar_con_original":true,"heredable":false,"holgura_puntos":3,"tolerancia_puntos":1,"tolerancia":1e-9,"guardar_como":"eje_pieza"},"recursos":{"_doc":"§3 y §5. Faroles y esencia: sin moneda ni compra. Topes de inventario.","faroles_iniciales":6,"faroles_por_victoria":1,"faroles_max":12,"esencia_inicial":30,"esencia_por_salvaje":{"_doc":"Por cada salvaje apagada, solo en victoria: base + floor(nivel / divisor_nivel).","base":5,"divisor_nivel":2},"esencia_max":999},"atrapar":{"_doc":"§3.2 (QA B-07). Enteros en porcentaje: pct1 = clamp(base_pct + floor(bono_vida_pct·SV/SM) − penal_nivel_pct·dn − floor(penal_pureza_pct·(c100 − c100_min)/c100_rango), pct_min, pct_max); pct2 = min(pct_max, pct1 + bono_reintento_pct); atrapada si floor(u·100) < pct. SV/SM = vida de tu equipo sin acompañante; dn sin acompañante; c100 = Math.round(calidadCriatura·100). 1 tirada por intento.","base_pct":60,"bono_vida_pct":25,"penal_nivel_pct":5,"penal_pureza_pct":15,"c100_min":8550,"c100_rango":900,"pct_min":25,"pct_max":95,"bono_reintento_pct":20,"intentos_max_por_salvaje":2,"tiradas_por_intento":1},"resonancia":{"_doc":"§5. Coste en esencia = base + por_eco_previo · (crias_A + crias_B). Límite de ecos por ánima y edad mínima: genetica.v0.2 limites_sim (5 y 1). Requisito extra: nivel ≥ desbloqueos.nivel_madurar en los dos padres.","coste_base":5,"coste_por_eco_previo":1,"tiradas_por_resonancia":280},"coleccion":{"_doc":"§6.","tamano_max":100,"equipo_max":3,"equipo_min":1,"liberar":{"_doc":"§6.2 (D-068, QA B-06). Por debajo de nivel_minimo no da nada; desde ahí esencia = esencia_base + floor(nivel / divisor_nivel) (5 → 2, 10 → 3, 30 → 7). No se puede liberar la última ánima ni una del equipo.","activo":true,"esencia_base":1,"divisor_nivel":5,"nivel_minimo":5},"nombre_max_caracteres":16},"nombres":{"_doc":"§1.4. Nombre por defecto = prefijo + sufijo (2 tiradas en el flujo |nombre|<nacimiento>). Sílabas originales; el jugador puede renombrar.","prefijos":["Bri","Cal","Dro","Fen","Gur","Isk","Lum","Mor","Nix","Pel","Rua","Sil","Tov","Vey","Zan","Ores"],"sufijos":["o","a","ix","el","un","ra","ek","is"],"tiradas":2},"mundo":{"_doc":"§2. Datos de zonas, encuentros y personajes, separados de la presentación (D-062). La pantalla los muestra como lista (paso 1) o como escenas (paso 2) sin cambiar estos datos. Textos provisionales.","zonas":[{"id":"prado_linde","nombre":"Prado de la Linde","nivel_min":1,"nivel_max":3,"grupo_pesos":[0.7,0.3,0],"familias_pesos":{"brote":1,"marea":1,"llama":1},"desbloqueo_nivel":0,"provisional":true},{"id":"marismas_quietas","nombre":"Marismas Quietas","nivel_min":5,"nivel_max":10,"grupo_pesos":[0.3,0.5,0.2],"familias_pesos":{"marea":1,"roca":1,"voltio":1,"brote":0.5},"desbloqueo_nivel":5,"provisional":true},{"id":"cantil_farol_roto","nombre":"Cantil del Farol Roto","nivel_min":10,"nivel_max":16,"grupo_pesos":[0.05,0.5,0.45],"familias_pesos":{"sombra":1,"voltio":1,"roca":1,"llama":0.5},"desbloqueo_nivel":10,"provisional":true}],"encuentro":{"_doc":"§2.3. Consumo fijo: 1 (tamaño del grupo) + grupo_max · (1 familia + 1 nivel + 205 salvaje) = 622. Se generan siempre 3 salvajes y se usan los primeros n. Las salvajes llevan id temporal y birth 0; al atraparlas reciben id = idAnima(++nacimientos) (QA B-04).","grupo_max":3,"tiradas_por_salvaje_extra":2,"tiradas_por_encuentro":622,"salvaje_puro":false,"id_temporal":"w<encuentro>-<i>","birth_temporal":0},"iniciales":{"_doc":"§1.3. Tres ánimas puras (todas sus genes de la familia), nivel 1, generadas del flujo |inicial|k (k = 0, 1, 2; 205 tiradas cada una).","familias":["llama","marea","brote"],"puras":true},"acompanante":{"_doc":"§2.4. Ánima del hechicero que lucha a tu lado mientras tengas menos de 'mientras_animas_menos_de' ánimas. Fija para todas las partidas (semilla propia). No recibe experiencia, no se puede atrapar ni resonar.","activo":true,"semilla":"acompanante|v0.1","familia":"sombra","nivel":10,"mientras_animas_menos_de":3},"personajes":[{"id":"hechicero","nombre":"Arnal","titulo":"farolero del santuario","lugar":"santuario","texto_inicio":["Llegas tarde. Las ánimas llevan tres noches sin dejarme dormir.","Son ánimas errantes: chispas sueltas desde que se rompió el Gran Farol. No son almas de nadie; solo tienen mucho carácter.","Sin un guardián se aburren. Y aburridas, muerden.","Elige una. Te seguirá, te desobedecerá a ratos y, si la cuidas, resonará con otras y dejará ecos.","Toma estos faroles. Lo demás lo aprenderás perdiendo."],"provisional":true}],"nombres_provisionales":{"_doc":"D-068: nombres provisionales, se cambian sin tocar reglas.","gran_farol":"Gran Farol","provisional":true}},"ia_salvaje":{"_doc":"§2.5. 'instinto': cada salvaje, en orden de equipo, usa el movimiento de pago más caro que pueda pagar con la energía que dejan las anteriores y que no esté descansando (empate: hueco menor); si no, el gratis. Nunca ahorra; la última ánima usa un solo movimiento. 'referencia': la IA de referencia de combate v0.5. Sin tiradas. Objetivo, aliado protegido o curado: el automático de combate (QA B-13).","modo":"referencia"},"combate_salvaje":{"_doc":"§2.2 (D-068). Extensión de tamaño de equipo: cada bando 1..combate.equipo.tamano (que pasa a ser el máximo). No cambia reglas; 3 contra 3 debe dar hashes idénticos al motor anterior (criterios_sim.no_regresion_3v3).","tamano_min":1,"colocaciones_por_tamano":{"1":["1+0"],"2":["2+0","1+1"],"3":["2+1","1+2"]},"colocacion_ia_por_tamano":{"1":[1],"2":[1,2]},"curacion_tras_combate":"completa"},"guardado":{"_doc":"§7. localStorage; una sola ranura.","clave_almacen":"genoma.partida","formato":"genoma-partida","version_formato":1,"flujos_rng":["inicial","encuentro","combate","farol","resonancia","nombre"]},"validacion_config":{"_doc":"§10.1. Comprobaciones del parser (sin tiradas).","regex_ids":"^[a-z0-9_]+$","formula_tiradas_encuentro":"1 + grupo_max * (tiradas_por_salvaje_extra + genetica.salvaje.tiradas_por_criatura)"},"escenarios_sim":{"_doc":"§9. Jugador modelo y montaje para el analista. Semillas NUEVAS (prefijo distinto de cualquiera usado al elegir estos números).","semilla_prefijo":"prog01","partidas":500,"sesiones":3,"combates_por_sesion":6,"sesiones_largas":12,"segundos_por_turno":10,"segundos_fijos_por_combate":30,"segundos_por_resonancia":40,"espejos_nivel_combates":4000,"variantes_genes_mutados":500},"criterios_sim":{"_doc":"§9.2. Umbrales.","resonancias_3_sesiones":{"mediana_min":20,"p10_min":15,"_doc":"Se debe cumplir en todo el rango de victorias 80/70/55 – 100 %."},"resonancias_sesion_1":{"mediana_min":2},"minutos_por_sesion":{"min":10,"max":20},"nivel_favorito_3_sesiones":{"mediana_min":15,"mediana_max":22},"combates_hasta_nivel_max":{"mediana_min":28,"mediana_max":70,"_doc":"QA B-15: con 100 % de victorias la mediana es 31; el mínimo vigila que el tope no llegue en 3 sesiones."},"atrapar_primer_intento":{"min":0.6,"max":0.8},"atrapar_con_reintento":{"min":0.85,"max":0.97},"victorias_jugador_por_zona":{"prado_linde":0.8,"marismas_quietas":0.7,"cantil_farol_roto_min":0.55,"cantil_farol_roto_max":0.8},"primer_combate_victoria_min":0.9,"espejo_4_vs_3_movimientos":{"min":0.52,"max":0.65},"espejo_4_vs_2_movimientos":{"min":0.6,"max":0.85},"turnos_salvaje":{"prado_linde_max":6,"cantil_farol_roto_max":9,"empates_max":0.02},"bloqueo_por_esencia_max":0.5,"coleccion_llena_3_sesiones_max":0,"variantes":{"espejo_nivel30_min":0.45,"espejo_nivel30_max":0.55,"pieza_gratis_max":0.58,"sin_candidatos_max":0.05,"sin_candidatos_gratis_max":0.15,"puntos_efectivos_mayores_max":0,"sin_candidatos_max_doc":"n < 2 (respaldo)"},"liberar_fraccion_esencia_max":0.15,"no_regresion_3v3":{"partidas_min":200,"hashes_iguales":1}}};
+};
+defs["config/mundo.v0.1.json"]=function(module,exports,require){
+module.exports = {"_doc":"Configuración del mundo caminable v0.1 (D-074): el Prado de la Linde como mapa en cuadrícula vista desde arriba. Fuente: docs/spec/mundo-v0.1.md. Todo número de la spec está aquí; si no coinciden, manda este fichero. Probabilidades en porcentaje entero. Datos del mapa separados de la presentación (D-062): el bloque 'presentacion' solo lo lee el cliente. Textos y nombres provisionales. No cambia ninguna regla de progresión v0.1 ni de combate v0.5.","version":"0.1","depende_de":{"_doc":"Configs vigentes que esta spec usa sin cambiarlas.","progresion":"progresion.v0.1.json"},"casillas":{"_doc":"§1.2. Leyenda del mapa: un carácter = un tipo de casilla. 'pisable': se puede estar encima. 'encuentro_pct': probabilidad entera (0..100) de encuentro por paso que TERMINA en esa casilla; > 0 solo en hierba alta. 'coste_ruta': coste entero del planificador de ruta táctil (§2.4). 'activa': casilla no pisable que dispara una acción al intentar entrar (puerta, salida).",".":{"id":"hierba","pisable":true,"encuentro_pct":0,"coste_ruta":1},"*":{"id":"flores","pisable":true,"encuentro_pct":0,"coste_ruta":1},"=":{"id":"camino","pisable":true,"encuentro_pct":0,"coste_ruta":1},"+":{"id":"puente","pisable":true,"encuentro_pct":0,"coste_ruta":1},",":{"id":"hierba_alta","pisable":true,"encuentro_pct":5,"coste_ruta":4},";":{"id":"hierba_espesa","pisable":true,"encuentro_pct":10,"coste_ruta":4},"~":{"id":"agua","pisable":false,"encuentro_pct":0,"coste_ruta":0},"T":{"id":"arbol","pisable":false,"encuentro_pct":0,"coste_ruta":0},"R":{"id":"roca","pisable":false,"encuentro_pct":0,"coste_ruta":0},"H":{"id":"muro_santuario","pisable":false,"encuentro_pct":0,"coste_ruta":0},"P":{"id":"puerta_santuario","pisable":false,"encuentro_pct":0,"coste_ruta":1,"activa":"puerta"},"S":{"id":"salida","pisable":false,"encuentro_pct":0,"coste_ruta":1,"activa":"salida"}},"movimiento":{"_doc":"§2. Paso de casilla en casilla (4 direcciones). ms_por_paso: duración de la animación de un paso (5 casillas/s); el núcleo no la usa. cola_entradas: direcciones que el cliente guarda mientras anima un paso. ruta_max_pasos: longitud máxima de una ruta táctil. orden_direcciones: desempate fijo del planificador.","ms_por_paso":200,"cola_entradas":1,"ruta_max_pasos":80,"orden_direcciones":["n","e","s","o"],"direcciones":{"n":{"dx":0,"dy":-1},"e":{"dx":1,"dy":0},"s":{"dx":0,"dy":1},"o":{"dx":-1,"dy":0}}},"encuentros":{"_doc":"§3. Al terminar cada paso en una casilla con encuentro_pct > 0 se consume SIEMPRE 1 tirada del flujo createRng(semilla|paso|k), k = contadores.pasos_hierba (antes de incrementarlo). Hay encuentro si gracia_restante = 0 y (floor(u·100) < encuentro_pct o pasos_sin_encuentro + 1 >= pasos_max_sin_encuentro). El encuentro es rollEncounter(game, mapa.zona) de progresión §2.3 sin cambios.","flujo_rng":"paso","tiradas_por_paso_hierba":1,"escala_pct":100,"gracia_tras_encuentro":4,"gracia_al_salir_santuario":6,"gracia_al_volver_de_lista":4,"pasos_max_sin_encuentro":40},"mapas":[{"id":"prado_linde","zona":"prado_linde","nombre":"Prado de la Linde","provisional":true,"ancho":30,"alto":24,"_doc_filas":"Fila 0 arriba, columna 0 a la izquierda; (x, y) = (columna, fila).","filas":["TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT","T;;*;TTTT..THHHHHT...TT,,,,,TT","T;;;;;TTT...HHHHH....T,,;;;,,T","T*;;;;TTT...HHPHH..*.T,;;;;;,T","TTTT;TTT......=......,,;;;;,,T","T,,,,,,.......=.......,,;;;,,T","T,,,,,,,......=........,,,,,TT","T,,,,,,,..*...=.........,,,TTT","T,,,,,,..~~~..=..........RR..T","T.,,,,..~~~~~.=...*.......R..T","TR.,,..~~~~~~.=..............T","T.....~~~~~~..=..............T","T......~~~~...===============S","T.......~~....=..........R...T","T,,,,,,..~....=.....,,,,.....T","T,,,,,,,.~....=....,,,,,,....T","T,,,,,,,.+=====....,,;;,,,...T","T,,,,,,,.~.........,,;;;;,,..T","T,,,,,,..~..R......,,;;;;,,..T","T,,,,,,..~.........,,,;;,,,..T","T.,,,,...~..*.......,,,,,....T","T..,,....~...........,,.....RT","T........~..................TT","TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"],"inicio":{"x":14,"y":4,"mira":"e"},"salida_santuario":{"x":14,"y":4,"mira":"s"},"llegada_desde_lista":{"x":28,"y":12,"mira":"o"},"activadores":[{"_doc":"§4. Puerta: intentar entrar abre el santuario (pantallas de progresión).","x":14,"y":3,"tipo":"puerta","destino":"santuario"},{"_doc":"§1.5. Salida: abre la lista de zonas (Marismas y Cantil siguen en lista, D-074). Cerrada hasta que la zona 'abre_con_zona' esté abierta (progresión §2.1).","x":29,"y":12,"tipo":"salida","destino":"lista_zonas","zonas":["marismas_quietas","cantil_farol_roto"],"abre_con_zona":"marismas_quietas","texto_cerrada":"La niebla de las Marismas no deja pasar. Se levanta cuando una de tus ánimas llega a nivel 5."}],"entidades":[{"id":"arnal","tipo":"personaje","personaje":"hechicero","x":15,"y":4,"mira":"o","_doc":"§4.2. La primera vez (inicial.elegida = null) da progresion.mundo.personajes[hechicero].texto_inicio y la elección de inicial. Después, texto_despues en ciclo.","texto_sin_anima":"¡Eh! Sin un ánima no te metas en la hierba alta. Ven aquí primero.","texto_despues":["En la hierba alta saltan ánimas. En la espesa, el doble. Por el camino no te molestará nadie.","Cuando una de las tuyas llegue a nivel 5, la niebla del este se levantará.","Dentro del santuario puedes resonar, ver tu colección y cambiar el equipo."],"provisional":true},{"id":"tasia","tipo":"vecino","nombre":"Tasia","x":16,"y":8,"mira":"s","texto":["Si la hierba alta se mueve sin viento, no es el viento."],"provisional":true},{"id":"gorio","tipo":"vecino","nombre":"Gorio","x":18,"y":18,"mira":"e","texto":["En la hierba espesa salen el doble. Yo ya no paso por ahí: tengo una edad."],"provisional":true},{"id":"cartel_este","tipo":"cartel","x":27,"y":11,"texto":["Este: Marismas Quietas. Oeste: hierba alta, ánimas con mal genio."],"provisional":true},{"id":"cartel_rincon","tipo":"cartel","x":1,"y":3,"texto":["Aquí vivió un farolero. Dejó la luz encendida y se fue."],"provisional":true},{"id":"farol_perdido","tipo":"objeto","x":3,"y":1,"_doc":"§1.4. Una sola vez por partida: +1 farol respetando progresion.recursos.faroles_max. Si estás en el tope, no se recoge y sigue ahí.","da":{"faroles":1},"texto":["Un farol viejo entre las flores. Todavía tira."],"texto_lleno":"Ya llevas todos los faroles que caben. Lo dejas donde estaba."}]}],"guardado":{"_doc":"§5. Clave propia en localStorage, separada de la partida de progresión (que no cambia). Se enlaza por la semilla.","clave_almacen":"genoma.mundo","formato":"genoma-mundo","version_formato":1,"flujos_rng":["paso"]},"validacion_config":{"_doc":"§6.2. Comprobaciones del parser (sin tiradas).","regex_ids":"^[a-z0-9_]+$","borde_no_pisable":true,"todo_pisable_alcanzable":true,"ancho_max":64,"alto_max":64},"presentacion":{"_doc":"§7. Solo cliente; el núcleo no lo lee ni lo valida (se admite sin mirar dentro). Acabado cuidado, no provisional: ver spec §7. Colores en hex: [base, sombra, luz, acento…] por tipo de casilla. Todo lo aleatorio del dibujo es determinista por coordenada (hash entero de x, y y la semilla visual), nunca rng de reglas ni Math.random.","semilla_visual":"prado|v0.1","escala":{"casilla_css_px":{"movil":32,"escritorio":48},"ancho_corte_css_px":720,"dpr_max":{"movil":2,"escritorio":2},"vista_casillas":{"movil":[11,13],"escritorio":[17,13]},"bloque_cache_casillas":8},"rendimiento":{"fps_objetivo":60,"ms_frame_max_movil":8,"particulas_max":40,"asomos_max_a_la_vez":1,"capas":["suelo_cache","agua_anim","hierba_anim","sombras","entidades_por_fila","copas","luz","particulas","ui"],"pausar_si_oculta":true,"modo_reducido_si_frame_ms_mayor_que":14,"respeta_prefers_reduced_motion":true},"fondo":"#12141c","luz_ambiente":{"_doc":"Atardecer fijo (sin reloj): velo azulado multiplicado sobre el mapa y viñeta.","velo":"#2a2f55","velo_alfa":0.28,"vineta_alfa":0.45},"casillas":{"hierba":{"colores":["#3d6a50","#33593f","#5a8a5e"],"detalle":"matas de 2–4 briznas y puntos claros, 0–3 por casilla según hash"},"flores":{"colores":["#3d6a50","#e8b04a","#d97a9b","#cfd8ff"],"detalle":"3–6 flores de 2–3 px de 2 colores según hash"},"camino":{"colores":["#a9855a","#8c6b46","#c8a477"],"detalle":"tierra con 1–3 guijarros; borde irregular con la hierba (§7.2)"},"puente":{"colores":["#7a5233","#553722","#9b6d46"],"detalle":"tablones transversales, sombra sobre el agua"},"hierba_alta":{"colores":["#2c5641","#1f4231","#6aa77a"],"detalle":"5–7 briznas altas en V que sobresalen 1/3 de casilla por arriba y tapan los pies del jugador; se mecen"},"hierba_espesa":{"colores":["#24443b","#182f2a","#5f8f6e","#7b63a3"],"detalle":"como hierba_alta, más densa y con puntas violeta; mecido más lento"},"agua":{"colores":["#1d3a63","#152a49","#4f86b8","#b9dcff"],"detalle":"orilla con borde de arena y espuma; brillos de 1–2 px que aparecen y se apagan"},"arbol":{"colores":["#1a3528","#24503a","#3c7a54","#0f1e17"],"detalle":"tronco en la casilla, copa redonda en 3 capas que sube 1 casilla por encima y tapa al jugador; sombra elíptica"},"roca":{"colores":["#58636f","#3c444e","#8a97a6"],"detalle":"2–3 facetas planas, una arista clara, musgo opcional por hash"},"muro_santuario":{"colores":["#655a6b","#433a49","#8a7f90","#2b2530"],"detalle":"piedra en hiladas; tejado en 2 aguas que ocupa la fila de arriba; farol colgado junto a la puerta"},"puerta_santuario":{"colores":["#3a2a22","#f2b54a","#ffe3a3"],"detalle":"arco con luz cálida que respira (alfa 0,6–0,9)"},"salida":{"colores":["#c9d3e0","#8a97a8"],"detalle":"cerrada: niebla que se mueve hacia dentro; abierta: camino que se pierde en luz fría"}},"personajes":{"farolero":{"capa":"#b4532f","capa_sombra":"#7e3420","capa_luz":"#d4744a","capucha_interior":"#1a1420","ojos":"#ffcf5a","baston":"#5e3e26","farol":"#ffcf5a","halo_radio_casillas":2.5,"frames_andar":4,"direcciones":4},"arnal":{"capa":"#4a3b6b","capa_sombra":"#2f2547","barba":"#d9d4c7","ojos":"#9fe3ff","farol":"#ffcf5a"},"vecinos":{"tasia":{"capa":"#3f6f9c","capa_sombra":"#2b4e70"},"gorio":{"capa":"#7a8f3c","capa_sombra":"#56662a"}},"aviso":"#ffcf5a"},"ambiente":{"luciernagas":{"max":14,"colores":["#ffe58a","#c9ff9a"],"solo_cerca_de":["hierba_alta","hierba_espesa","agua"]},"motas_farol":{"max":6},"hojas":{"max":4},"hierba_mece_ms":1400,"hierba_espesa_mece_ms":1900,"agua_brillo_ms":2200,"puerta_respira_ms":2600},"asomo":{"_doc":"§7.5. Pista decorativa: unos ojos de luz asoman en una casilla de hierba alta visible a 2–5 casillas del jugador. No predice el siguiente encuentro.","cada_ms":[6000,11000],"dura_ms":900,"distancia_casillas":[2,5]},"transicion_encuentro":{"_doc":"§7.6. Pausa del paso, brizna que salta, ojos, destello, viñeta que se cierra.","temblor_ms":180,"ojos_ms":350,"destello_ms":120,"vineta_ms":450,"total_ms":1100},"animacion":{"andar_frames":4,"ms_por_paso":200,"giro_sin_paso_ms":0,"respirar_ms":1800}}};
+};
+defs["client/animas/wmap.ts"]=function(module,exports,require){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ESSENCE_ICON = exports.LANTERN_ICON = void 0;
+exports.mountMap = mountMap;
+exports.unmountMap = unmountMap;
+exports.mapMounted = mapMounted;
+exports.mapStats = mapStats;
+exports.updateHud = updateHud;
+exports.goTo = goTo;
+exports.say = say;
+exports.tileToClient = tileToClient;
+/** Mapa caminable del Prado (spec mundo v0.1 §2, §7): canvas, cámara, entrada, diálogos y transiciones.
+ *  Las reglas (paso, encuentro, ruta, interacción) son del núcleo; aquí solo se dibuja y se llama a su API pública. */
+const index_ts_1 = require("../../packages/core/src/index.ts");
+const data_ts_1 = require("../combat/data.ts");
+const palette_ts_1 = require("../art/palette.ts");
+const battle_ts_1 = require("./battle.ts");
+const data_ts_2 = require("./data.ts");
+const wdraw_ts_1 = require("./wdraw.ts");
+// ------------------------------------------------------------------ estado del módulo
+let H = null;
+let root = null;
+let cv = null;
+let ctx = null;
+let raf = 0;
+let alive = false;
+let map = data_ts_2.wcfg.maps[0];
+const T = (0, wdraw_ts_1.terrainOf)(map);
+const DOOR_X = (0, wdraw_ts_1.doorX)(T);
+const DOOR_Y = (() => { for (let y = 0; y < map.height; y++)
+    if (T.ch(DOOR_X, y) === "P")
+        return y; return 0; })();
+const SANCT_TOP = (() => { for (let y = 0; y < map.height; y++)
+    if (map.rows[y].includes("H"))
+        return y; return 0; })();
+// escala
+let tileCss = 32;
+let dpr = 1;
+let S = 32; // px de dispositivo por casilla
+let vw = 11, vh = 13; // casillas visibles (fraccionarias)
+let cssW = 352, cssH = 416;
+// cachés por escala
+let blocks = [];
+let tufts = [];
+let canopies = [];
+const sprites = new Map();
+let punch = null;
+let warm = null;
+let cool = null;
+let fly = null;
+let lightC = null;
+let vignette = null;
+const BLOCK = data_ts_2.LOOK.escala.bloque_cache_casillas;
+// listas precalculadas
+const grassRows = [];
+const trees = [];
+const waterTiles = [];
+const flyAnchors = [];
+(() => {
+    for (let y = 0; y < map.height; y++) {
+        const row = [];
+        for (let x = 0; x < map.width; x++) {
+            const c = T.ch(x, y);
+            if (c === "," || c === ";")
+                row.push([x, y, c === ";"]);
+            if (c === "T")
+                trees.push([x, y]);
+            if (c === "~")
+                waterTiles.push([x, y]);
+        }
+        grassRows.push(row);
+    }
+    const cand = [];
+    for (let y = 1; y < map.height - 1; y++)
+        for (let x = 1; x < map.width - 1; x++) {
+            const c = T.ch(x, y);
+            if (c === "," || c === ";" || c === "~")
+                cand.push([x, y, (0, wdraw_ts_1.h01)(x, y, 901)]);
+        }
+    cand.sort((a, b) => a[2] - b[2]);
+    for (const [x, y] of cand.slice(0, 48))
+        flyAnchors.push([x, y]);
+})();
+let mv = null;
+let bump = null;
+let stepCount = 0;
+let enteredAt = -1e9; // momento en que pisó la casilla actual (para apartar la hierba)
+let held = null;
+let queued = null;
+let blockedDir = null;
+let route = [];
+let routeTarget = null;
+let marker = null;
+let pendingEnc = null;
+const npcFace = new Map();
+let trans = null;
+// diálogo y menú
+let dlg = null;
+let menuEl = null;
+let hudEl = null;
+let hintEl = null;
+// ambiente
+const reducedPref = (() => { try {
+    return matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+catch {
+    return false;
+} })();
+let reduced = reducedPref;
+let asomo = null;
+let nextAsomo = 0;
+const PRADO_FAMS = data_ts_2.pcfg.world.zones.find((z) => z.id === map.zone)?.families ?? ["brote"];
+// medidas
+const stats = { frames: 0, drawMs: 0, since: 0, slowSince: -1, fps: 0, avgDraw: 0 };
+let lastNow = 0;
+// ------------------------------------------------------------------ montaje
+function mountMap(host, hooks, opts = {}) {
+    unmountMap();
+    H = hooks;
+    map = (0, index_ts_1.mapById)(data_ts_2.wcfg, hooks.world().mapa);
+    root = host;
+    host.className = "wmap";
+    hudEl = (0, battle_ts_1.h)("div", { class: "whud" });
+    cv = (0, battle_ts_1.h)("canvas", { class: "wcv", "aria-label": "Mapa del Prado de la Linde" });
+    const stage = (0, battle_ts_1.h)("div", { class: "wstage" }, (0, battle_ts_1.h)("div", { class: "wframe" }, cv));
+    hintEl = (0, battle_ts_1.h)("div", { class: "whint" });
+    host.replaceChildren(hudEl, stage, hintEl);
+    ctx = cv.getContext("2d");
+    updateHud();
+    resize();
+    cv.addEventListener("pointerdown", onPointer);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("resize", resize);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVis);
+    mv = null;
+    bump = null;
+    route = [];
+    routeTarget = null;
+    held = queued = blockedDir = null;
+    pendingEnc = null;
+    marker = null;
+    trans = opts.open === false ? null : { kind: "open", t0: performance.now(), dur: 450 };
+    alive = true;
+    nextAsomo = performance.now() + 4000;
+    raf = requestAnimationFrame(frame);
+    if (opts.greet && opts.greet.length)
+        say(opts.greet, null);
+}
+function unmountMap() {
+    alive = false;
+    cancelAnimationFrame(raf);
+    if (cv)
+        cv.removeEventListener("pointerdown", onPointer);
+    window.removeEventListener("keydown", onKey);
+    window.removeEventListener("keyup", onKeyUp);
+    window.removeEventListener("resize", resize);
+    window.removeEventListener("blur", onBlur);
+    window.removeEventListener("pagehide", onHide);
+    document.removeEventListener("visibilitychange", onVis);
+    dlg = null;
+    menuEl = null;
+    H = null;
+    cv = null;
+}
+function mapMounted() {
+    return alive;
+}
+function mapStats() {
+    return { fps: Math.round(stats.fps), drawMs: Math.round(stats.avgDraw * 100) / 100, S, reduced };
+}
+exports.LANTERN_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 1.5v2" stroke="#c9a46a" stroke-width="1.4" stroke-linecap="round"/><path d="M4 5h8l-1 1H5z" fill="#6b4a33"/><rect x="5" y="6" width="6" height="7" rx="1.6" fill="#3a2a22"/><rect x="6.2" y="7.2" width="3.6" height="4.6" rx="1" fill="#ffcf5a"/><path d="M4.5 13.5h7" stroke="#6b4a33" stroke-width="1.4" stroke-linecap="round"/></svg>';
+exports.ESSENCE_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 1.5 10 6.5 14.5 8 10 9.5 8 14.5 6 9.5 1.5 8 6 6.5z" fill="#9fe3ff"/><circle cx="8" cy="8" r="1.6" fill="#ffffff"/></svg>';
+function updateHud() {
+    if (!hudEl || !H)
+        return;
+    const g = H.game();
+    const res = (0, battle_ts_1.h)("div", { class: "wres" });
+    res.innerHTML = `<span title="Faroles">${exports.LANTERN_ICON}<b>${g.recursos.faroles}</b></span><span title="Esencia">${exports.ESSENCE_ICON}<b>${g.recursos.esencia}</b></span>`;
+    hudEl.replaceChildren((0, battle_ts_1.h)("div", { class: "wzone" }, (0, battle_ts_1.h)("b", null, map.name), (0, battle_ts_1.h)("small", null, "atardecer")), res, (0, battle_ts_1.h)("button", { class: "wmenu", "aria-label": "Menú", onclick: () => openMenu() }, (0, battle_ts_1.h)("i", null), (0, battle_ts_1.h)("i", null), (0, battle_ts_1.h)("i", null)));
+    if (hintEl) {
+        const coarse = (() => { try {
+            return matchMedia("(pointer: coarse)").matches;
+        }
+        catch {
+            return false;
+        } })();
+        hintEl.textContent = g.inicial.elegida === null
+            ? `Habla con ${data_ts_2.ARNAL.nombre}: ${coarse ? "tócalo" : "ponte a su lado y pulsa Espacio"}.`
+            : coarse ? "Toca una casilla para ir · tócate para el menú" : "Flechas o WASD para andar · Espacio para hablar · M menú";
+    }
+}
+// ------------------------------------------------------------------ escala y cachés
+function resize() {
+    if (!cv || !root)
+        return;
+    const small = window.innerWidth < data_ts_2.LOOK.escala.ancho_corte_css_px;
+    tileCss = small ? data_ts_2.LOOK.escala.casilla_css_px.movil : data_ts_2.LOOK.escala.casilla_css_px.escritorio;
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    const stage = cv.parentElement?.parentElement;
+    const availW = Math.max(200, stage.clientWidth);
+    const availH = Math.max(200, stage.clientHeight);
+    const [mc, mr] = small ? [data_ts_2.LOOK.escala.vista_casillas.movil[0] ?? 11, map.height] : [data_ts_2.LOOK.escala.vista_casillas.escritorio[0] ?? 17, data_ts_2.LOOK.escala.vista_casillas.escritorio[1] ?? 13];
+    cssW = Math.floor(Math.min(availW, mc * tileCss, map.width * tileCss));
+    cssH = Math.floor(Math.min(availH, mr * tileCss, map.height * tileCss));
+    cv.style.width = `${cssW}px`;
+    cv.style.height = `${cssH}px`;
+    if (hudEl)
+        hudEl.style.maxWidth = `${cssW}px`;
+    cv.width = Math.round(cssW * dpr);
+    cv.height = Math.round(cssH * dpr);
+    vw = cssW / tileCss;
+    vh = cssH / tileCss;
+    const newS = tileCss * dpr;
+    if (newS !== S || blocks.length === 0) {
+        S = newS;
+        buildCaches();
+    }
+    lightC = (0, wdraw_ts_1.canvas)(cv.width, cv.height);
+    const v = (0, wdraw_ts_1.canvas)(cv.width, cv.height);
+    const g = v.x.createRadialGradient(cv.width / 2, cv.height / 2, Math.min(cv.width, cv.height) * 0.3, cv.width / 2, cv.height / 2, Math.max(cv.width, cv.height) * 0.72);
+    g.addColorStop(0, "rgba(6,7,16,0)");
+    g.addColorStop(1, `rgba(6,7,16,${data_ts_2.LOOK.luz_ambiente.vineta_alfa})`);
+    v.x.fillStyle = g;
+    v.x.fillRect(0, 0, cv.width, cv.height);
+    vignette = v.c;
+}
+function buildCaches() {
+    sprites.clear();
+    const bw = Math.ceil(map.width / BLOCK), bh = Math.ceil(map.height / BLOCK);
+    blocks = [];
+    for (let by = 0; by < bh; by++)
+        for (let bx = 0; bx < bw; bx++) {
+            const b = (0, wdraw_ts_1.canvas)(BLOCK * S, BLOCK * S);
+            b.x.setTransform(S, 0, 0, S, -bx * BLOCK * S, -by * BLOCK * S);
+            (0, wdraw_ts_1.drawGround)(b.x, T, bx * BLOCK, by * BLOCK, bx * BLOCK + BLOCK - 1, by * BLOCK + BLOCK - 1);
+            blocks.push(b.c);
+        }
+    tufts = [false, true].map((front) => ({ alta: [0, 1, 2, 3].map((v) => (0, wdraw_ts_1.tuftSprite)(S, false, v, front)), espesa: [0, 1, 2, 3].map((v) => (0, wdraw_ts_1.tuftSprite)(S, true, v + 10, front)) }));
+    canopies = [0, 1, 2, 3, 4].map((v) => (0, wdraw_ts_1.canopySprite)(S, v));
+    punch = (0, wdraw_ts_1.haloSprite)(256, "255,255,255", 1);
+    warm = (0, wdraw_ts_1.haloSprite)(256, "255,190,90", 0.55);
+    cool = (0, wdraw_ts_1.haloSprite)(256, "160,200,255", 0.4);
+    fly = (0, wdraw_ts_1.haloSprite)(64, "255,240,160", 0.9);
+}
+function figureSprite(who, dir, frame) {
+    const key = `${who}|${dir}|${frame}`;
+    let c = sprites.get(key);
+    if (!c) {
+        const L = wdraw_ts_1.LOOKS[who];
+        const k = (0, wdraw_ts_1.canvas)(S * 1.6, S * 1.6);
+        k.x.setTransform(S, 0, 0, S, S * 0.3, S * 0.55);
+        (0, wdraw_ts_1.drawFigure)(k.x, L, dir, frame);
+        c = k.c;
+        sprites.set(key, c);
+    }
+    return c;
+}
+// ------------------------------------------------------------------ entrada
+/** Al ocultar o cerrar la página se guarda la posición (entre medias solo cada 10 pasos, §5.1). */
+function onHide() {
+    if (H)
+        H.commit(H.world(), H.game(), "world");
+}
+function onVis() {
+    if (document.hidden) {
+        cancelAnimationFrame(raf);
+        onHide();
+    }
+    else if (alive) {
+        lastNow = 0;
+        raf = requestAnimationFrame(frame);
+    }
+}
+function onBlur() {
+    held = null;
+    queued = null;
+}
+const KEYDIR = { ArrowUp: "n", ArrowRight: "e", ArrowDown: "s", ArrowLeft: "o", w: "n", d: "e", s: "s", a: "o", W: "n", D: "e", S: "s", A: "o" };
+function busy() {
+    return (trans !== null && trans.kind !== "open") || pendingEnc !== null || menuEl !== null;
+}
+function onKey(e) {
+    if (!alive)
+        return;
+    const tag = e.target?.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA")
+        return;
+    if (menuEl) {
+        if (e.key === "Escape" || e.key === "m" || e.key === "M") {
+            closeMenu();
+            e.preventDefault();
+        }
+        return;
+    }
+    if (dlg) {
+        if (e.key === " " || e.key === "Enter" || e.key === "e" || e.key === "E" || e.key === "Escape") {
+            e.preventDefault();
+            if (!e.repeat)
+                advance();
+        }
+        return;
+    }
+    const d = KEYDIR[e.key];
+    if (d) {
+        e.preventDefault();
+        if (e.repeat)
+            return;
+        held = d;
+        blockedDir = null;
+        route = [];
+        routeTarget = null;
+        marker = null;
+        queued = d; // un toque corto da un paso aunque se suelte antes del siguiente frame
+        return;
+    }
+    if (e.key === " " || e.key === "Enter" || e.key === "e" || e.key === "E") {
+        e.preventDefault();
+        if (!mv && !busy() && !e.repeat)
+            use();
+    }
+    else if (e.key === "Escape" || e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        if (!busy())
+            openMenu();
+    }
+}
+function onKeyUp(e) {
+    const d = KEYDIR[e.key];
+    if (d && held === d)
+        held = null;
+}
+function camera(now) {
+    const p = playerPos(now);
+    const cx = map.width <= vw ? map.width / 2 : Math.min(Math.max(p.x + 0.5, vw / 2), map.width - vw / 2);
+    const cy = map.height <= vh ? map.height / 2 : Math.min(Math.max(p.y + 0.5, vh / 2), map.height - vh / 2);
+    return { ox: Math.round((vw / 2 - cx) * S), oy: Math.round((vh / 2 - cy) * S), px: p.x, py: p.y };
+}
+function onPointer(e) {
+    if (!alive || !H || !cv)
+        return;
+    e.preventDefault();
+    if (dlg) {
+        advance();
+        return;
+    }
+    if (busy())
+        return;
+    const r = cv.getBoundingClientRect();
+    const cam = camera(performance.now());
+    const tx = Math.floor(((e.clientX - r.left) * dpr - cam.ox) / S);
+    const ty = Math.floor(((e.clientY - r.top) * dpr - cam.oy) / S);
+    const w = H.world();
+    if (tx === w.pos.x && ty === w.pos.y && !mv) {
+        openMenu();
+        return;
+    }
+    goTo(tx, ty);
+}
+/** Ruta táctil: `planRoute` del núcleo, ejecutada paso a paso con `step`. */
+function goTo(tx, ty) {
+    if (!H)
+        return;
+    const w = H.world();
+    const target = (0, index_ts_1.entityAt)(w, data_ts_2.wcfg, tx, ty) !== null || (0, index_ts_1.activatorAt)(data_ts_2.wcfg, w.mapa, tx, ty) !== null;
+    const r = (0, index_ts_1.planRoute)(w, H.game(), { x: tx, y: ty }, data_ts_2.wcfg);
+    held = null;
+    queued = null;
+    if (r === null) {
+        route = [];
+        routeTarget = null;
+        marker = { x: tx, y: ty, t0: performance.now(), bad: true };
+        return;
+    }
+    route = r.slice();
+    routeTarget = { x: tx, y: ty, use: target };
+    marker = { x: tx, y: ty, t0: performance.now(), bad: false };
+    if (route.length === 0 && target && !mv) {
+        routeTarget = null;
+        marker = null;
+        use();
+    }
+}
+// ------------------------------------------------------------------ pasos e interacción
+function playerPos(now) {
+    const w = H?.world();
+    if (!w)
+        return { x: 0, y: 0 };
+    let x = w.pos.x, y = w.pos.y;
+    if (mv) {
+        const t = Math.min(1, (now - mv.t0) / mv.dur);
+        x = mv.fx + (mv.tx - mv.fx) * t;
+        y = mv.fy + (mv.ty - mv.fy) * t;
+    }
+    if (bump) {
+        const t = (now - bump.t0) / 80;
+        if (t >= 1)
+            bump = null;
+        else {
+            const k = 0.09 * (t < 0.5 ? t * 2 : 2 - t * 2);
+            x += bump.dx * k;
+            y += bump.dy * k;
+        }
+    }
+    return { x, y };
+}
+function tryStep(dir, now, fromRoute) {
+    if (!H)
+        return;
+    const w0 = H.world();
+    const g0 = H.game();
+    const last = fromRoute && route.length === 0;
+    const r = (0, index_ts_1.step)(w0, g0, dir, data_ts_2.wcfg, data_ts_2.pcfg);
+    const o = r.outcome;
+    const v = data_ts_2.wcfg.movement.vec[dir];
+    switch (o.kind) {
+        case "moved":
+        case "encounter": {
+            stepCount++;
+            const grass = o.tile.encounterPct > 0;
+            if (o.kind === "encounter") {
+                H.commit(r.world, r.game, "both"); // mundo primero, partida después (§3.4)
+                pendingEnc = o.encounter;
+                route = [];
+                held = null;
+                queued = null;
+            }
+            else {
+                if (o.error)
+                    console.warn("encuentro no disponible:", o.error);
+                H.commit(r.world, r.game, grass || stepCount % 10 === 0 ? "world" : "none");
+            }
+            mv = { fx: w0.pos.x, fy: w0.pos.y, tx: r.world.pos.x, ty: r.world.pos.y, t0: now, dur: data_ts_2.wcfg.movement.msPerStep };
+            enteredAt = now + data_ts_2.wcfg.movement.msPerStep * 0.5;
+            break;
+        }
+        case "blocked": {
+            H.commit(r.world, r.game, "none");
+            route = [];
+            bump = { dx: v.dx, dy: v.dy, t0: now };
+            blockedDir = dir;
+            if (o.reason === "entity" && last && routeTarget?.use) {
+                routeTarget = null;
+                marker = null;
+                use();
+            }
+            else if (o.reason === "no_starter") {
+                const arnal = map.entities.find((e) => e.kind === "personaje");
+                say([{ who: "arnal", name: data_ts_2.ARNAL.nombre, text: arnal && arnal.kind === "personaje" ? arnal.noStarterText : "Sin un ánima, mejor no." }], null);
+            }
+            else if (o.reason === "exit_locked") {
+                say([{ who: null, name: null, text: o.text ?? "No se puede pasar." }], null);
+            }
+            if (!last) {
+                routeTarget = null;
+                marker = null;
+            }
+            break;
+        }
+        case "door":
+            // M-03: el paso ya da el evento; no se llama además a interact
+            H.commit(r.world, r.game, "world");
+            route = [];
+            routeTarget = null;
+            marker = null;
+            leave(() => H?.onDoor());
+            break;
+        case "exit": {
+            H.commit(r.world, r.game, "world");
+            route = [];
+            routeTarget = null;
+            marker = null;
+            const zones = o.zones;
+            leave(() => H?.onExit(zones));
+            break;
+        }
+    }
+}
+function leave(done) {
+    held = null;
+    queued = null;
+    trans = { kind: "close", t0: performance.now(), dur: 320, done };
+}
+function faceToward(id, from, at) {
+    const dx = from.x - at.x, dy = from.y - at.y;
+    npcFace.set(id, Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "e" : "o") : dy > 0 ? "s" : "n");
+}
+/** «Usar» la casilla a la que se mira (`interact` del núcleo). */
+function use() {
+    if (!H)
+        return;
+    const w0 = H.world();
+    const g0 = H.game();
+    const ft = (0, index_ts_1.facingTarget)(w0, data_ts_2.wcfg);
+    const r = (0, index_ts_1.interact)(w0, g0, data_ts_2.wcfg, data_ts_2.pcfg);
+    const o = r.outcome;
+    if (ft.entity)
+        faceToward(ft.entity.id, w0.pos, ft.entity);
+    switch (o.kind) {
+        case "talk": {
+            const isArnal = o.id === "arnal" || o.name === null;
+            H.commit(r.world, r.game, r.world !== w0 ? "world" : "none");
+            say(o.text.map((t) => ({ who: isArnal ? "arnal" : o.id, name: isArnal ? data_ts_2.ARNAL.nombre : o.name, text: t })), null);
+            break;
+        }
+        case "sign":
+            say(o.text.map((t) => ({ who: null, name: null, text: t })), null);
+            break;
+        case "pickup":
+            H.commit(r.world, r.game, "both"); // M-02: mundo primero, después la partida
+            updateHud();
+            say([...o.text.map((t) => ({ who: null, name: null, text: t })), { who: null, name: null, text: `+${o.faroles} farol. Ahora llevas ${r.game.recursos.faroles}.` }], null);
+            break;
+        case "pickup_full":
+            say([{ who: null, name: null, text: o.text }], null);
+            break;
+        case "arnal_intro": {
+            const lines = g0.inicial.intro_vista ? ["¿Ya te has decidido? Ven, elige tu ánima."] : data_ts_2.ARNAL.texto_inicio;
+            say(lines.map((t) => ({ who: "arnal", name: data_ts_2.ARNAL.nombre, text: t })), () => leave(() => H?.onArnalIntro()));
+            break;
+        }
+        case "door":
+            leave(() => H?.onDoor());
+            break;
+        case "exit": {
+            const zones = o.zones;
+            leave(() => H?.onExit(zones));
+            break;
+        }
+        case "exit_locked":
+            say([{ who: null, name: null, text: o.text }], null);
+            break;
+        case "nothing":
+            break;
+    }
+}
+// ------------------------------------------------------------------ diálogo y menú
+function say(lines, done) {
+    if (!root || lines.length === 0)
+        return;
+    held = null;
+    queued = null;
+    route = [];
+    const frameEl = root.querySelector(".wframe");
+    dlg?.el.remove();
+    const txt = (0, battle_ts_1.h)("div", { class: "dtx" });
+    const el = (0, battle_ts_1.h)("div", { class: "dlg", role: "dialog", "aria-live": "polite", onclick: (e) => { e.stopPropagation(); advance(); } });
+    frameEl.append(el);
+    dlg = { lines, i: 0, t0: performance.now(), el, txt, done };
+    paintDlg();
+}
+function paintDlg() {
+    if (!dlg)
+        return;
+    const ln = dlg.lines[dlg.i];
+    const L = ln.who ? wdraw_ts_1.LOOKS[ln.who] : undefined;
+    const accent = ln.who === null ? "#c9a46a" : L ? L.capa : "#c9a46a";
+    dlg.el.style.setProperty("--spk", ln.who === "arnal" ? "#9fe3ff" : ln.who ? (0, palette_ts_1.mix)(accent, "#ffffff", 0.35) : accent);
+    const kids = [];
+    if (ln.who && L)
+        kids.push((0, battle_ts_1.h)("div", { class: "dpic" }, (0, wdraw_ts_1.portrait)(ln.who, 44)));
+    kids.push((0, battle_ts_1.h)("div", { class: "dbody" }, ln.name ? (0, battle_ts_1.h)("b", { class: "dname" }, ln.name) : (0, battle_ts_1.h)("b", { class: "dname sign" }, ln.who === null && ln.name === null ? "" : ""), dlg.txt, (0, battle_ts_1.h)("span", { class: "dmore" }, dlg.i < dlg.lines.length - 1 ? "▸" : "■")));
+    dlg.el.replaceChildren(...kids);
+    dlg.el.classList.toggle("nosp", !ln.name);
+    dlg.txt.textContent = "";
+    dlg.t0 = performance.now();
+}
+function typed() {
+    if (!dlg)
+        return 0;
+    return Math.floor((performance.now() - dlg.t0) / 22);
+}
+function advance() {
+    if (!dlg)
+        return;
+    const ln = dlg.lines[dlg.i];
+    if (typed() < ln.text.length) {
+        dlg.t0 = -1e9; // muestra la línea entera
+        return;
+    }
+    if (dlg.i < dlg.lines.length - 1) {
+        dlg.i++;
+        paintDlg();
+        return;
+    }
+    const done = dlg.done;
+    dlg.el.remove();
+    dlg = null;
+    done?.();
+}
+function openMenu() {
+    if (!root || !H || menuEl)
+        return;
+    held = null;
+    route = [];
+    const items = H.menu();
+    menuEl = (0, battle_ts_1.h)("div", { class: "wmenuov", onclick: (e) => { if (e.target === menuEl)
+            closeMenu(); } }, (0, battle_ts_1.h)("div", { class: "wmenup" }, (0, battle_ts_1.h)("b", null, "Menú"), ...items.map((it) => (0, battle_ts_1.h)("button", { class: "btn" + (it.primary ? " primary" : ""), onclick: () => { closeMenu(); it.fn(); } }, it.label)), (0, battle_ts_1.h)("button", { class: "btn", onclick: () => closeMenu() }, "Seguir andando")));
+    root.append(menuEl);
+}
+function closeMenu() {
+    menuEl?.remove();
+    menuEl = null;
+}
+// ------------------------------------------------------------------ bucle
+function frame(now) {
+    if (!alive || !H || !ctx || !cv)
+        return;
+    const t0 = performance.now();
+    update(now);
+    if (!alive)
+        return;
+    draw(now);
+    const dt = performance.now() - t0;
+    // medidas (fps aproximados y ms de dibujo) y modo reducido si va lento
+    if (lastNow > 0) {
+        stats.frames++;
+        stats.drawMs += dt;
+        if (now - stats.since >= 1000) {
+            stats.fps = (stats.frames * 1000) / (now - stats.since);
+            stats.avgDraw = stats.drawMs / stats.frames;
+            if (stats.avgDraw > data_ts_2.LOOK.rendimiento.modo_reducido_si_frame_ms_mayor_que) {
+                if (stats.slowSince < 0)
+                    stats.slowSince = now;
+                else if (now - stats.slowSince > 2000)
+                    reduced = true;
+            }
+            else
+                stats.slowSince = -1;
+            stats.frames = 0;
+            stats.drawMs = 0;
+            stats.since = now;
+        }
+    }
+    else
+        stats.since = now;
+    lastNow = now;
+    raf = requestAnimationFrame(frame);
+}
+function update(now) {
+    if (!H)
+        return;
+    if (dlg) {
+        const t = dlg.lines[dlg.i].text;
+        const n = Math.min(t.length, typed());
+        if (dlg.txt.textContent?.length !== n)
+            dlg.txt.textContent = t.slice(0, n);
+    }
+    if (mv && now >= mv.t0 + mv.dur) {
+        mv = null;
+        if (pendingEnc) {
+            const e = pendingEnc;
+            const w = H.world();
+            const v = data_ts_2.wcfg.movement.vec[w.mira];
+            const first = e.wilds[0];
+            trans = { kind: "enc", t0: now, color: (0, data_ts_1.palette)(first ? first.creature.family : "brote").main, ex: w.pos.x + v.dx * 0.6, ey: w.pos.y + v.dy * 0.6, done: () => H?.onEncounter(e) };
+        }
+        else if (route.length === 0 && routeTarget) {
+            const tgt = routeTarget;
+            routeTarget = null;
+            marker = null;
+            if (tgt.use)
+                use();
+        }
+    }
+    if (trans) {
+        const el = now - trans.t0;
+        if (trans.kind === "enc" && el >= data_ts_2.LOOK.transicion_encuentro.total_ms) {
+            const d = trans.done;
+            trans = null;
+            pendingEnc = null;
+            d();
+            return;
+        }
+        if (trans.kind === "close" && el >= trans.dur) {
+            const d = trans.done;
+            trans = null;
+            d();
+            return;
+        }
+        if (trans.kind === "open" && el >= trans.dur)
+            trans = null;
+    }
+    if (mv || dlg || busy())
+        return;
+    let d = null;
+    let fromRoute = false;
+    if (queued) {
+        d = queued;
+        queued = null;
+    }
+    else if (held && held !== blockedDir)
+        d = held;
+    else if (route.length) {
+        d = route.shift();
+        fromRoute = true;
+    }
+    if (d)
+        tryStep(d, now, fromRoute);
+    // ánimas que asoman (decorativo; hash del tiempo de pantalla y la posición, nunca el flujo «paso»)
+    if (!reduced && now > nextAsomo) {
+        const w = H.world();
+        const k = Math.floor(now / 1000);
+        const cands = [];
+        for (const row of grassRows)
+            for (const [x, y] of row) {
+                const dd = Math.max(Math.abs(x - w.pos.x), Math.abs(y - w.pos.y));
+                if (dd >= data_ts_2.LOOK.asomo.distancia_casillas[0] && dd <= data_ts_2.LOOK.asomo.distancia_casillas[1] && Math.abs(x - w.pos.x) < vw / 2 - 0.5 && Math.abs(y - w.pos.y) < vh / 2 - 0.5)
+                    cands.push([x, y]);
+            }
+        if (cands.length) {
+            const [ax, ay] = cands[(0, wdraw_ts_1.hash32)(k, w.pos.x * 64 + w.pos.y, 777) % cands.length];
+            const fam = PRADO_FAMS[(0, wdraw_ts_1.hash32)(ax, ay, k) % PRADO_FAMS.length];
+            asomo = { x: ax, y: ay, t0: now, color: (0, data_ts_1.palette)(fam).main };
+        }
+        const [a, b] = data_ts_2.LOOK.asomo.cada_ms;
+        nextAsomo = now + a + (b - a) * (0, wdraw_ts_1.h01)(k, 3, 778);
+    }
+    if (asomo && now - asomo.t0 > data_ts_2.LOOK.asomo.dura_ms)
+        asomo = null;
+}
+// ------------------------------------------------------------------ dibujo
+function draw(now) {
+    const x = ctx;
+    const c = cv;
+    const w = H.world();
+    const g = H.game();
+    const cam = camera(now);
+    const { ox, oy } = cam;
+    x.setTransform(1, 0, 0, 1, 0, 0);
+    x.globalAlpha = 1;
+    x.globalCompositeOperation = "source-over";
+    x.fillStyle = data_ts_2.LOOK.fondo;
+    x.fillRect(0, 0, c.width, c.height);
+    // capa estática por bloques
+    const bw = Math.ceil(map.width / BLOCK);
+    blocks.forEach((b, i) => {
+        if (!b)
+            return;
+        const bx = (i % bw) * BLOCK * S + ox, by = Math.floor(i / bw) * BLOCK * S + oy;
+        if (bx > c.width || by > c.height || bx + BLOCK * S < 0 || by + BLOCK * S < 0)
+            return;
+        x.drawImage(b, bx, by);
+    });
+    const x0 = Math.max(0, Math.floor(-ox / S) - 1), y0 = Math.max(0, Math.floor(-oy / S) - 1);
+    const x1 = Math.min(map.width - 1, Math.ceil((c.width - ox) / S) + 1), y1 = Math.min(map.height - 1, Math.ceil((c.height - oy) / S) + 2);
+    const inView = (tx, ty) => tx >= x0 && tx <= x1 && ty >= y0 && ty <= y1;
+    x.setTransform(S, 0, 0, S, ox, oy);
+    const motion = !reduced;
+    // agua: brillos que aparecen y se apagan
+    if (motion) {
+        const per = data_ts_2.LOOK.ambiente.agua_brillo_ms;
+        x.fillStyle = (0, wdraw_ts_1.col)("agua", 3);
+        for (const [tx, ty] of waterTiles) {
+            if (!inView(tx, ty))
+                continue;
+            for (let k = 0; k < 2; k++) {
+                const a = (0, wdraw_ts_1.wave)(now / per + (0, wdraw_ts_1.h01)(tx, ty, 801 + k));
+                if (a <= 0.35)
+                    continue;
+                x.globalAlpha = (a - 0.35) * 1.5;
+                const px = tx + 0.15 + 0.7 * (0, wdraw_ts_1.h01)(tx, ty, 811 + k), py = ty + 0.15 + 0.7 * (0, wdraw_ts_1.h01)(tx, ty, 821 + k);
+                const L = (1.5 + a * 2.5) / S;
+                x.fillRect(px - L, py - 0.6 / S, L * 2, 1.2 / S);
+                x.fillRect(px - 0.6 / S, py - L * 0.6, 1.2 / S, L * 1.2);
+            }
+            const sx = (0, wdraw_ts_1.wave)(now / 5200 + (0, wdraw_ts_1.h01)(tx, ty, 831)) * 0.12;
+            x.globalAlpha = 0.25;
+            x.fillStyle = (0, wdraw_ts_1.col)("agua", 2);
+            x.fillRect(tx + 0.3 + sx, ty + 0.55 + 0.2 * (0, wdraw_ts_1.h01)(tx, ty, 832), 0.3, 1.5 / S);
+            x.fillStyle = (0, wdraw_ts_1.col)("agua", 3);
+        }
+        x.globalAlpha = 1;
+    }
+    // puerta del santuario: luz que respira, y farol colgado
+    const breath = 0.75 + 0.15 * (0, wdraw_ts_1.wave)(now / data_ts_2.LOOK.ambiente.puerta_respira_ms);
+    if (inView(DOOR_X, DOOR_Y)) {
+        const wallTop = SANCT_TOP + 1.15;
+        const bot = DOOR_Y + 1;
+        x.globalAlpha = breath;
+        x.fillStyle = (0, wdraw_ts_1.col)("puerta_santuario", 1);
+        x.beginPath();
+        x.roundRect(DOOR_X + 0.5 - 0.28, wallTop + 0.22, 0.56, bot - wallTop - 0.2, [0.28, 0.28, 0, 0]);
+        x.fill();
+        x.fillStyle = (0, wdraw_ts_1.col)("puerta_santuario", 2);
+        x.beginPath();
+        x.roundRect(DOOR_X + 0.5 - 0.16, wallTop + 0.4, 0.32, bot - wallTop - 0.4, [0.16, 0.16, 0, 0]);
+        x.fill();
+        x.globalAlpha = 1;
+        x.strokeStyle = "#2a1d14";
+        x.lineWidth = 0.035;
+        x.beginPath();
+        x.moveTo(DOOR_X + 0.98, wallTop + 0.3);
+        x.lineTo(DOOR_X + 1.22, wallTop + 0.3);
+        x.stroke();
+        (0, wdraw_ts_1.drawLantern)(x, DOOR_X + 1.2, wallTop + 0.3, motion ? 0.012 * (0, wdraw_ts_1.wave)(now / 2600) : 0, 1.1, breath);
+    }
+    // salida: niebla (cerrada) o luz fría (abierta)
+    const exitA = map.activators.find((a) => a.kind === "salida");
+    const exitIsOpen = exitA ? (0, index_ts_1.exitOpen)(g, exitA, data_ts_2.pcfg) : false;
+    if (exitA && inView(exitA.x, exitA.y)) {
+        for (let k = 0; k < 3; k++) {
+            const ph = (now / 6000 + k / 3) % 1;
+            const fx = exitA.x + 1.3 - ph * 2.2;
+            const a = (ph < 0.2 ? ph / 0.2 : ph > 0.7 ? (1 - ph) / 0.3 : 1) * (exitIsOpen ? 0.12 : 0.32);
+            x.globalAlpha = a;
+            x.fillStyle = exitIsOpen ? "#bcd8ff" : (0, wdraw_ts_1.col)("salida", k % 2);
+            x.beginPath();
+            x.ellipse(fx, exitA.y + 0.2 + k * 0.32, 1.1, 0.42, 0, 0, wdraw_ts_1.TAU);
+            x.fill();
+        }
+        x.globalAlpha = 1;
+    }
+    // sombras de personajes
+    const ents = (0, index_ts_1.activeEntities)(w, data_ts_2.wcfg);
+    x.fillStyle = "rgba(8,6,20,0.38)";
+    for (const e of ents) {
+        if (!inView(e.x, e.y) || e.kind === "objeto")
+            continue;
+        x.beginPath();
+        x.ellipse(e.x + 0.5, e.y + 0.94, e.kind === "cartel" ? 0.22 : 0.3, 0.09, 0, 0, wdraw_ts_1.TAU);
+        x.fill();
+    }
+    x.beginPath();
+    x.ellipse(cam.px + 0.5, cam.py + 0.94, 0.28, 0.085, 0, 0, wdraw_ts_1.TAU);
+    x.fill();
+    // entidades por fila: personajes y jugador, después la hierba alta de esa fila (tapa los pies)
+    const pRow = mv ? Math.max(mv.fy, mv.ty) : w.pos.y;
+    const lights = [];
+    for (let ty = y0; ty <= y1; ty++) {
+        drawGrassRow(x, ty, x0, x1, now, w, 0);
+        for (const e of ents)
+            if (e.y === ty && inView(e.x, e.y))
+                drawEntity(x, e, now, g, lights);
+        if (ty === pRow)
+            drawPlayer(x, w, cam.px, cam.py, now, lights);
+        drawGrassRow(x, ty, x0, x1, now, w, 1);
+    }
+    // copas por encima (semitransparentes si tapan al jugador)
+    for (const [tx, ty] of trees) {
+        if (tx < x0 - 1 || tx > x1 + 1 || ty < y0 || ty > y1 + 1)
+            continue;
+        const hide = cam.px + 0.75 > tx - 0.2 && cam.px + 0.25 < tx + 1.2 && cam.py + 0.95 > ty - 1.15 && cam.py + 0.15 < ty + 0.55;
+        const v = (0, wdraw_ts_1.hash32)(tx, ty, 1001) % canopies.length;
+        const s = 0.94 + 0.12 * (0, wdraw_ts_1.h01)(tx, ty, 1002);
+        const sw = motion ? 0.01 * (0, wdraw_ts_1.wave)(now / 3400 + (0, wdraw_ts_1.h01)(tx, ty, 1003)) : 0;
+        x.globalAlpha = hide ? 0.55 : 1;
+        x.drawImage(canopies[v], tx + 0.5 - 0.85 * s + sw, ty - 0.35 - 1.0 * s, 1.7 * s, 2.0 * s);
+    }
+    x.globalAlpha = 1;
+    // luz: velo de atardecer abierto por los faroles
+    lights.push([DOOR_X + 0.5, DOOR_Y + 0.7, 1.7 * breath, warm], [DOOR_X + 1.2, SANCT_TOP + 1.6, 1.3, warm], [DOOR_X - 1.75, SANCT_TOP + 1.8, 0.8, warm], [DOOR_X + 2.25, SANCT_TOP + 1.8, 0.8, warm]);
+    if (exitA && exitIsOpen)
+        lights.push([exitA.x + 0.5, exitA.y + 0.5, 2.2, cool]);
+    drawLight(x, ox, oy, lights);
+    // partículas: luciérnagas, motas del farol y hojas
+    if (motion)
+        drawParticles(x, now, x0, x1, y0, y1, cam.px, cam.py, w);
+    // interfaz: marcador, aviso de Arnal, burbuja de «usar»
+    drawUi(x, now, w, g);
+    // transiciones
+    drawTrans(x, now, ox, oy, cam.px, cam.py);
+}
+function drawPlayer(x, w, px, py, now, lights) {
+    const L = wdraw_ts_1.LOOKS["farolero"];
+    const dir = w.mira;
+    let frame = -1;
+    if (mv)
+        frame = Math.min(3, Math.floor(((now - mv.t0) / mv.dur) * 4));
+    const b = frame < 0 && !reduced ? 0.022 * (0, wdraw_ts_1.wave)(now / data_ts_2.LOOK.animacion.respirar_ms) : 0;
+    const st = (0, wdraw_ts_1.staffOf)(dir, L, frame);
+    const swing = mv ? 0.035 * (0, wdraw_ts_1.wave)((now - mv.t0) / (mv.dur * 2) - 0.15) : reduced ? 0 : 0.012 * (0, wdraw_ts_1.wave)(now / 2400);
+    const glow = 0.8 + 0.2 * (0, wdraw_ts_1.wave)(now / 700);
+    const drawS = () => {
+        x.save();
+        x.translate(px, py);
+        (0, wdraw_ts_1.drawStaff)(x, st, String(data_ts_2.LOOK.personajes.farolero["baston"] ?? "#5e3e26"));
+        (0, wdraw_ts_1.drawLantern)(x, st.x1 + 0.1, st.y1 - 0.03, swing, 1, glow);
+        x.restore();
+    };
+    if (dir === "n")
+        drawS();
+    x.drawImage(figureSprite("farolero", dir, frame), px - 0.3, py - 0.55 - 1.5 * b, 1.6, 1.6 * (1 + b));
+    if (dir !== "n")
+        drawS();
+    const halo = Number(data_ts_2.LOOK.personajes.farolero["halo_radio_casillas"] ?? 2.5);
+    lights.push([px + st.x1 + 0.1 + swing, py + st.y1 + 0.1, halo * (0.96 + 0.04 * glow), warm]);
+}
+function drawEntity(x, e, now, g, lights) {
+    const motion = !reduced;
+    if (e.kind === "cartel") {
+        x.fillStyle = "#4a3020";
+        x.fillRect(e.x + 0.46, e.y + 0.45, 0.08, 0.5);
+        x.fillStyle = "#6b4a33";
+        x.beginPath();
+        x.roundRect(e.x + 0.16, e.y + 0.2, 0.68, 0.4, 0.05);
+        x.fill();
+        x.fillStyle = "#8a6a44";
+        x.beginPath();
+        x.roundRect(e.x + 0.18, e.y + 0.21, 0.64, 0.32, 0.04);
+        x.fill();
+        x.fillStyle = "#4a3020";
+        for (let i = 0; i < 3; i++)
+            x.fillRect(e.x + 0.26, e.y + 0.28 + i * 0.08, i === 2 ? 0.3 : 0.48, 0.025);
+        return;
+    }
+    if (e.kind === "objeto") {
+        const fl = motion ? 0.75 + 0.25 * (0, wdraw_ts_1.wave)(now / 430 + 0.3 * (0, wdraw_ts_1.wave)(now / 1700)) : 0.9;
+        x.fillStyle = "rgba(8,6,20,0.35)";
+        x.beginPath();
+        x.ellipse(e.x + 0.5, e.y + 0.82, 0.18, 0.06, 0, 0, wdraw_ts_1.TAU);
+        x.fill();
+        (0, wdraw_ts_1.drawLantern)(x, e.x + 0.5, e.y + 0.5, 0, 1.9, fl);
+        lights.push([e.x + 0.5, e.y + 0.65, 1.1 * fl, warm]);
+        return;
+    }
+    const who = e.kind === "personaje" ? "arnal" : e.id in wdraw_ts_1.LOOKS ? e.id : "tasia";
+    const L = wdraw_ts_1.LOOKS[who];
+    const dir = npcFace.get(e.id) ?? (e.facing ?? "s");
+    const b = motion ? 0.02 * (0, wdraw_ts_1.wave)(now / data_ts_2.LOOK.animacion.respirar_ms + (0, wdraw_ts_1.h01)(e.x, e.y, 5)) : 0;
+    const st = (0, wdraw_ts_1.staffOf)(dir, L, -1);
+    const staff = () => {
+        if (who === "tasia")
+            return;
+        x.save();
+        x.translate(e.x, e.y);
+        (0, wdraw_ts_1.drawStaff)(x, st, "#5e3e26", who === "gorio");
+        if (who === "arnal")
+            (0, wdraw_ts_1.drawLantern)(x, st.x1 + 0.1, st.y1 - 0.03, motion ? 0.01 * (0, wdraw_ts_1.wave)(now / 2900) : 0, 1.35, 0.9);
+        x.restore();
+    };
+    if (dir === "n")
+        staff();
+    x.drawImage(figureSprite(who, dir, -1), e.x - 0.3, e.y - 0.55 - 1.5 * b, 1.6, 1.6 * (1 + b));
+    if (dir !== "n")
+        staff();
+    if (who === "arnal")
+        lights.push([e.x + st.x1 + 0.1, e.y + st.y1 + 0.12, 1.8, warm]);
+    void g;
+}
+function drawGrassRow(x, ty, x0, x1, now, w, layer) {
+    const row = grassRows[ty];
+    if (!row)
+        return;
+    const motion = !reduced;
+    for (const [tx, , dense] of row) {
+        if (tx < x0 || tx > x1)
+            continue;
+        const per = dense ? data_ts_2.LOOK.ambiente.hierba_espesa_mece_ms : data_ts_2.LOOK.ambiente.hierba_mece_ms;
+        let k = motion ? (dense ? 0.05 : 0.065) * (0, wdraw_ts_1.wave)(now / per + (0, wdraw_ts_1.h01)(tx, ty, 1101) * 0.6 + tx * 0.07) : 0;
+        let sx = 1, sy = 1;
+        const onMe = tx === w.pos.x && ty === w.pos.y;
+        if (onMe) {
+            const el = now - enteredAt;
+            if (el > 0 && el < 250) {
+                const t = el / 250;
+                sx = 1 + 0.16 * (1 - t);
+                sy = 1 - 0.18 * (1 - t);
+            }
+            if (trans && trans.kind === "enc") {
+                const te = now - trans.t0;
+                if (te < data_ts_2.LOOK.transicion_encuentro.temblor_ms + 120) {
+                    sy = 1 + 0.28 * Math.abs((0, wdraw_ts_1.wave)(te / 90));
+                    k += 0.08 * (0, wdraw_ts_1.wave)(te / 60);
+                }
+            }
+        }
+        if (asomo && asomo.x === tx && asomo.y === ty)
+            k += 0.06 * (0, wdraw_ts_1.wave)((now - asomo.t0) / 110);
+        const set = tufts[layer];
+        const sp = (dense ? set.espesa : set.alta)[(0, wdraw_ts_1.hash32)(tx, ty, 1102) % 4];
+        // sesgo desde la base: las puntas se mecen, la base no
+        x.save();
+        x.transform(sx, 0, -k, sy, tx + 0.5 - 0.5 * sx + k, ty + 1 - sy);
+        x.drawImage(sp, 0, -0.45, 1, 1.45);
+        x.restore();
+    }
+}
+function drawLight(x, ox, oy, lights) {
+    if (!lightC || !punch)
+        return;
+    const lx = lightC.x;
+    const c = lightC.c;
+    lx.globalCompositeOperation = "source-over";
+    lx.clearRect(0, 0, c.width, c.height);
+    lx.fillStyle = data_ts_2.LOOK.luz_ambiente.velo;
+    lx.fillRect(0, 0, c.width, c.height);
+    lx.globalCompositeOperation = "destination-out";
+    for (const [px, py, r] of lights) {
+        const R = r * S;
+        lx.drawImage(punch, px * S + ox - R, py * S + oy - R, R * 2, R * 2);
+    }
+    x.setTransform(1, 0, 0, 1, 0, 0);
+    x.globalCompositeOperation = "multiply";
+    x.globalAlpha = Math.min(1, data_ts_2.LOOK.luz_ambiente.velo_alfa * 1.6);
+    x.drawImage(c, 0, 0);
+    x.globalCompositeOperation = "lighter";
+    for (const [px, py, r, spr] of lights) {
+        if (!spr)
+            continue;
+        const R = r * S * 0.85;
+        x.globalAlpha = 0.5;
+        x.drawImage(spr, px * S + ox - R, py * S + oy - R, R * 2, R * 2);
+    }
+    x.globalCompositeOperation = "source-over";
+    x.globalAlpha = 1;
+    if (vignette)
+        x.drawImage(vignette, 0, 0);
+    x.setTransform(S, 0, 0, S, ox, oy);
+}
+function drawParticles(x, now, x0, x1, y0, y1, px, py, w) {
+    const A = data_ts_2.LOOK.ambiente;
+    let n = 0;
+    x.globalCompositeOperation = "lighter";
+    // luciérnagas
+    for (let i = 0; i < flyAnchors.length && n < A.luciernagas.max; i++) {
+        const [ax, ay] = flyAnchors[i];
+        if (ax < x0 || ax > x1 || ay < y0 || ay > y1)
+            continue;
+        n++;
+        const fx = ax + 0.5 + 0.7 * (0, wdraw_ts_1.wave)(now / (5200 + i * 37) + (0, wdraw_ts_1.h01)(i, 1, 1201));
+        const fy = ay + 0.1 + 0.45 * (0, wdraw_ts_1.wave)(now / (3700 + i * 53) + (0, wdraw_ts_1.h01)(i, 2, 1202));
+        const a = Math.max(0, (0, wdraw_ts_1.wave)(now / (1900 + i * 41) + (0, wdraw_ts_1.h01)(i, 3, 1203)));
+        if (a < 0.05)
+            continue;
+        x.globalAlpha = a;
+        x.drawImage(fly, fx - 0.16, fy - 0.16, 0.32, 0.32);
+        x.fillStyle = A.luciernagas.colores[i % A.luciernagas.colores.length] ?? "#ffe58a";
+        x.fillRect(fx - 1.2 / S, fy - 1.2 / S, 2.4 / S, 2.4 / S);
+    }
+    // motas alrededor del farol del jugador
+    const st = (0, wdraw_ts_1.staffOf)(w.mira, wdraw_ts_1.LOOKS["farolero"], -1);
+    const lx = px + st.x1 + 0.1, ly = py + st.y1 + 0.1;
+    for (let i = 0; i < A.motas_farol.max; i++) {
+        const ph = (now / 1700 + i / A.motas_farol.max) % 1;
+        x.globalAlpha = (1 - ph) * 0.8;
+        x.fillStyle = "#ffcf5a";
+        const mx = lx + 0.18 * (0, wdraw_ts_1.wave)(ph * 1.3 + i * 0.37), my = ly - ph * 0.7;
+        x.fillRect(mx - 0.8 / S, my - 0.8 / S, 1.6 / S, 1.6 / S);
+    }
+    x.globalCompositeOperation = "source-over";
+    // hojas que caen de las copas visibles
+    const vis = trees.filter(([tx, ty]) => tx >= x0 && tx <= x1 && ty >= y0 && ty <= y1);
+    if (vis.length) {
+        for (let i = 0; i < A.hojas.max; i++) {
+            const per = 5200;
+            const tt = now + i * 1300;
+            const cyc = Math.floor(tt / per);
+            const ph = (tt % per) / per;
+            const [tx, ty] = vis[(0, wdraw_ts_1.hash32)(cyc, i, 1301) % vis.length];
+            const lx2 = tx + 0.5 + 0.5 * (0, wdraw_ts_1.wave)(ph * 1.5 + i * 0.3) + ((0, wdraw_ts_1.h01)(cyc, i, 1302) - 0.5);
+            const ly2 = ty - 0.6 + ph * 1.6;
+            x.globalAlpha = ph < 0.1 ? ph * 10 : ph > 0.85 ? (1 - ph) / 0.15 : 1;
+            x.fillStyle = i % 2 ? "#c99a45" : "#5f9a5c";
+            x.beginPath();
+            x.ellipse(lx2, ly2, 0.06, 0.028, (0, wdraw_ts_1.wave)(ph * 2 + i * 0.2) * 1.2, 0, wdraw_ts_1.TAU);
+            x.fill();
+        }
+    }
+    x.globalAlpha = 1;
+}
+function drawUi(x, now, w, g) {
+    // ojos que asoman en la hierba
+    if (asomo) {
+        const t = (now - asomo.t0) / data_ts_2.LOOK.asomo.dura_ms;
+        const a = t < 0.25 ? t / 0.25 : t > 0.7 ? (1 - t) / 0.3 : 1;
+        eyes(x, asomo.x + 0.5, asomo.y + 0.42, asomo.color, a, 0.9);
+    }
+    // marcador de destino
+    if (marker) {
+        const el = now - marker.t0;
+        if (marker.bad) {
+            if (el > 600)
+                marker = null;
+            else {
+                x.globalAlpha = 1 - el / 600;
+                x.strokeStyle = "#ff8a7a";
+                x.lineWidth = 0.07;
+                x.lineCap = "round";
+                x.beginPath();
+                x.moveTo(marker.x + 0.32, marker.y + 0.32);
+                x.lineTo(marker.x + 0.68, marker.y + 0.68);
+                x.moveTo(marker.x + 0.68, marker.y + 0.32);
+                x.lineTo(marker.x + 0.32, marker.y + 0.68);
+                x.stroke();
+            }
+        }
+        else {
+            const p = (el % 1000) / 1000;
+            x.strokeStyle = "#ffcf5a";
+            x.lineWidth = 0.05;
+            x.globalAlpha = 0.9;
+            x.beginPath();
+            x.ellipse(marker.x + 0.5, marker.y + 0.78, 0.3, 0.13, 0, 0, wdraw_ts_1.TAU);
+            x.stroke();
+            x.globalAlpha = 1 - p;
+            x.beginPath();
+            x.ellipse(marker.x + 0.5, marker.y + 0.78, 0.3 + p * 0.25, 0.13 + p * 0.1, 0, 0, wdraw_ts_1.TAU);
+            x.stroke();
+            x.globalAlpha = 1;
+            x.fillStyle = "#ffcf5a";
+            const by = marker.y + 0.25 - 0.08 * Math.abs((0, wdraw_ts_1.wave)(el / 900));
+            x.beginPath();
+            x.moveTo(marker.x + 0.5, by + 0.22);
+            x.lineTo(marker.x + 0.38, by);
+            x.lineTo(marker.x + 0.62, by);
+            x.closePath();
+            x.fill();
+        }
+        x.globalAlpha = 1;
+    }
+    // «!» sobre Arnal hasta la intro
+    if (g.inicial.elegida === null) {
+        const ar = map.entities.find((e) => e.kind === "personaje");
+        if (ar) {
+            const by = ar.y - 0.55 - 0.08 * Math.abs((0, wdraw_ts_1.wave)(now / 1100));
+            const ax = ar.x + 0.5;
+            x.fillStyle = "#1b1622";
+            x.beginPath();
+            x.roundRect(ax - 0.17, by - 0.2, 0.34, 0.4, 0.12);
+            x.fill();
+            x.fillStyle = data_ts_2.LOOK.personajes.aviso;
+            x.beginPath();
+            x.roundRect(ax - 0.045, by - 0.13, 0.09, 0.19, 0.04);
+            x.fill();
+            x.beginPath();
+            x.arc(ax, by + 0.12, 0.045, 0, wdraw_ts_1.TAU);
+            x.fill();
+        }
+    }
+    // burbuja «usar» sobre lo que se tiene delante
+    if (!mv && !dlg && !trans) {
+        const ft = (0, index_ts_1.facingTarget)(w, data_ts_2.wcfg);
+        if ((ft.entity || ft.activator) && !(ft.entity?.kind === "personaje" && g.inicial.elegida === null)) {
+            const bx = ft.x + 0.5, by = ft.y - (ft.entity && ft.entity.kind !== "cartel" && ft.entity.kind !== "objeto" ? 0.45 : 0.05) - 0.04 * Math.abs((0, wdraw_ts_1.wave)(now / 1300));
+            x.fillStyle = "rgba(245,240,230,0.92)";
+            x.beginPath();
+            x.roundRect(bx - 0.2, by - 0.13, 0.4, 0.24, 0.1);
+            x.fill();
+            x.beginPath();
+            x.moveTo(bx - 0.05, by + 0.1);
+            x.lineTo(bx, by + 0.18);
+            x.lineTo(bx + 0.05, by + 0.1);
+            x.fill();
+            x.fillStyle = "#2b2530";
+            for (let i = -1; i <= 1; i++) {
+                x.beginPath();
+                x.arc(bx + i * 0.09, by - 0.01, 0.028, 0, wdraw_ts_1.TAU);
+                x.fill();
+            }
+        }
+    }
+}
+function eyes(x, cx, cy, color, a, scale) {
+    if (a <= 0)
+        return;
+    x.globalAlpha = a * 0.55;
+    x.fillStyle = "#05080a";
+    x.beginPath();
+    x.ellipse(cx, cy, 0.3 * scale, 0.14 * scale, 0, 0, wdraw_ts_1.TAU);
+    x.fill();
+    x.globalAlpha = a * 0.6;
+    x.globalCompositeOperation = "lighter";
+    x.drawImage(fly, cx - 0.35 * scale, cy - 0.3 * scale, 0.7 * scale, 0.6 * scale);
+    x.globalCompositeOperation = "source-over";
+    x.globalAlpha = a;
+    x.fillStyle = (0, palette_ts_1.mix)(color, "#ffffff", 0.35);
+    for (const s of [-1, 1]) {
+        x.beginPath();
+        x.ellipse(cx + s * 0.11 * scale, cy, 0.07 * scale, 0.04 * scale * (0.3 + 0.7 * a), s * 0.35, 0, wdraw_ts_1.TAU);
+        x.fill();
+    }
+    x.globalAlpha = 1;
+}
+function drawTrans(x, now, ox, oy, px, py) {
+    if (!trans || !cv)
+        return;
+    const el = now - trans.t0;
+    const cx = (px + 0.5) * S + ox, cy = (py + 0.5) * S + oy;
+    const diag = cv.width + cv.height;
+    const hole = (r, alpha = 1) => {
+        x.setTransform(1, 0, 0, 1, 0, 0);
+        x.globalAlpha = alpha;
+        x.fillStyle = "#07080f";
+        x.beginPath();
+        x.rect(0, 0, cv.width, cv.height);
+        if (r > 0)
+            x.arc(cx, cy, r, 0, wdraw_ts_1.TAU);
+        x.fill("evenodd");
+        x.globalAlpha = 1;
+        x.setTransform(S, 0, 0, S, ox, oy);
+    };
+    if (trans.kind === "open") {
+        const t = Math.min(1, el / trans.dur);
+        hole(diag * t * t, 1);
+    }
+    else if (trans.kind === "close") {
+        const t = Math.min(1, el / trans.dur);
+        hole(diag * (1 - t) * (1 - t), 1);
+    }
+    else {
+        const P = data_ts_2.LOOK.transicion_encuentro;
+        const tEyes = P.temblor_ms, tFlash = tEyes + P.ojos_ms, tVig = tFlash + P.destello_ms;
+        if (el >= tEyes) {
+            const a = Math.min(1, (el - tEyes) / 150);
+            eyes(x, trans.ex + 0.5, trans.ey + 0.5, trans.color, a, 1.7 + 0.5 * Math.min(1, (el - tEyes) / P.ojos_ms));
+        }
+        if (el >= tFlash && el < tVig + 60) {
+            x.setTransform(1, 0, 0, 1, 0, 0);
+            x.globalAlpha = 0.85 * (1 - Math.max(0, el - tFlash) / (P.destello_ms + 60));
+            x.fillStyle = "#fff6dc";
+            x.fillRect(0, 0, cv.width, cv.height);
+            x.globalAlpha = 1;
+            x.setTransform(S, 0, 0, S, ox, oy);
+        }
+        if (el >= tVig) {
+            const t = Math.min(1, (el - tVig) / P.vineta_ms);
+            hole(diag * 0.6 * (1 - t) * (1 - t));
+        }
+    }
+}
+/** Para pruebas: posición en pantalla (CSS) del centro de una casilla. */
+function tileToClient(tx, ty) {
+    if (!cv)
+        return null;
+    const cam = camera(performance.now());
+    const r = cv.getBoundingClientRect();
+    return { x: r.left + ((tx + 0.5) * S + cam.ox) / dpr, y: r.top + ((ty + 0.5) * S + cam.oy) / dpr };
+}
+
+};
+defs["client/animas/wdraw.ts"]=function(module,exports,require){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.LOOKS = exports.TAU = exports.h01 = void 0;
+exports.hash32 = hash32;
+exports.wave = wave;
+exports.col = col;
+exports.rgba = rgba;
+exports.canvas = canvas;
+exports.terrainOf = terrainOf;
+exports.drawGround = drawGround;
+exports.doorX = doorX;
+exports.tuftSprite = tuftSprite;
+exports.canopySprite = canopySprite;
+exports.haloSprite = haloSprite;
+exports.drawFigure = drawFigure;
+exports.staffOf = staffOf;
+exports.drawStaff = drawStaff;
+exports.drawLantern = drawLantern;
+exports.portrait = portrait;
+exports.sanctuaryArt = sanctuaryArt;
+const palette_ts_1 = require("../art/palette.ts");
+const data_ts_1 = require("./data.ts");
+// ------------------------------------------------------------------ hash, onda, colores
+let VSEED = 0;
+for (const ch of data_ts_1.LOOK.semilla_visual)
+    VSEED = (Math.imul(VSEED ^ ch.charCodeAt(0), 0x9e3779b1) + 0x7f4a7c15) | 0;
+function hash32(x, y, k = 0) {
+    let h = Math.imul(x | 0, 0x27d4eb2d) ^ Math.imul(y | 0, 0x165667b1) ^ Math.imul(k | 0, 0x85ebca6b) ^ VSEED;
+    h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+    h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
+    return (h ^ (h >>> 15)) >>> 0;
+}
+/** [0, 1) determinista. */
+const h01 = (x, y, k = 0) => hash32(x, y, k) / 4294967296;
+exports.h01 = h01;
+const WAVE = [];
+for (let i = 0; i < 32; i++) {
+    const p = i / 32;
+    const tri = p < 0.25 ? p * 4 : p < 0.75 ? 2 - p * 4 : p * 4 - 4;
+    WAVE.push(tri * (1.5 - 0.5 * tri * tri)); // aproximación cúbica de una onda suave, sin trigonometría
+}
+/** Onda periódica suave en [-1, 1]; `p` en ciclos. */
+function wave(p) {
+    const f = (p - Math.floor(p)) * 32;
+    const i = Math.floor(f);
+    const a = WAVE[i & 31];
+    const b = WAVE[(i + 1) & 31];
+    return a + (b - a) * (f - i);
+}
+exports.TAU = Math.PI * 2;
+function col(tile, i) {
+    const c = data_ts_1.LOOK.casillas[tile]?.colores ?? [];
+    return c[i] ?? c[0] ?? "#ff00ff";
+}
+function rgba(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+function canvas(w, h) {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.ceil(w));
+    c.height = Math.max(1, Math.ceil(h));
+    return { c, x: c.getContext("2d") };
+}
+function terrainOf(map) {
+    return {
+        map,
+        ch: (x, y) => (x < 0 || y < 0 || x >= map.width || y >= map.height ? "#" : map.rows[y][x]),
+    };
+}
+/** Forma unida de un terreno: cuadrados que crecen `g` hacia los vecinos de otro tipo, esquinas convexas redondeadas,
+ *  esquinas cóncavas con filete y bultos irregulares en los bordes (§7.2). */
+function shape(x, T, p, r0, g, r, color, bump, salt, fillet = 0.29) {
+    const [ax, ay, bx, by] = r0;
+    x.fillStyle = color;
+    const e = 0.012;
+    for (let ty = ay; ty <= by; ty++) {
+        for (let tx = ax; tx <= bx; tx++) {
+            const me = p(tx, ty);
+            const N = p(tx, ty - 1), S = p(tx, ty + 1), W = p(tx - 1, ty), E = p(tx + 1, ty);
+            if (me) {
+                const l = tx - (W ? e : g), t = ty - (N ? e : g), rr = tx + 1 + (E ? e : g), b = ty + 1 + (S ? e : g);
+                const R = Math.min(r + g, 0.49 + g);
+                x.beginPath();
+                x.roundRect(l, t, rr - l, b - t, [!N && !W ? R : 0, !N && !E ? R : 0, !S && !E ? R : 0, !S && !W ? R : 0]);
+                x.fill();
+                if (bump > 0) {
+                    const sides = [
+                        [N, tx, ty - g, 1, 0], [S, tx, ty + 1 + g, 1, 0], [W, tx - g, ty, 0, 1], [E, tx + 1 + g, ty, 0, 1],
+                    ];
+                    sides.forEach(([nb, sx, sy, dx, dy], k) => {
+                        if (nb)
+                            return;
+                        for (let j = 0; j < 2; j++) {
+                            const u = 0.22 + 0.56 * (0, exports.h01)(tx * 4 + k, ty, salt + j * 7);
+                            const rad = bump * (0.55 + 0.6 * (0, exports.h01)(tx, ty * 4 + k, salt + j * 13));
+                            const out = ((0, exports.h01)(tx + k, ty, salt + 99 + j) - 0.35) * bump * 0.8;
+                            const cx = sx + dx * u + (dy ? (k === 2 ? -out : out) : 0);
+                            const cy = sy + dy * u + (dx ? (k === 0 ? -out : out) : 0);
+                            x.beginPath();
+                            x.arc(cx, cy, rad, 0, exports.TAU);
+                            x.fill();
+                        }
+                    });
+                }
+            }
+            else {
+                // filetes en las esquinas cóncavas
+                const rf = fillet;
+                const corners = [
+                    [N, W, tx + g, ty + g, 1, 1], [N, E, tx + 1 - g, ty + g, -1, 1], [S, E, tx + 1 - g, ty + 1 - g, -1, -1], [S, W, tx + g, ty + 1 - g, 1, -1],
+                ];
+                for (const [a, c, cx, cy, dx, dy] of corners) {
+                    if (!a || !c)
+                        continue;
+                    x.beginPath();
+                    x.moveTo(cx - dx * e, cy - dy * e);
+                    x.lineTo(cx + dx * rf, cy - dy * e);
+                    x.quadraticCurveTo(cx, cy, cx - dx * e, cy + dy * rf);
+                    x.closePath();
+                    x.fill();
+                }
+            }
+        }
+    }
+}
+const isTall = (c) => c === "," || c === ";";
+const isWater = (c) => c === "~" || c === "+";
+const isPath = (c) => c === "=" || c === "P" || c === "S";
+function blade(x, bx, by, hgt, lean, w) {
+    x.beginPath();
+    x.moveTo(bx - w, by);
+    x.quadraticCurveTo(bx - w * 0.3 + lean * 0.3, by - hgt * 0.55, bx + lean, by - hgt);
+    x.quadraticCurveTo(bx + w * 0.4 + lean * 0.35, by - hgt * 0.5, bx + w, by);
+    x.closePath();
+    x.fill();
+}
+/** Dibuja el terreno estático de las casillas [ax..bx]×[ay..by] (con margen para que los bloques casen). `x` ya está escalado a casillas. */
+function drawGround(x, T, ax, ay, bx, by) {
+    const R = [ax - 2, ay - 2, bx + 2, by + 2];
+    const [x0, y0, x1, y1] = R;
+    const c = T.ch;
+    // 1. hierba base con manchas de tono
+    x.fillStyle = col("hierba", 0);
+    x.fillRect(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+    for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+            for (let k = 0; k < 2; k++) {
+                const v = (0, exports.h01)(tx, ty, 11 + k);
+                x.fillStyle = v < 0.5 ? (0, palette_ts_1.mix)(col("hierba", 0), col("hierba", 1), 0.25 + v * 0.6) : (0, palette_ts_1.mix)(col("hierba", 0), col("hierba", 2), (v - 0.5) * 0.45);
+                x.beginPath();
+                x.ellipse(tx + (0, exports.h01)(tx, ty, 21 + k), ty + (0, exports.h01)(tx, ty, 31 + k), 0.3 + 0.3 * (0, exports.h01)(tx, ty, 41 + k), 0.22 + 0.2 * (0, exports.h01)(tx, ty, 51 + k), 0, 0, exports.TAU);
+                x.fill();
+            }
+        }
+    }
+    // 2. suelo del bosque y de la hierba alta
+    shape(x, T, (a, b) => c(a, b) === "T" || c(a, b) === "#", R, 0.16, 0.4, "#2a4a3a", 0.16, 1);
+    shape(x, T, (a, b) => isTall(c(a, b)), R, 0.13, 0.42, col("hierba_alta", 1), 0.16, 2);
+    shape(x, T, (a, b) => isTall(c(a, b)), R, 0.03, 0.4, col("hierba_alta", 0), 0.12, 3);
+    shape(x, T, (a, b) => c(a, b) === ";", R, 0.06, 0.4, col("hierba_espesa", 1), 0.12, 4);
+    shape(x, T, (a, b) => c(a, b) === ";", R, -0.06, 0.35, col("hierba_espesa", 0), 0.1, 5);
+    // 3. camino: labio oscuro, tierra, luces y guijarros
+    x.save();
+    x.translate(0, 0.05);
+    shape(x, T, (a, b) => isPath(c(a, b)), R, 0.1, 0.3, col("camino", 1), 0.1, 6);
+    x.restore();
+    shape(x, T, (a, b) => isPath(c(a, b)), R, 0.08, 0.3, col("camino", 0), 0.1, 6);
+    for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+            if (!isPath(c(tx, ty)))
+                continue;
+            x.fillStyle = (0, palette_ts_1.mix)(col("camino", 0), col("camino", 2), 0.55);
+            x.beginPath();
+            x.ellipse(tx + 0.3 + 0.4 * (0, exports.h01)(tx, ty, 61), ty + 0.3 + 0.4 * (0, exports.h01)(tx, ty, 62), 0.22, 0.12, 0, 0, exports.TAU);
+            x.fill();
+            x.fillStyle = (0, palette_ts_1.mix)(col("camino", 0), col("camino", 1), 0.5);
+            x.beginPath();
+            x.ellipse(tx + 0.25 + 0.5 * (0, exports.h01)(tx, ty, 63), ty + 0.6 + 0.3 * (0, exports.h01)(tx, ty, 64), 0.16, 0.06, 0, 0, exports.TAU);
+            x.fill();
+            const n = 1 + (hash32(tx, ty, 65) % 3);
+            for (let i = 0; i < n; i++) {
+                const px = tx + 0.12 + 0.76 * (0, exports.h01)(tx, ty, 70 + i), py = ty + 0.12 + 0.76 * (0, exports.h01)(tx, ty, 80 + i), rr = 0.025 + 0.035 * (0, exports.h01)(tx, ty, 90 + i);
+                x.fillStyle = col("camino", 1);
+                x.beginPath();
+                x.ellipse(px, py + 0.015, rr * 1.3, rr, 0, 0, exports.TAU);
+                x.fill();
+                x.fillStyle = (0, exports.h01)(tx, ty, 95 + i) < 0.5 ? "#c9b79a" : "#9b8f86";
+                x.beginPath();
+                x.ellipse(px, py, rr * 1.2, rr * 0.85, 0, 0, exports.TAU);
+                x.fill();
+            }
+        }
+    }
+    // 4. agua: arena, arena mojada, espuma, agua y fondo
+    const W = (a, b) => isWater(c(a, b));
+    shape(x, T, W, R, 0.17, 0.42, "#b39a6c", 0.1, 7, 0.5);
+    shape(x, T, W, R, 0.09, 0.42, "#7d6c50", 0.08, 7, 0.5);
+    shape(x, T, W, R, 0.04, 0.42, (0, palette_ts_1.mix)(col("agua", 2), col("agua", 3), 0.4), 0.07, 7, 0.5);
+    shape(x, T, W, R, -0.01, 0.4, col("agua", 0), 0.06, 7, 0.5);
+    shape(x, T, (a, b) => W(a, b) && W(a - 1, b) && W(a + 1, b) && W(a, b - 1) && W(a, b + 1), R, 0.22, 0.45, col("agua", 1), 0.08, 8);
+    // reflejos fijos en la orilla
+    x.strokeStyle = rgba(col("agua", 2), 0.55);
+    x.lineWidth = 0.03;
+    x.lineCap = "round";
+    for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+            if (c(tx, ty) !== "~" || (0, exports.h01)(tx, ty, 101) < 0.35)
+                continue;
+            const px = tx + 0.2 + 0.5 * (0, exports.h01)(tx, ty, 102), py = ty + 0.25 + 0.5 * (0, exports.h01)(tx, ty, 103);
+            x.beginPath();
+            x.moveTo(px, py);
+            x.quadraticCurveTo(px + 0.12, py - 0.05, px + 0.26, py);
+            x.stroke();
+        }
+    }
+    // 5. puente
+    for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+            if (c(tx, ty) !== "+")
+                continue;
+            const vertical = !isWater(c(tx - 1, ty)) ? false : true; // el arroyo corre norte-sur: el puente va oeste-este
+            x.save();
+            if (vertical) {
+                x.translate(tx + 0.5, ty + 0.5);
+                x.rotate(Math.PI / 2);
+                x.translate(-tx - 0.5, -ty - 0.5);
+            }
+            x.fillStyle = "rgba(5,10,25,0.35)";
+            x.fillRect(tx - 0.15, ty + 0.2, 1.3, 0.72);
+            for (let i = 0; i < 6; i++) {
+                const px = tx - 0.15 + i * 0.217;
+                x.fillStyle = i % 2 ? col("puente", 0) : (0, palette_ts_1.mix)(col("puente", 0), col("puente", 2), 0.3);
+                x.beginPath();
+                x.roundRect(px, ty + 0.1 + 0.02 * (0, exports.h01)(tx, i, 111), 0.2, 0.74, 0.03);
+                x.fill();
+                x.fillStyle = col("puente", 1);
+                x.fillRect(px + 0.02, ty + 0.78, 0.16, 0.05);
+            }
+            x.fillStyle = col("puente", 1);
+            x.fillRect(tx - 0.18, ty + 0.06, 1.36, 0.08);
+            x.fillRect(tx - 0.18, ty + 0.8, 1.36, 0.08);
+            x.fillStyle = col("puente", 2);
+            x.fillRect(tx - 0.18, ty + 0.06, 1.36, 0.03);
+            x.fillRect(tx - 0.18, ty + 0.8, 1.36, 0.03);
+            x.restore();
+        }
+    }
+    // 6. detalle de la hierba baja y las flores
+    const FL = [col("flores", 1), col("flores", 2), col("flores", 3)];
+    for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+            const k = c(tx, ty);
+            if (k !== "." && k !== "*")
+                continue;
+            const tufts = hash32(tx, ty, 121) % 4;
+            for (let i = 0; i < tufts; i++) {
+                const px = tx + 0.15 + 0.7 * (0, exports.h01)(tx, ty, 130 + i), py = ty + 0.3 + 0.62 * (0, exports.h01)(tx, ty, 140 + i);
+                x.fillStyle = i % 2 ? col("hierba", 2) : col("hierba", 1);
+                const nb = 2 + (hash32(tx, ty, 150 + i) % 3);
+                for (let j = 0; j < nb; j++)
+                    blade(x, px + (j - nb / 2) * 0.035, py, 0.1 + 0.07 * (0, exports.h01)(tx, j, 160 + i), (j - nb / 2 + 0.5) * 0.05, 0.016);
+            }
+            if ((0, exports.h01)(tx, ty, 170) < 0.35) {
+                x.fillStyle = rgba(col("hierba", 2), 0.6);
+                x.beginPath();
+                x.arc(tx + (0, exports.h01)(tx, ty, 171), ty + (0, exports.h01)(tx, ty, 172), 0.025, 0, exports.TAU);
+                x.fill();
+            }
+            const nf = k === "*" ? 3 + (hash32(tx, ty, 180) % 4) : (0, exports.h01)(tx, ty, 181) < 0.1 ? 1 : 0;
+            const ca = FL[hash32(tx, ty, 182) % 3], cb = FL[hash32(tx, ty, 183) % 3];
+            for (let i = 0; i < nf; i++) {
+                const px = tx + 0.15 + 0.7 * (0, exports.h01)(tx, ty, 190 + i), py = ty + 0.15 + 0.7 * (0, exports.h01)(tx, ty, 200 + i);
+                x.fillStyle = col("hierba", 1);
+                x.fillRect(px - 0.006, py, 0.012, 0.08);
+                x.fillStyle = i % 2 ? cb : ca;
+                for (let p = 0; p < 4; p++) {
+                    x.beginPath();
+                    x.arc(px + (p % 2 ? 0.024 : -0.024) * (p < 2 ? 1 : 0), py + (p >= 2 ? (p === 2 ? 0.024 : -0.024) : 0), 0.026, 0, exports.TAU);
+                    x.fill();
+                }
+                x.fillStyle = "#fff3c4";
+                x.beginPath();
+                x.arc(px, py, 0.016, 0, exports.TAU);
+                x.fill();
+            }
+        }
+    }
+    // 7. rocas y troncos (con sombra)
+    for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+            const k = c(tx, ty);
+            if (k === "R")
+                drawRock(x, tx, ty);
+            else if (k === "T") {
+                x.fillStyle = "rgba(8,14,12,0.35)";
+                x.beginPath();
+                x.ellipse(tx + 0.55, ty + 0.78, 0.62, 0.26, 0, 0, exports.TAU);
+                x.fill();
+                x.fillStyle = "#3a281c";
+                x.beginPath();
+                x.moveTo(tx + 0.38, ty + 0.9);
+                x.quadraticCurveTo(tx + 0.45, ty + 0.7, tx + 0.44, ty + 0.4);
+                x.lineTo(tx + 0.58, ty + 0.4);
+                x.quadraticCurveTo(tx + 0.56, ty + 0.7, tx + 0.64, ty + 0.9);
+                x.closePath();
+                x.fill();
+                x.fillStyle = "#5a3f2b";
+                x.fillRect(tx + 0.46, ty + 0.42, 0.04, 0.44);
+            }
+        }
+    }
+    // 8. santuario
+    drawSanctuary(x, T, R);
+}
+function drawRock(x, tx, ty) {
+    const j = (k) => ((0, exports.h01)(tx, ty, 300 + k) - 0.5) * 0.12;
+    x.fillStyle = "rgba(8,10,20,0.35)";
+    x.beginPath();
+    x.ellipse(tx + 0.55, ty + 0.84, 0.44, 0.15, 0, 0, exports.TAU);
+    x.fill();
+    const pts = [[0.12 + j(0), 0.82], [0.1 + j(1), 0.5 + j(2)], [0.3 + j(3), 0.2 + j(4)], [0.62 + j(5), 0.14 + j(6)], [0.88 + j(7), 0.42 + j(8)], [0.9 + j(9), 0.82]];
+    const poly = (p, fill) => {
+        x.fillStyle = fill;
+        x.beginPath();
+        p.forEach(([a, b], i) => (i ? x.lineTo(tx + a, ty + b) : x.moveTo(tx + a, ty + b)));
+        x.closePath();
+        x.fill();
+    };
+    poly(pts, col("roca", 1));
+    const [p1, p2, p3, p4, p5] = pts;
+    poly([p1, p2, p3, p4, [p4[0] - 0.05, 0.55], [0.3, 0.62]], col("roca", 0));
+    poly([p2, p3, p4, [p4[0] - 0.1, p4[1] + 0.16], [p3[0] - 0.02, p3[1] + 0.2]], col("roca", 2));
+    void p5;
+    x.strokeStyle = (0, palette_ts_1.mix)(col("roca", 2), "#ffffff", 0.35);
+    x.lineWidth = 0.022;
+    x.beginPath();
+    x.moveTo(tx + p2[0], ty + p2[1]);
+    x.lineTo(tx + p3[0], ty + p3[1]);
+    x.lineTo(tx + p4[0], ty + p4[1]);
+    x.stroke();
+    if ((0, exports.h01)(tx, ty, 320) < 0.6) {
+        x.fillStyle = "#4f7a45";
+        x.beginPath();
+        x.ellipse(tx + 0.25 + 0.3 * (0, exports.h01)(tx, ty, 321), ty + 0.62, 0.14, 0.06, 0, 0, exports.TAU);
+        x.fill();
+        x.fillStyle = "#6f9a55";
+        x.beginPath();
+        x.ellipse(tx + 0.25 + 0.3 * (0, exports.h01)(tx, ty, 321) - 0.03, ty + 0.6, 0.07, 0.03, 0, 0, exports.TAU);
+        x.fill();
+    }
+}
+/** El santuario: tejado a dos aguas en la fila de arriba, muro de piedra en hiladas, ventanas cálidas y arco de puerta. */
+function drawSanctuary(x, T, R) {
+    let minX = 99, maxX = -1, minY = 99, maxY = -1;
+    for (let ty = 0; ty < T.map.height; ty++)
+        for (let tx = 0; tx < T.map.width; tx++) {
+            const k = T.ch(tx, ty);
+            if (k === "H" || k === "P") {
+                minX = Math.min(minX, tx);
+                maxX = Math.max(maxX, tx);
+                minY = Math.min(minY, ty);
+                maxY = Math.max(maxY, ty);
+            }
+        }
+    if (maxX < 0 || maxX < R[0] || minX > R[2] || maxY < R[1] || minY > R[3])
+        return;
+    const L = minX, Rr = maxX + 1, top = minY, bot = maxY + 1;
+    const wallTop = top + 1.15;
+    const [cM, cS, cL, cD] = [col("muro_santuario", 0), col("muro_santuario", 1), col("muro_santuario", 2), col("muro_santuario", 3)];
+    // sombra
+    x.fillStyle = "rgba(6,6,16,0.4)";
+    x.beginPath();
+    x.ellipse((L + Rr) / 2 + 0.2, bot - 0.05, (Rr - L) / 2 + 0.4, 0.3, 0, 0, exports.TAU);
+    x.fill();
+    // muro
+    x.fillStyle = cD;
+    x.fillRect(L + 0.08, wallTop, Rr - L - 0.16, bot - wallTop - 0.04);
+    const rows = 5;
+    const rh = (bot - wallTop - 0.08) / rows;
+    for (let i = 0; i < rows; i++) {
+        const yy = wallTop + 0.02 + i * rh;
+        let xx = L + 0.1 - (i % 2 ? 0.22 : 0);
+        let k = 0;
+        while (xx < Rr - 0.1) {
+            const w = 0.36 + 0.18 * (0, exports.h01)(i, k, 401);
+            const a = Math.max(xx, L + 0.1), b = Math.min(xx + w, Rr - 0.1);
+            if (b - a > 0.05) {
+                x.fillStyle = (0, exports.h01)(i, k, 402) < 0.3 ? cS : (0, palette_ts_1.mix)(cM, cS, 0.25 * (0, exports.h01)(i, k, 403));
+                x.beginPath();
+                x.roundRect(a + 0.015, yy + 0.015, b - a - 0.03, rh - 0.03, 0.04);
+                x.fill();
+                x.fillStyle = rgba(cL, 0.55);
+                x.fillRect(a + 0.04, yy + 0.02, b - a - 0.08, 0.025);
+            }
+            xx += w;
+            k++;
+        }
+    }
+    // ventanas
+    for (const wx of [L + 0.75, Rr - 0.75]) {
+        x.fillStyle = cD;
+        x.beginPath();
+        x.roundRect(wx - 0.2, wallTop + 0.35, 0.4, 0.5, [0.2, 0.2, 0.03, 0.03]);
+        x.fill();
+        x.fillStyle = "#f2b54a";
+        x.beginPath();
+        x.roundRect(wx - 0.14, wallTop + 0.41, 0.28, 0.4, [0.14, 0.14, 0.02, 0.02]);
+        x.fill();
+        x.fillStyle = "#ffe3a3";
+        x.beginPath();
+        x.roundRect(wx - 0.08, wallTop + 0.47, 0.1, 0.16, [0.05, 0.05, 0, 0]);
+        x.fill();
+        x.fillStyle = cD;
+        x.fillRect(wx - 0.015, wallTop + 0.41, 0.03, 0.4);
+        x.fillRect(wx - 0.14, wallTop + 0.6, 0.28, 0.03);
+    }
+    // puerta (la luz que respira va aparte, animada)
+    const dx = doorX(T) + 0.5;
+    x.fillStyle = col("puerta_santuario", 0);
+    x.beginPath();
+    x.roundRect(dx - 0.38, wallTop + 0.12, 0.76, bot - wallTop - 0.1, [0.38, 0.38, 0, 0]);
+    x.fill();
+    x.fillStyle = "#1c1218";
+    x.beginPath();
+    x.roundRect(dx - 0.28, wallTop + 0.22, 0.56, bot - wallTop - 0.2, [0.28, 0.28, 0, 0]);
+    x.fill();
+    x.fillStyle = cL;
+    x.fillRect(dx - 0.46, bot - 0.1, 0.92, 0.08);
+    // tejado a dos aguas
+    const ridge = top + 0.05;
+    const eave = wallTop + 0.08;
+    x.fillStyle = "#231d29";
+    x.beginPath();
+    x.moveTo(L - 0.18, eave + 0.06);
+    x.lineTo(L + 0.55, ridge);
+    x.lineTo(Rr - 0.55, ridge);
+    x.lineTo(Rr + 0.18, eave + 0.06);
+    x.closePath();
+    x.fill();
+    const bands = 4;
+    for (let i = 0; i < bands; i++) {
+        const t0 = i / bands, t1 = (i + 1) / bands;
+        const y0 = ridge + (eave - ridge) * t0, y1 = ridge + (eave - ridge) * t1;
+        const lx0 = L + 0.55 - 0.73 * t0, lx1 = L + 0.55 - 0.73 * t1;
+        const rx0 = Rr - 0.55 + 0.73 * t0, rx1 = Rr - 0.55 + 0.73 * t1;
+        x.fillStyle = i % 2 ? "#3a2f42" : "#43364c";
+        x.beginPath();
+        x.moveTo(lx0 + 0.04, y0 + 0.02);
+        x.lineTo(rx0 - 0.04, y0 + 0.02);
+        x.lineTo(rx1 - 0.04, y1 - 0.02);
+        // borde festoneado de tejas
+        const n = Math.round(rx1 - lx1) * 3;
+        for (let k = n; k > 0; k--) {
+            const xa = lx1 + ((rx1 - lx1) * k) / n, xb = lx1 + ((rx1 - lx1) * (k - 1)) / n;
+            x.quadraticCurveTo((xa + xb) / 2, y1 + 0.07, xb + 0.04 * (k === 1 ? 1 : 0), y1 - 0.02);
+        }
+        x.closePath();
+        x.fill();
+    }
+    x.fillStyle = cL;
+    x.fillRect(L + 0.55, ridge - 0.03, Rr - L - 1.1, 0.07);
+    // emblema del Gran Farol sobre la puerta
+    x.fillStyle = "#2b2530";
+    x.beginPath();
+    x.arc(dx, eave - 0.32, 0.17, 0, exports.TAU);
+    x.fill();
+    x.fillStyle = "#f2b54a";
+    x.beginPath();
+    x.moveTo(dx, eave - 0.45);
+    x.lineTo(dx + 0.08, eave - 0.32);
+    x.lineTo(dx, eave - 0.2);
+    x.lineTo(dx - 0.08, eave - 0.32);
+    x.closePath();
+    x.fill();
+}
+function doorX(T) {
+    for (let ty = 0; ty < T.map.height; ty++)
+        for (let tx = 0; tx < T.map.width; tx++)
+            if (T.ch(tx, ty) === "P")
+                return tx;
+    return 0;
+}
+// ------------------------------------------------------------------ sprites: hierba alta y copas
+/** Mata de hierba alta: base en la mitad baja de la casilla, puntas que sobresalen ~1/3 por arriba. Área: x 0..1, y -0.45..1. */
+/** `front`: matas bajas de la mitad de abajo (van por delante del jugador y le tapan los pies); si no, las de detrás. */
+function tuftSprite(s, dense, v, front) {
+    const { c, x } = canvas(s, s * 1.45);
+    x.setTransform(s, 0, 0, s, 0, s * 0.45);
+    const id = dense ? "hierba_espesa" : "hierba_alta";
+    const n = front ? (dense ? 4 : 3) : dense ? 4 : 3;
+    const items = [];
+    for (let i = 0; i < n; i++) {
+        const bx = 0.12 + 0.76 * ((i + (front ? 0.5 : 0.1 + 0.8 * (0, exports.h01)(v, i, 505))) / n) + ((0, exports.h01)(v, i, 501) - 0.5) * 0.1;
+        const by = front ? 0.84 + 0.14 * (0, exports.h01)(v, i, 502) : 0.42 + 0.3 * (0, exports.h01)(v, i, 502);
+        const hgt = front ? (dense ? 0.36 : 0.32) + 0.08 * (0, exports.h01)(v, i, 503) : (dense ? 0.52 : 0.46) + 0.16 * (0, exports.h01)(v, i, 503);
+        const lean = ((0, exports.h01)(v, i, 504) - 0.5) * 0.16;
+        items.push([bx, Math.min(1, by), hgt, lean, i]);
+    }
+    items.sort((p, q) => p[1] - q[1]);
+    const dark = col(id, 1), base = col(id, 0), light = col(id, 2);
+    for (const [bx, by, hgt, lean, i] of items) {
+        // mata en V: dos hojas hacia fuera y una central, de oscuro a claro (sin contorno)
+        x.fillStyle = dark;
+        blade(x, bx - 0.05, by, hgt * 0.85, lean - 0.13, 0.05);
+        blade(x, bx + 0.05, by, hgt * 0.85, lean + 0.13, 0.05);
+        x.fillStyle = (0, palette_ts_1.mix)(base, light, 0.25);
+        blade(x, bx - 0.035, by, hgt * 0.92, lean - 0.09, 0.04);
+        x.fillStyle = (0, palette_ts_1.mix)(base, light, 0.55);
+        blade(x, bx + 0.035, by, hgt, lean + 0.08, 0.042);
+        x.fillStyle = dense && i % 2 === 0 ? col(id, 3) : light;
+        blade(x, bx + 0.035 + (lean + 0.08) * 0.62, by - hgt * 0.62, hgt * 0.38, (lean + 0.08) * 0.38, 0.022);
+        if (dense && i % 2 === 1) {
+            x.fillStyle = col(id, 3);
+            blade(x, bx - 0.035 + (lean - 0.09) * 0.6, by - hgt * 0.55, hgt * 0.37, (lean - 0.09) * 0.4, 0.02);
+        }
+    }
+    return c;
+}
+/** Copa de árbol en 3 capas planas (oscuro → claro). Área: x -0.35..1.35, y -1.3..0.7. */
+function canopySprite(s, v) {
+    const { c, x } = canvas(s * 1.7, s * 2.0);
+    x.setTransform(s, 0, 0, s, s * 0.35, s * 1.3);
+    const j = (k) => ((0, exports.h01)(v, k, 601) - 0.5) * 0.14;
+    const blobs = [
+        [0.5 + j(0), -0.28 + j(1), 0.56], [0.1 + j(2), -0.08, 0.38], [0.9 + j(3), -0.06, 0.37], [0.28 + j(4), -0.66 + j(5), 0.4], [0.74 + j(6), -0.68 + j(7), 0.38], [0.5, 0.12, 0.36],
+    ];
+    const layer = (shrink, ox, oy, color) => {
+        x.fillStyle = color;
+        x.beginPath();
+        for (const [bx, by, r] of blobs) {
+            if (r - shrink <= 0.02)
+                continue;
+            x.moveTo(bx + ox + r - shrink, by + oy);
+            x.arc(bx + ox, by + oy, r - shrink, 0, exports.TAU);
+        }
+        x.fill();
+    };
+    layer(0, 0, 0, col("arbol", 0));
+    layer(0.06, -0.03, -0.05, col("arbol", 1));
+    layer(0.16, -0.07, -0.11, col("arbol", 2));
+    layer(0.3, -0.12, -0.17, (0, palette_ts_1.mix)(col("arbol", 2), "#a8d88a", 0.3));
+    x.fillStyle = (0, palette_ts_1.mix)(col("arbol", 2), "#d8f5a0", 0.35);
+    for (let i = 0; i < 6; i++) {
+        x.beginPath();
+        x.ellipse(0.1 + 0.6 * (0, exports.h01)(v, i, 611), -0.85 + 0.6 * (0, exports.h01)(v, i, 612), 0.05, 0.03, 0, 0, exports.TAU);
+        x.fill();
+    }
+    if ((0, exports.h01)(v, 9, 613) < 0.5) {
+        x.fillStyle = "#c9604a";
+        for (let i = 0; i < 3; i++) {
+            x.beginPath();
+            x.arc(0.15 + 0.7 * (0, exports.h01)(v, i, 614), -0.5 + 0.6 * (0, exports.h01)(v, i, 615), 0.03, 0, exports.TAU);
+            x.fill();
+        }
+    }
+    return c;
+}
+/** Halo radial pre-renderizado (sin shadowBlur por frame). */
+function haloSprite(size, rgb, inner) {
+    const { c, x } = canvas(size, size);
+    const g = x.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    g.addColorStop(0, `rgba(${rgb},${inner})`);
+    g.addColorStop(0.45, `rgba(${rgb},${inner * 0.45})`);
+    g.addColorStop(1, `rgba(${rgb},0)`);
+    x.fillStyle = g;
+    x.fillRect(0, 0, size, size);
+    return c;
+}
+const FP = data_ts_1.LOOK.personajes;
+const fs = (o, k, d) => (typeof o[k] === "string" ? o[k] : d);
+exports.LOOKS = {
+    farolero: { H: 0.8, capa: fs(FP.farolero, "capa", "#b4532f"), sombra: fs(FP.farolero, "capa_sombra", "#7e3420"), luz: fs(FP.farolero, "capa_luz", "#d4744a"), interior: fs(FP.farolero, "capucha_interior", "#1a1420"), ojos: fs(FP.farolero, "ojos", "#ffcf5a"), peak: 0.1 },
+    arnal: { H: 0.98, capa: FP.arnal["capa"] ?? "#4a3b6b", sombra: FP.arnal["capa_sombra"] ?? "#2f2547", luz: (0, palette_ts_1.mix)(FP.arnal["capa"] ?? "#4a3b6b", "#b9a6e8", 0.35), interior: "#141020", ojos: FP.arnal["ojos"] ?? "#9fe3ff", beard: FP.arnal["barba"] ?? "#d9d4c7", peak: 0.2 },
+    tasia: { H: 0.8, capa: FP.vecinos["tasia"]?.["capa"] ?? "#3f6f9c", sombra: FP.vecinos["tasia"]?.["capa_sombra"] ?? "#2b4e70", luz: (0, palette_ts_1.mix)(FP.vecinos["tasia"]?.["capa"] ?? "#3f6f9c", "#cfe4ff", 0.3), interior: "#121624", ojos: "#ffe9a8", hat: "#5b3b2a" },
+    gorio: { H: 0.72, capa: FP.vecinos["gorio"]?.["capa"] ?? "#7a8f3c", sombra: FP.vecinos["gorio"]?.["capa_sombra"] ?? "#56662a", luz: (0, palette_ts_1.mix)(FP.vecinos["gorio"]?.["capa"] ?? "#7a8f3c", "#efffb0", 0.3), interior: "#161a10", ojos: "#ffd89a", hunch: true, peak: 0.06 },
+};
+/** Una figura encapuchada (sin el bastón), en casillas: x 0..1, pies en y 0.95. `frame` 0..3 al andar; -1 quieto. */
+function drawFigure(x, L, dir, frame) {
+    const bob = frame === 1 || frame === 3 ? -0.025 : 0;
+    const sway = frame === 1 ? 0.035 : frame === 3 ? -0.035 : 0;
+    const feetY = 0.95;
+    const top = feetY - L.H + bob;
+    const hoodR = 0.18 * (L.H / 0.8) * (L.hunch ? 0.95 : 1);
+    const side = dir === "e" ? 1 : dir === "o" ? -1 : 0;
+    const hcx = 0.5 + side * 0.04 + (L.hunch ? side * 0.08 : 0);
+    const hcy = top + hoodR + (L.hunch ? 0.06 : 0);
+    const hem = 0.3 * (L.H / 0.8) * (L.hunch ? 1.05 : 1);
+    // pies
+    if (frame === 1 || frame === 3) {
+        x.fillStyle = "#1a1418";
+        const fx = frame === 1 ? 0.4 : 0.6;
+        x.beginPath();
+        x.ellipse(fx + side * 0.04, feetY, 0.06, 0.035, 0, 0, exports.TAU);
+        x.fill();
+    }
+    const cape = (sx, ox, oy, color) => {
+        x.save();
+        x.translate(0.5 + ox, oy);
+        x.scale(sx, 1);
+        x.translate(-0.5, 0);
+        x.fillStyle = color;
+        x.beginPath();
+        x.moveTo(0.5 - hoodR * 0.9 + (hcx - 0.5), hcy);
+        x.quadraticCurveTo(0.5 - hem * 0.95, top + L.H * 0.6, 0.5 - hem + sway, feetY - 0.02);
+        x.quadraticCurveTo(0.5 - hem * 0.5 + sway, feetY + 0.03, 0.5 + sway * 0.5, feetY - 0.01);
+        x.quadraticCurveTo(0.5 + hem * 0.5 + sway, feetY + 0.03, 0.5 + hem + sway, feetY - 0.02);
+        x.quadraticCurveTo(0.5 + hem * 0.95, top + L.H * 0.6, 0.5 + hoodR * 0.9 + (hcx - 0.5), hcy);
+        x.closePath();
+        x.fill();
+        x.restore();
+    };
+    cape(1, 0, 0, L.sombra);
+    cape(0.84, -0.03 - side * 0.02, -0.015, L.capa);
+    cape(0.36, -0.12 - side * 0.03, -0.02, L.luz);
+    // barba (por delante del pecho)
+    if (L.beard && dir !== "n") {
+        x.fillStyle = L.beard;
+        x.beginPath();
+        x.moveTo(hcx - 0.1 + side * 0.04, hcy + 0.08);
+        x.quadraticCurveTo(hcx + side * 0.06, hcy + 0.5, hcx + 0.1 + side * 0.06, hcy + 0.08);
+        x.closePath();
+        x.fill();
+    }
+    // capucha: 3 capas y pico
+    const peak = L.peak ?? 0;
+    if (peak > 0) {
+        x.fillStyle = L.sombra;
+        x.beginPath();
+        x.moveTo(hcx - hoodR * 0.7, hcy - hoodR * 0.4);
+        x.quadraticCurveTo(hcx - side * 0.05, top - peak * 0.6, hcx - side * 0.12 + 0.06, top - peak);
+        x.quadraticCurveTo(hcx + hoodR * 0.4, top + 0.02, hcx + hoodR * 0.8, hcy - hoodR * 0.3);
+        x.closePath();
+        x.fill();
+    }
+    x.fillStyle = L.sombra;
+    x.beginPath();
+    x.arc(hcx, hcy, hoodR, 0, exports.TAU);
+    x.fill();
+    x.fillStyle = L.capa;
+    x.beginPath();
+    x.arc(hcx - 0.015, hcy - 0.015, hoodR * 0.9, 0, exports.TAU);
+    x.fill();
+    x.fillStyle = L.luz;
+    x.beginPath();
+    x.ellipse(hcx - hoodR * 0.45, hcy - hoodR * 0.4, hoodR * 0.35, hoodR * 0.22, -0.6, 0, exports.TAU);
+    x.fill();
+    if (L.hat) {
+        x.fillStyle = L.hat;
+        x.beginPath();
+        x.ellipse(hcx, hcy - hoodR * 0.45, hoodR * 1.55, hoodR * 0.42, 0, 0, exports.TAU);
+        x.fill();
+        x.fillStyle = (0, palette_ts_1.mix)(L.hat, "#000000", 0.25);
+        x.beginPath();
+        x.roundRect(hcx - hoodR * 0.7, hcy - hoodR * 1.25, hoodR * 1.4, hoodR * 0.8, [hoodR * 0.4, hoodR * 0.4, 0, 0]);
+        x.fill();
+        x.fillStyle = "#d9b46a";
+        x.fillRect(hcx - hoodR * 0.7, hcy - hoodR * 0.6, hoodR * 1.4, hoodR * 0.15);
+    }
+    // hueco de la cara con dos ojos de luz
+    if (dir !== "n") {
+        const fx = hcx + side * hoodR * 0.38;
+        x.fillStyle = L.interior;
+        x.beginPath();
+        x.ellipse(fx, hcy + hoodR * 0.12, hoodR * (side ? 0.5 : 0.66), hoodR * 0.58, 0, 0, exports.TAU);
+        x.fill();
+        x.fillStyle = rgba(L.ojos, 0.22);
+        x.beginPath();
+        x.ellipse(fx, hcy + hoodR * 0.12, hoodR * 0.5, hoodR * 0.35, 0, 0, exports.TAU);
+        x.fill();
+        x.fillStyle = L.ojos;
+        const ey = hcy + hoodR * 0.1;
+        const eyes = side ? [fx + side * hoodR * 0.12, fx - side * hoodR * 0.22] : [fx - hoodR * 0.27, fx + hoodR * 0.27];
+        eyes.forEach((ex, i) => {
+            const w = side && i === 1 ? 0.6 : 1;
+            x.beginPath();
+            x.ellipse(ex, ey, hoodR * 0.12 * w, hoodR * 0.2, side ? 0 : (i ? -0.35 : 0.35), 0, exports.TAU);
+            x.fill();
+        });
+    }
+    else {
+        x.strokeStyle = L.sombra;
+        x.lineWidth = 0.02;
+        x.beginPath();
+        x.moveTo(hcx, hcy - hoodR * 0.6);
+        x.quadraticCurveTo(hcx + 0.01, hcy + hoodR * 0.4, hcx, hcy + hoodR * 1.3);
+        x.stroke();
+    }
+}
+/** Bastón con farol. Devuelve el punto del que cuelga el farol (casillas). */
+function staffOf(dir, L, frame) {
+    const bob = frame === 1 || frame === 3 ? -0.025 : 0;
+    const top = 0.95 - L.H + bob;
+    const sx = dir === "s" ? 0.8 : dir === "n" ? 0.2 : dir === "e" ? 0.78 : 0.22;
+    return { x0: sx - (dir === "e" ? 0.05 : dir === "o" ? -0.05 : 0), y0: 0.93, x1: sx, y1: top + 0.02 };
+}
+function drawStaff(x, st, color, crook = false) {
+    x.strokeStyle = color;
+    x.lineWidth = 0.045;
+    x.lineCap = "round";
+    x.beginPath();
+    x.moveTo(st.x0, st.y0);
+    x.lineTo(st.x1, st.y1);
+    if (crook)
+        x.quadraticCurveTo(st.x1 + 0.02, st.y1 - 0.14, st.x1 + 0.12, st.y1 - 0.08);
+    else
+        x.lineTo(st.x1 + 0.1, st.y1 - 0.03);
+    x.stroke();
+}
+/** Farol colgado de (hx, hy) con balanceo `sw` (casillas de desplazamiento) y brillo `glow` 0..1. */
+function drawLantern(x, hx, hy, sw, scale, glow) {
+    const lx = hx + sw, ly = hy + 0.11 * scale;
+    x.strokeStyle = "#2a1d14";
+    x.lineWidth = 0.018;
+    x.beginPath();
+    x.moveTo(hx, hy);
+    x.lineTo(lx, ly - 0.05 * scale);
+    x.stroke();
+    x.fillStyle = "#3a2a22";
+    x.beginPath();
+    x.roundRect(lx - 0.065 * scale, ly - 0.06 * scale, 0.13 * scale, 0.15 * scale, 0.03 * scale);
+    x.fill();
+    x.fillStyle = (0, palette_ts_1.mix)("#f2b54a", "#fff1c4", glow * 0.6);
+    x.beginPath();
+    x.roundRect(lx - 0.042 * scale, ly - 0.035 * scale, 0.084 * scale, 0.1 * scale, 0.02 * scale);
+    x.fill();
+    x.fillStyle = "#3a2a22";
+    x.beginPath();
+    x.moveTo(lx - 0.08 * scale, ly - 0.055 * scale);
+    x.lineTo(lx, ly - 0.11 * scale);
+    x.lineTo(lx + 0.08 * scale, ly - 0.055 * scale);
+    x.closePath();
+    x.fill();
+}
+/** Retrato (busto) de un personaje en un canvas de `px` CSS: el mismo dibujo que en el mapa. */
+function portrait(who, px) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const { c, x } = canvas(px * dpr, px * dpr);
+    c.style.width = c.style.height = `${px}px`;
+    const L = exports.LOOKS[who] ?? exports.LOOKS["farolero"];
+    const s = px * dpr * 1.25;
+    x.fillStyle = "rgba(0,0,0,0)";
+    const g = x.createRadialGradient(px * dpr * 0.5, px * dpr * 0.45, 0, px * dpr * 0.5, px * dpr * 0.45, px * dpr * 0.55);
+    g.addColorStop(0, rgba(L.ojos, 0.35));
+    g.addColorStop(1, rgba(L.ojos, 0));
+    x.fillStyle = g;
+    x.fillRect(0, 0, px * dpr, px * dpr);
+    x.setTransform(s, 0, 0, s, -s * 0.5 + px * dpr * 0.5, -s * (0.95 - L.H) + px * dpr * 0.12);
+    drawFigure(x, L, "s", -1);
+    if (who !== "tasia") {
+        const st = staffOf("s", L, -1);
+        drawStaff(x, st, "#5e3e26", who === "gorio");
+        if (who !== "gorio")
+            drawLantern(x, st.x1 + 0.1, st.y1 - 0.03, 0, who === "arnal" ? 1.4 : 1, 1);
+    }
+    return c;
+}
+/** Interior del santuario para la cabecera de su pantalla (§7.9): pared de piedra, farol grande y Arnal a un lado. */
+function sanctuaryArt() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const Wc = 720, Hc = 170;
+    const { c, x } = canvas(Wc * dpr, Hc * dpr);
+    c.className = "sanct-art";
+    x.scale(dpr, dpr);
+    const [cM, cS, cL, cD] = [col("muro_santuario", 0), col("muro_santuario", 1), col("muro_santuario", 2), col("muro_santuario", 3)];
+    x.fillStyle = cD;
+    x.fillRect(0, 0, Wc, Hc);
+    // hiladas de piedra
+    const rh = 26;
+    for (let r = 0; r * rh < Hc - 30; r++) {
+        let xx = -((r % 2) * 30);
+        let k = 0;
+        while (xx < Wc) {
+            const w = 48 + 30 * (0, exports.h01)(r, k, 1401);
+            x.fillStyle = (0, exports.h01)(r, k, 1402) < 0.3 ? cS : (0, palette_ts_1.mix)(cM, cS, 0.2 + 0.3 * (0, exports.h01)(r, k, 1403));
+            x.beginPath();
+            x.roundRect(xx + 2, r * rh + 2, w - 4, rh - 4, 5);
+            x.fill();
+            x.fillStyle = rgba(cL, 0.35);
+            x.fillRect(xx + 6, r * rh + 3, w - 12, 2);
+            xx += w;
+            k++;
+        }
+    }
+    // suelo
+    x.fillStyle = "#2a2230";
+    x.fillRect(0, Hc - 30, Wc, 30);
+    x.fillStyle = "#3a3042";
+    x.fillRect(0, Hc - 30, Wc, 4);
+    // ventana en arco con luz
+    for (const wx of [560, 650]) {
+        x.fillStyle = cD;
+        x.beginPath();
+        x.roundRect(wx - 26, 26, 52, 80, [26, 26, 4, 4]);
+        x.fill();
+        x.fillStyle = "#33406e";
+        x.beginPath();
+        x.roundRect(wx - 19, 33, 38, 66, [19, 19, 2, 2]);
+        x.fill();
+        x.fillStyle = "#9fb4ff";
+        for (let i = 0; i < 4; i++)
+            x.fillRect(wx - 12 + 8 * i * (0, exports.h01)(wx, i, 1404), 45 + 40 * (0, exports.h01)(wx, i, 1405), 2, 2);
+        x.fillStyle = cD;
+        x.fillRect(wx - 2, 33, 4, 66);
+    }
+    // halo cálido y gran farol colgado
+    const halo = haloSprite(360, "255,190,90", 0.6);
+    x.globalCompositeOperation = "lighter";
+    x.drawImage(halo, 360 - 180, 70 - 180, 360, 360);
+    x.globalCompositeOperation = "source-over";
+    x.strokeStyle = "#1e1720";
+    x.lineWidth = 3;
+    x.beginPath();
+    x.moveTo(360, 0);
+    x.lineTo(360, 34);
+    x.stroke();
+    x.save();
+    x.translate(360, 34);
+    x.scale(170, 170);
+    drawLantern(x, 0, 0, 0, 2.6, 1);
+    x.restore();
+    // Arnal a un lado, con su farol
+    x.save();
+    x.translate(80, 52);
+    x.scale(118, 118);
+    const L = exports.LOOKS["arnal"];
+    drawFigure(x, L, "e", -1);
+    const st = staffOf("e", L, -1);
+    drawStaff(x, st, "#5e3e26");
+    drawLantern(x, st.x1 + 0.1, st.y1 - 0.03, 0, 1.35, 1);
+    x.restore();
+    const h2 = haloSprite(160, "255,200,110", 0.5);
+    x.globalCompositeOperation = "lighter";
+    x.drawImage(h2, 80 + 118 * (st.x1 + 0.1) - 60, 52 + 118 * (st.y1 + 0.1) - 60, 120, 120);
+    x.globalCompositeOperation = "source-over";
+    // viñeta
+    const g = x.createLinearGradient(0, 0, 0, Hc);
+    g.addColorStop(0, "rgba(10,9,18,0.35)");
+    g.addColorStop(0.5, "rgba(10,9,18,0)");
+    g.addColorStop(1, "rgba(10,9,18,0.45)");
+    x.fillStyle = g;
+    x.fillRect(0, 0, Wc, Hc);
+    return c;
+}
+
 };
 req("x","./client/animas/main.ts");
 })();
