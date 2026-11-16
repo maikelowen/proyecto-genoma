@@ -48,3 +48,7 @@
 - **"Nunca más fuerza" con `potencia ≤ original`:** no basta si el original está en el tope del escalable o tiene holgura por redondeo; añadir una pieza deja la misma potencia. Enumera candidatos con el catálogo real y cuenta "pieza añadida con misma potencia" (progresión v0.1, B-01: 4/72 genes).
 - **Probabilidades redondeadas (`r2`) con decimales:** el orden de las operaciones cambia el % en ~0,15 % de los casos; exige una sola función o fórmula entera cuando el % se muestra al jugador (B-07).
 - **Economías con "libera/vende":** mide la devolución de lo más barato (ecos de nivel 1), no solo las capturas caras; ahí estaba casi todo el 15 % (B-06).
+- **"Sin respaldo, n < 2 alto":** mide el efecto que nota el jugador (niveles que no ofrecen nada, ánimas afectadas), no solo el % por gen. En progresión v0.1, un 9,7 % por gen eran el 7 % de los niveles sin oferta y el 34 % de las ánimas afectadas (N-01).
+- **Comparar con `puntosEf(M)`:** M ya ha perdido puntos por redondeo, así que una cota estricta castiga a los originales mal redondeados. Antes de proponer tolerancia, cuenta "pieza añadida con la misma potencia" y "cambio por una pieza más cara con la misma potencia" (N-01).
+- **Reglas que se activan con un contador de la colección (acompañante < 2 ánimas):** cruza su condición con quién entra en el equipo. Los simuladores rehacen el equipo y no lo ven (N-03).
+- **Parser nuevo:** prueba siempre una errata de clave por bloque. En progresión v0.1 faltaba `onlyKeys` (N-02, lo mismo que R-01).
