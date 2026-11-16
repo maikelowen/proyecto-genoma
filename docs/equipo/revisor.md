@@ -45,3 +45,6 @@
 - Veredicto (APROBADO / CON CAMBIOS / RECHAZADO), tabla de hallazgos (ID, severidad, fichero:línea, reproducción, arreglo) y checklist marcada.
 - Severidad: **bloqueante** = el resultado es incorrecto; **mayor** = cambia una cifra o el alcance de una conclusión; **menor** = texto, robustez o higiene; **sugerencia** = mejora.
 - La respuesta al coordinador, corta: el veredicto y solo los hallazgos que cambien alguna conclusión.
+- **"Nunca más fuerza" con `potencia ≤ original`:** no basta si el original está en el tope del escalable o tiene holgura por redondeo; añadir una pieza deja la misma potencia. Enumera candidatos con el catálogo real y cuenta "pieza añadida con misma potencia" (progresión v0.1, B-01: 4/72 genes).
+- **Probabilidades redondeadas (`r2`) con decimales:** el orden de las operaciones cambia el % en ~0,15 % de los casos; exige una sola función o fórmula entera cuando el % se muestra al jugador (B-07).
+- **Economías con "libera/vende":** mide la devolución de lo más barato (ecos de nivel 1), no solo las capturas caras; ahí estaba casi todo el 15 % (B-06).
