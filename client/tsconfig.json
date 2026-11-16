@@ -1,5 +1,5 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": { "lib": ["es2023", "dom"], "rootDir": ".." },
-  "include": ["combat/**/*.ts"]
+  "include": ["combat/**/*.ts", "animas/**/*.ts"]
 }

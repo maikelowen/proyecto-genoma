@@ -20,6 +20,7 @@
     "sim:progresion": "node sim/progresion/cli.ts",
     "build:combate": "node client/build-combate.mjs",
     "build:combate-v05": "node client/build-combate.mjs --v05",
+    "build:animas": "node client/build-combate.mjs --animas",
     "build:galeria": "node client/viewer/galeria-v3.ts"
   },
   "devDependencies": {
