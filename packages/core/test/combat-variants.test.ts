@@ -237,12 +237,12 @@ describe("V2 — descanso de un turno", () => {
     const r = play(start(), lead(2), basics(), cfg);
     assert.deepEqual(r.state.fighters[0][0]!.rest, [0, 1, 0, 0]);
     assert.deepEqual(r.state.fighters[0][1]!.rest, [0, 0, 0, 0]);
-    assert.deepEqual(restingMoves(r.state, "A", 1), [2]);
-    assert.deepEqual(restingMoves(r.state, "A", 2), []);
+    assert.deepEqual(restingMoves(r.state, "A", 1, cfg), [2]);
+    assert.deepEqual(restingMoves(r.state, "A", 2, cfg), []);
     const off = flat();
     const r0 = play(createBattle(mkTeam("a", "llama", [], off), mkTeam("b", "vapor", [], off), off), lead(2), basics(), off);
     assert.equal("rest" in r0.state.fighters[0][0]!, false);
-    assert.deepEqual(restingMoves(r0.state, "A", 1), []);
+    assert.deepEqual(restingMoves(r0.state, "A", 1, off), []);
   });
 
   it("repetir el movimiento en descanso invalida el plan (⇒ golpes básicos); al turno siguiente vuelve", () => {

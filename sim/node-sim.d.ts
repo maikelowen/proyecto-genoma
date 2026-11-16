@@ -19,6 +19,7 @@ declare module "node:crypto" {
 
 declare const process: {
   readonly argv: string[];
+  readonly env: Record<string, string | undefined>;
   exitCode: number | undefined;
   readonly stdout: { write(s: string): boolean };
 };

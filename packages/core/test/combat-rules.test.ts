@@ -397,14 +397,14 @@ describe("estados (combate §8)", () => {
     let r = play(s, lead(1, 1), basics());
     assert.ok(evs(r, "status").some((e) => e.status === "aturdir" && e.side === "B" && e.pos === 1));
     s = r.state;
-    assert.deepEqual(eligibleActors(s, "B"), [2, 3, 4]);
+    assert.deepEqual(eligibleActors(s, "B", FLAT), [2, 3, 4]);
     assert.match(validatePlan(s, "B", basics(), FLAT) ?? "", /no puede actuar/);
     for (const t of [2, 3]) {
       r = play(s, lead(1, 1), t === 2 ? planOf([2, 3, 4], 0, 1) : basics());
       assert.ok(evs(r, "immune").some((e) => e.side === "B" && e.pos === 1), `turno ${t}`);
       s = r.state;
     }
-    assert.deepEqual(eligibleActors(s, "B"), ALL);
+    assert.deepEqual(eligibleActors(s, "B", FLAT), ALL);
     r = play(s, lead(1, 1), basics());
     assert.ok(evs(r, "status").some((e) => e.status === "aturdir"));
   });

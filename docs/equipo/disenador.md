@@ -40,3 +40,9 @@
 - Presupuesto convexo + energía escasa = los kits baratos pierden. Paga el hueco de acción (término fijo) y cuenta el rendimiento neto del golpe básico.
 - Una IA que valora estados por encima de rematar juega peor con ellos: valida cada heurística con "pieza gratis" (si añadirla baja el WR, el fallo es de la IA). No metas los estados en el precio de la energía.
 - C2 con catálogos de 12 movimientos es muy sensible: un movimiento cambia ±10–15 puntos. Equilibra primero con kits aleatorios y luego el catálogo con sales, siguiendo un procedimiento fijo.
+
+## Lecciones de combate v0.5
+- Cada mecánica nueva va tras su interruptor en config, con la combinación "todo a false" = versión anterior exacta (vector dorado). Las variantes que Miguel deja como plan B, también como clave.
+- Si una acción pasa a usar más tiradas (varias acciones de un ánima), reutiliza las tiradas ya consumidas de casillas vacías o caídas antes que añadir tiradas: se mantienen las 24 fijas y el pareo.
+- Revisa el código del motor antes de especificar: `planSynergy` cuenta entradas del plan, no ánimas (varias entradas del mismo actor la romperían). Dilo en la nota para el núcleo.
+- Define "mejora" con umbrales en pp frente a una base pareada y con semillas nuevas, no "baja algo".

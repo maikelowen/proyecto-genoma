@@ -1,6 +1,6 @@
 /** Interfaz del combate jugable (DOM sin dependencias). Estados: team → plan ⇄ report. */
-import { attackable, describeMove, describeMoveShort, eligibleActors, forecastTargets, freeMoveSlot, restingMoves, validatePlacement, type Action, type BattleEvent, type BattleState, type Move, type SideId } from "../../packages/core/src/index.ts";
-import { cfg, familyLabel, gcfg, palette } from "./data.ts";
+import { attackable, describeMove, describeMoveShort, eligibleActors, forecastTargets, freeMoveSlot, lastAnimaPos, restingMoves, validatePlacement, type Action, type BattleEvent, type BattleState, type Move, type SideId } from "../../packages/core/src/index.ts";
+import { cfg, familyLabel, gcfg, palette, V05 } from "./data.ts";
 import { SOUL_ART } from "./souls.ts";
 import { chooseOpponentAi, newSeed, playTurn, rollOffer, rollRival, startFight, type Dificultad, type Fight, type Soul } from "./game.ts";
 import { key, narrate, type LogLine, type Part } from "./narrate.ts";
@@ -46,6 +46,8 @@ function saveScore(): void {
 type Phase = "team" | "place" | "plan" | "report";
 interface Pick {
   move: number;
+  /** Última ánima (v0.5): movimientos de pago marcados, en orden de ejecución. Vacío = el gratis. */
+  seq: number[];
 }
 const params = new URLSearchParams(typeof location !== "undefined" ? location.search : "");
 let offerSeed = params.get("oferta") ?? newSeed();
@@ -249,6 +251,14 @@ const HELP: [string, string][] = [
   ["Sinergia", "Si 2 o 3 de tus almas usan movimientos de pago de la misma familia en el mismo turno, esos movimientos ganan +10 % o +25 % de potencia. El gratis no cuenta."],
 ];
 
+if (V05) {
+  HELP.push(["Última ánima (prueba v0.5)", "Cuando a un bando le queda una sola ánima viva, ese turno puede encadenar hasta 3 movimientos de pago distintos (sin descanso) o usar el gratis. Se ejecutan en el orden marcado."]);
+  HELP.push(["Energía pagada al confirmar (prueba v0.5)", "Al confirmar el turno la energía de tus acciones se gasta ya: si un ánima cae o es aturdida antes de actuar, esa energía se pierde."]);
+}
+function v05Tag(): HTMLElement | null {
+  return V05 ? h("div", { class: "v05tag" }, "Versión de prueba v0.5") : null;
+}
+
 function glossaryNodes(): HTMLElement[] {
   return [h("p", null, h("b", null, "Glosario")), h("dl", { class: "glos" }, ...GLOSARIO.flatMap(([w, d]) => [h("dt", null, w), h("dd", null, d)]))];
 }
@@ -258,7 +268,7 @@ function helpBox(): HTMLElement {
 }
 
 function topBar(): HTMLElement {
-  return h("div", { class: "top" }, h("h1", null, "Proyecto Genoma · Combate"), h("div", { class: "score", id: "score" }, `Partidas: ${score.played} · Ganadas: ${score.won}`));
+  return h("div", { class: "top" }, h("h1", null, "Proyecto Genoma · Combate"), v05Tag(), h("div", { class: "score", id: "score" }, `Partidas: ${score.played} · Ganadas: ${score.won}`));
 }
 
 // ------------------------------------------------------------------ pantalla de equipo
@@ -438,10 +448,10 @@ function beginPlanning(): void {
   // todas las almas empiezan el turno con su movimiento gratis
   picks = [1, 2, 3, 4].map((p) => {
     const c = f.state.teams[0][p - 1];
-    return { move: c ? freeMoveSlot(c) : 1 };
+    return { move: c ? freeMoveSlot(c) : 1, seq: [] };
   });
   inspect = null;
-  const el = eligibleActors(f.state, "A");
+  const el = eligibleActors(f.state, "A", cfg);
   if (!el.includes(focus)) focus = el[0] ?? ([1, 2, 3, 4].find((p) => f.mine[p - 1] && !f.state.fighters[0][p - 1]?.ko) ?? 1);
   phase = "plan";
   render();
@@ -456,13 +466,40 @@ function costOf(f: Fight, pos: number, move: number): number {
 }
 
 function spentBy(f: Fight, except: number | null): number {
-  return eligibleActors(f.state, "A")
+  return eligibleActors(f.state, "A", cfg)
     .filter((q) => q !== except)
-    .reduce((a, q) => a + costOf(f, q, (picks[q - 1] as Pick).move), 0);
+    .reduce((a, q) => a + pickCost(f, q), 0);
 }
 
+/** Casilla de la última ánima de mi bando este turno (0 si no aplica). */
+function lastPos(f: Fight): number {
+  return V05 ? lastAnimaPos(f.state, "A", cfg) : 0;
+}
+const pickCost = (f: Fight, pos: number): number => {
+  const p = picks[pos - 1] as Pick;
+  return p.seq.length > 0 ? p.seq.reduce((a, m) => a + costOf(f, pos, m), 0) : costOf(f, pos, p.move);
+};
+let lastNoteSeen = false;
+
 function selectMove(pos: number, move: number): void {
-  (picks[pos - 1] as Pick).move = move;
+  const f = fight as Fight;
+  const p = picks[pos - 1] as Pick;
+  if (pos === lastPos(f)) {
+    // última ánima: el gratis va solo; los pagos se marcan en orden (cada uno una vez)
+    if (costOf(f, pos, move) === 0) p.seq = [];
+    else {
+      const k = p.seq.indexOf(move);
+      if (k >= 0) p.seq.splice(k, 1);
+      else if (p.seq.length < 3 && pickCost(f, pos) + costOf(f, pos, move) <= f.state.energy[0]) p.seq.push(move);
+    }
+    const fs = freeMoveSlot(f.state.teams[0][pos - 1] as NonNullable<BattleState["teams"][0][0]>);
+    p.move = p.seq[0] ?? fs;
+    focus = pos;
+    inspect = null;
+    render();
+    return;
+  }
+  p.move = move;
   focus = pos;
   inspect = null;
   render();
@@ -542,23 +579,37 @@ function trayPlan(f: Fight): HTMLElement {
     const soul = f.mine[pos - 1] as Soul;
     const fs = f.state.fighters[0][pos - 1] as BattleState["fighters"][0][0];
     const p = picks[pos - 1] as Pick;
-    const fc = eligibleActors(f.state, "A").includes(pos) ? forecastTargets(f.state, "A", pos, p.move, cfg) : null;
+    const fc = eligibleActors(f.state, "A", cfg).includes(pos) ? forecastTargets(f.state, "A", pos, p.move, cfg) : null;
     const nm = fc ? (fc.side === "A" ? f.mine : f.rival) : [];
     const tgt = !fc ? "" : "Irá a: " + (fc.positions.map((q) => nm[q - 1]?.name ?? "?").join(" y ") || "nadie");
     head = h("div", { class: "thead" }, soulShape(soul.combatant.family, 30), h("b", { class: "na" }, soul.name), h("small", null, `${familyLabel(soul.combatant.family)} · ${rowName(pos)}`), h("span", { class: "tnote hot", title: "Previsión: el objetivo se decide al actuar" }, tgt));
     if (fs.ko) body = h("div", { class: "opts5 msg" }, "Esta alma está KO.");
-    else if (!eligibleActors(f.state, "A").includes(pos)) body = h("div", { class: "opts5 msg" }, "Aturdida: pierde este turno.");
+    else if (!eligibleActors(f.state, "A", cfg).includes(pos)) body = h("div", { class: "opts5 msg" }, "Aturdida: pierde este turno.");
     else {
-      const avail = f.state.energy[0] - spentBy(f, pos);
-      const resting = restingMoves(f.state, "A", pos);
-      body = h("div", { class: "opts5" }, ...orderedMoves(soul.combatant).map(({ m, slot }) => optButton(m, slot, resting.includes(slot) ? "rest" : p.move === slot ? "on" : "", m.cost > avail, () => selectMove(pos, slot))));
+      const isLast = pos === lastPos(f);
+      const avail = f.state.energy[0] - (isLast ? pickCost(f, pos) : spentBy(f, pos));
+      const resting = restingMoves(f.state, "A", pos, cfg);
+      body = h("div", { class: "opts5" }, ...orderedMoves(soul.combatant).map(({ m, slot }) => {
+        if (!isLast) return optButton(m, slot, resting.includes(slot) ? "rest" : p.move === slot ? "on" : "", m.cost > avail, () => selectMove(pos, slot));
+        const n = p.seq.indexOf(slot);
+        const on = m.cost === 0 ? p.seq.length === 0 : n >= 0;
+        const b = optButton(m, slot, on ? "on" : "", !on && (m.cost > avail || (m.cost > 0 && p.seq.length >= 3)), () => selectMove(pos, slot));
+        if (n >= 0) b.querySelector(".oname")?.prepend(h("span", { class: "seqn" }, String(n + 1)));
+        return b;
+      }));
     }
   }
-  return h("div", { class: "tray" }, head, body, confirm);
+  const notes: HTMLElement[] = [];
+  if (V05 && lastPos(f) > 0 && !lastNoteSeen) notes.push(h("div", { class: "note" }, h("b", null, "Última ánima: "), "encadena varios pagos (se ejecutan en el orden marcado, sin descanso) o usa solo el gratis."));
+  if (V05 && cfg.combat.energy.payOnConfirm && currentPlan(f).cost > 0) notes.push(h("div", { class: "note warn" }, "La energía se gasta al confirmar: si el ánima cae o la aturden antes de actuar, se pierde."));
+  return h("div", { class: "tray" }, ...notes, head, body, confirm);
 }
 
 function currentPlan(f: Fight): { plan: Action[]; cost: number } {
-  const plan: Action[] = eligibleActors(f.state, "A").map((pos) => ({ actor: pos, move: (picks[pos - 1] as Pick).move, target: 0 }));
+  const plan: Action[] = eligibleActors(f.state, "A", cfg).flatMap((pos) => {
+    const p = picks[pos - 1] as Pick;
+    return (p.seq.length > 0 ? p.seq : [p.move]).map((move) => ({ actor: pos, move, target: 0 }));
+  });
   return { plan, cost: plan.reduce((a, x) => a + costOf(f, x.actor, x.move), 0) };
 }
 
@@ -595,6 +646,7 @@ function turnBar(f: Fight, left: string, withBtns: boolean): HTMLElement {
     "div",
     { class: "turnbar" },
     h("b", null, left),
+    v05Tag(),
     h("span", { class: "score", id: "score" }, `Partidas: ${score.played} · Ganadas: ${score.won}`),
     withBtns ? h("span", { class: "tbr" }, report ? h("button", { class: "btn sm", onclick: () => toggleOverlay("prev") }, "Turno anterior") : null, h("button", { class: "btn sm", onclick: () => toggleOverlay("help") }, "Ayuda")) : h("span", { class: "tbr" }, h("button", { class: "btn sm", onclick: () => toggleOverlay("help") }, "Ayuda")),
   );
@@ -603,7 +655,7 @@ function turnBar(f: Fight, left: string, withBtns: boolean): HTMLElement {
 function renderPlan(): void {
   const f = fight as Fight;
   const { cost } = currentPlan(f);
-  const elig = eligibleActors(f.state, "A");
+  const elig = eligibleActors(f.state, "A", cfg);
   if (!elig.includes(focus) && inspect === null) focus = elig[0] ?? ([1, 2, 3, 4].find((p) => f.mine[p - 1] && !f.state.fighters[0][p - 1]?.ko) ?? focus);
   const tgts: { side: SideId; pos: number }[] = [];
   const lines: NonNullable<Sel["lines"]> = [];
@@ -617,7 +669,9 @@ function renderPlan(): void {
       lines.push({ from: pos, side: fc.side, to: fc.positions, focus: isF, pay: !!m && m.cost > 0 });
       if (isF) for (const q of fc.positions) tgts.push({ side: fc.side, pos: q });
     }
-    if (m && m.cost > 0) orders[pos] = { txt: `⚡${m.cost}`, title: `${m.name} (${m.cost} de energía)` };
+    const pc = pickCost(f, pos);
+    if (p.seq.length > 1) orders[pos] = { txt: `⚡${pc}`, title: p.seq.map((q) => moveOf(f, pos, q)?.name ?? "").join(" → ") + ` (${pc} de energía)` };
+    else if (m && m.cost > 0) orders[pos] = { txt: `⚡${m.cost}`, title: `${m.name} (${m.cost} de energía)` };
   }
   const atk = attackable(f.state, "B", cfg);
   app.replaceChildren(
@@ -632,6 +686,7 @@ function renderPlan(): void {
 function confirmTurn(): void {
   const f = fight as Fight;
   const { plan } = currentPlan(f);
+  if (lastPos(f) > 0) lastNoteSeen = true;
   const { before, events } = playTurn(f, plan);
   report = { lines: narrate(before, events, f.names).lines, before, events };
   pendingResult = f.state.result;

@@ -230,8 +230,8 @@ describe("movimiento gratis y botones (combate v0.4 §2, §5)", () => {
       const r = play(s, [{ actor: 1, move: 3, target: 0 }, { actor: 2, move: t % 2 === 0 ? 1 : 2, target: 0 }, { actor: 3, move: 3, target: 0 }], free([1, 2, 3]));
       assert.ok(r.events.some((e) => e.type === "plan" && e.side === "A" && e.valid));
       s = r.state;
-      assert.deepEqual(restingMoves(s, "A", 1), []);
-      assert.deepEqual(restingMoves(s, "A", 2), [t % 2 === 0 ? 1 : 2]);
+      assert.deepEqual(restingMoves(s, "A", 1, FLAT04), []);
+      assert.deepEqual(restingMoves(s, "A", 2, FLAT04), [t % 2 === 0 ? 1 : 2]);
     }
     assert.match(validatePlan(s, "A", [{ actor: 1, move: 3, target: 0 }, { actor: 2, move: 1, target: 0 }, { actor: 3, move: 3, target: 0 }], FLAT04) ?? "", /descanso/);
   });

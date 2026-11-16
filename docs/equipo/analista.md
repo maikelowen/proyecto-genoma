@@ -55,3 +55,9 @@
 - `npm run sim:v04` (`--quick` < 30 s; completo ≈ 8 min; fases `base` → `elegir` → `validar`, semillas `base04`/`elige03`/`valida04`). Parches de movimientos con ruta larga crean claves sin error (R-01): comprobar que existe en la base, que cambia el valor y que la config parseada cambia (catálogo, estadísticas y una partida); aborta si no.
 - Medir también en espejo: remontada ≈ 70 % con el mismo equipo en los dos lados, así que es mecánica de 3 almas y no diferencia de equipos; ninguna palanca de config (vida, energía, sinergia) la movió. Con una IA que no ve una pieza (provocar), dar la profundidad con y sin ella (R-02).
 - Una candidata que sube un criterio puede hundir otro (energía 5: pago ok, pero familias de 2 a 4 fuera de banda): la regla de elección y la de adopción deben mirar también lo que empeora.
+
+## Lecciones (combate v0.5)
+- `npm run sim:v05` (`--quick` ≈ 10 s; completo ver informe). Reutiliza `sim/v04` con `SIM_COMBAT_CONFIG` (la config de combate se elige por variable de entorno; los hilos la heredan) y las 4 configs salen de `escenarios_sim.configs_v05`, sin parches escritos a mano. Semillas `v05|`.
+- **Pareado de verdad:** misma semilla de equipos y de partida en todas las configs (`paired`), y un código de 4 caracteres por partida (`codes`) para calcular el error estándar de cada Δ por linealización partida a partida; con pareado, 12 000 partidas dan ± ≈ 1 pp en un Δ de primer KO.
+- Una config "base" que el parche deja igual que el fichero no pasa `checkVariants` de v04 ("ya vale"): v05 tiene su propia comprobación (huellas distintas + config parseada con los valores pedidos).
+- "Remontadas" y "primer KO" miden casi lo mismo (remontada ≈ 1 − primer KO, salvo empates con KO): no cuentan como dos pruebas independientes.

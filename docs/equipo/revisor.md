@@ -37,6 +37,10 @@
 - **Estado con duración 1 leído al empezar el turno:** siempre vale 0. Si una IA lo lee (provocar), nunca lo verá. Comprueba la frecuencia de uso cuando un hallazgo dice "revisar si sube" (R-02).
 - **`npm run check` con otro agente trabajando:** si falla por ficheros sin confirmar ajenos al commit, repítelo sobre `git archive <commit>` en `/tmp` y di las dos cosas.
 
+- **Garantía "idéntico a vX con la clave a false":** no te quedes en el dorado. Compara los hashes de ≥ 1000 partidas de la config vieja con los de la nueva con las claves desactivadas (v0.5: 1000/1000).
+- **"La métrica nueva sale alta":** mide su contrafactual en la base. En v0.5, la energía "perdida" ya se devolvía en v0.4 (4,6 por partida), así que la estimación de la spec estaba mal desde el principio. Separa también lo que no tiene efecto, como lo perdido en el último turno por el bando que pierde (I-02).
+- **Funciones con `cfg?` opcional que cambian de regla según la config:** busca con grep las llamadas sin `cfg` en `client/` y `sim/`, y pide que sea obligatorio (I-01).
+
 ## Formato de entrega
 - Veredicto (APROBADO / CON CAMBIOS / RECHAZADO), tabla de hallazgos (ID, severidad, fichero:línea, reproducción, arreglo) y checklist marcada.
 - Severidad: **bloqueante** = el resultado es incorrecto; **mayor** = cambia una cifra o el alcance de una conclusión; **menor** = texto, robustez o higiene; **sugerencia** = mejora.
