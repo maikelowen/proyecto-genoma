@@ -113,7 +113,8 @@ export function playGame(seed: string, profile: Profile, starter: number, maxCom
   let minutes = 0;
   let sessionStart = 0;
   for (let c = 1; c <= maxCombats; c++) {
-    g = pickTeam(g, cfg, profile);
+    // D-072/N-03: con menos de 3 en el equipo el núcleo mete solo las capturas; el modelo elige equipo solo con el equipo lleno
+    if (g.equipo.length >= cfg.collection.teamMax) g = pickTeam(g, cfg, profile);
     g = pickVariants(g, cfg, profile);
     const zi = pickZone(g, cfg, profile);
     if (zi >= 1 && mut.firstZone[0] === 0) mut.firstZone[0] = c;

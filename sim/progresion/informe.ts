@@ -283,6 +283,8 @@ export function buildReport(d: Data): string {
   const nm = M.find((m) => m.profile === "normal") ?? M[0]!;
   const bad = nm.comp.filter((x) => x.win.n >= 30).sort((a, b) => a.win.v - b.win.v)[0];
   if (bad) P(`- **Atasco principal (perfil ${nm.profile})**: ${ZONES[bad.zone]}, tu equipo de ${bad.team} contra ${bad.wilds} salvajes: ${pct(bad.win.v)} de victorias en ${bad.win.n} combates (frente a ${pct(nm.winZone[bad.zone]!.v)} de la zona entera).`);
+  const c22 = nm.comp.find((x) => x.zone === 0 && x.team === 2 && x.wilds === 2);
+  P(c22 ? `- **Prado, 2 ánimas contra 2 salvajes (perfil ${nm.profile})**: ${pct(c22.win.v)} de victorias en ${c22.win.n} combates.` : `- **Prado, 2 ánimas contra 2 salvajes (perfil ${nm.profile})**: no aparece (0 combates): con el acompañante hasta 3 ánimas ese combate no se da.`);
   const cu = M.find((m) => m.profile === "cuidadoso");
   if (cu) P(`- **Quien espera a estar fuerte se atasca en el Prado**: el perfil cuidadoso entra en las Marismas en el combate ${num(cu.marismasAt.med, 0)} y en el Cantil en el ${cu.cantilAt ? num(cu.cantilAt.med, 0) : "—"} (normal: ${num(nm.marismasAt.med, 0)} y ${nm.cantilAt ? num(nm.cantilAt.med, 0) : "—"}); tras 3 sesiones tiene ${num(cu.res[2]!.med, 0)} resonancias y el favorito está en nivel ${num(cu.fav3.med, 0)}.`);
   P(`- **Faroles**: en el perfil ${nm.profile} el ${pct(nm.combatsNoLanterns.v)} de los combates empieza con 0 faroles y se lanza farol al ${pct(nm.thrown.v)} de las salvajes derrotadas; el ${pct(1 - nm.neverZero.v)} de las partidas se queda sin faroles en algún momento. Tras cada victoria siempre hay al menos 1 (+1 por victoria), así que el atrapar nunca queda bloqueado, pero el ritmo lo marcan los faroles, no las salvajes disponibles.`);
