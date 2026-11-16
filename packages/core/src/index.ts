@@ -5,3 +5,4 @@ export * from "./genetics/index.ts";
 export * from "./moves/index.ts";
 export * from "./combat/index.ts";
 export * from "./progression/index.ts";
+export * from "./world/index.ts";
