@@ -46,3 +46,9 @@
 - Si una acción pasa a usar más tiradas (varias acciones de un ánima), reutiliza las tiradas ya consumidas de casillas vacías o caídas antes que añadir tiradas: se mantienen las 24 fijas y el pareo.
 - Revisa el código del motor antes de especificar: `planSynergy` cuenta entradas del plan, no ánimas (varias entradas del mismo actor la romperían). Dilo en la nota para el núcleo.
 - Define "mejora" con umbrales en pp frente a una base pareada y con semillas nuevas, no "baja algo".
+
+## Lecciones de progresión v0.1
+- Antes de fijar ritmos de sesión, calcula el cuello de botella real (aquí, combates por sesión: ~6) y modela la economía con un Monte Carlo mínimo sin combate; di qué criterios quedan "sin estimar" porque dependen del combate real.
+- Revisa qué supone el motor antes de proponer formatos nuevos: `teamSize` fijo a 3 obligó a especificar una extensión (bandos de 1–3) con vector dorado de 3 contra 3 intacto.
+- "Vida restante" del rival no sirve tras una victoria (siempre 0): cuando el encargo dé un parámetro, comprueba que tenga sentido en el momento en que se usa.
+- Estado del jugador (nivel, huecos, habilidades) fuera del genoma: así la herencia y "mismo gen ⇒ mismo movimiento" no se tocan.
