@@ -58,3 +58,4 @@
 - El estado de partida que se guarda usa las claves de la spec tal cual (es un formato de datos, como la config): la ida y vuelta es `JSON.stringify` y no hace falta traducir nada.
 - Reglas "como mucho lo mismo" (puntos efectivos de las variantes): mídelas sobre el catálogo entero y sobre claves mutadas antes de entregar. Los recuentos (n < 2 por locus) son datos para el analista, no cosas que arreglar en el núcleo.
 - `npm run check` ronda ya los 23 s con progresión: el próximo módulo debe recortar tests lentos o avisar.
+- Ajustes de config + reglas (D-072/D-073): al cambiar una palanca en config, busca los tests que fijaban el caso (genes concretos, `mientras_animas_menos_de`) y el dorado; el dorado de una partida cambia con la IA, no solo con el algoritmo. Los parsers de bloques llevan `onlyKeys` desde el primer día y un test de errata generado por bloque. Varios ficheros del árbol son CRLF: edita con un script que normaliza y conserva el final de línea.

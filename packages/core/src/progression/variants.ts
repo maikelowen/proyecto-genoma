@@ -183,7 +183,9 @@ export function variantAlternatives(move: Move, cfg: ProgressionConfig): PieceCh
 
 /**
  * progresión §4.5 — candidatos válidos `C` (orden: eje, luego pieza): ensamblado exacto,
- * válido según movimientos §3 y puntosEf(M) − holgura ≤ puntosEf(c) ≤ puntosEf(M) (D-070, QA B-01).
+ * válido según movimientos §3 y puntosEf(M) − holgura ≤ puntosEf(c) ≤ puntosEf(M) + tolerancia_puntos
+ * (D-070, QA B-01; D-072/N-01: hasta 1 punto más, un paso de redondeo). Además, una variante que
+ * AÑADE una pieza en un eje vacío tiene que perder potencia (nunca una pieza gratis).
  */
 export function variantCandidates(move: Move, cfg: ProgressionConfig): VariantCandidate[] {
   const mcfg = cfg.battle.moves;
@@ -194,10 +196,18 @@ export function variantCandidates(move: Move, cfg: ProgressionConfig): VariantCa
     const m = assembleExact(move, change, mcfg);
     if (m === null) continue;
     const pe = effectivePoints(m, mcfg);
-    if (pe > base + tol || pe < base - cfg.variants.slack - tol) continue;
+    if (pe > base + cfg.variants.tolerancePoints + tol || pe < base - cfg.variants.slack - tol) continue;
+    if (addsPiece(move, change) && !(m.power < move.power)) continue; // D-072/N-01: sin pieza gratis
     out.push(Object.freeze({ change: m.variant, move: m, effectivePoints: pe }));
   }
   return out;
+}
+
+/** D-072/N-01 — ¿el cambio pone una pieza donde el eje estaba vacío? */
+function addsPiece(move: Move, change: PieceChange): boolean {
+  if (change.pieza === NO_PIECE) return false;
+  const current = change.eje === "modificador" ? move.modifier : change.eje === "estado" ? move.status : move.condition;
+  return current === null;
 }
 
 /** Movimiento de gen del D de un locus (movimientos §4, con la sal del catálogo si la tiene). */

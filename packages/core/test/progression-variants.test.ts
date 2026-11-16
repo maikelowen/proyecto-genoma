@@ -33,7 +33,7 @@ import {
   type Move,
 } from "../src/index.ts";
 import { CFG as GCFG, catalogGene, makeCreature } from "./genetics-helpers.ts";
-import { P } from "./progression-helpers.ts";
+import { P, loadProg } from "./progression-helpers.ts";
 
 const M = P.battle.moves;
 const pieces = (m: Move): number => (m.modifier ? 1 : 0) + (m.status ? 1 : 0) + (m.condition ? 1 : 0);
@@ -55,8 +55,8 @@ function checkCandidates(orig: Move): number {
     assert.equal(diff.length, 1, where);
     assert.equal(v.extraEnergy, orig.extraEnergy, where);
     assert.equal(v.taunt, orig.taunt, where);
-    // D-070 / QA B-01: mismos puntos efectivos como mucho, y no más de `holgura` por debajo
-    assert.ok(c.effectivePoints <= pe0 + 1e-9, `${where}: ${c.effectivePoints} > ${pe0}`);
+    // D-072 / N-01: como mucho `tolerancia_puntos` (1) más que el original, y no más de `holgura` por debajo
+    assert.ok(c.effectivePoints <= pe0 + P.variants.tolerancePoints + 1e-9, `${where}: ${c.effectivePoints} > ${pe0}`);
     assert.ok(c.effectivePoints >= pe0 - P.variants.slack - 1e-9, `${where}: holgura`);
     // ninguna variante con más piezas y la misma potencia (o más)
     if (pieces(v) > pieces(orig)) assert.ok(v.power < orig.power, `${where}: pieza gratis`);
@@ -69,6 +69,23 @@ describe("candidatos (§4.5)", () => {
     let total = 0;
     for (const t of GCFG.catalog) total += checkCandidates(generateMove(t, M));
     assert.ok(total > 72 * 4, `${total} candidatos`);
+  });
+  it("D-072/N-01: genes del catálogo con < 2 candidatas ≤ 2/72, y ninguna variante gana una pieza gratis", () => {
+    let few = 0;
+    let freebies = 0;
+    for (const t of GCFG.catalog) {
+      const m = generateMove(t, M);
+      const C = variantCandidates(m, P);
+      if (C.length < 2) few++;
+      for (const c of C) if (pieces(c.move) > pieces(m) && !(c.move.power < m.power)) freebies++;
+    }
+    assert.ok(few <= 2, `${few} genes con menos de 2 candidatas`);
+    assert.equal(freebies, 0);
+    // sin la tolerancia (valor 0, como antes) el catálogo se rompía: la palanca existe y funciona
+    const P0 = loadProg((r) => { r.variantes.tolerancia_puntos = 0; });
+    let few0 = 0;
+    for (const t of GCFG.catalog) if (variantCandidates(generateMove(t, M), P0).length < 2) few0++;
+    assert.ok(few0 > 2, `con tolerancia 0 hay ${few0}`);
   });
   it("500 genes de salvajes al azar (todas las familias base) y sus claves mutadas vecinas cumplen lo mismo", () => {
     const pop = createWildPopulation(createRng("var-mut"), GCFG, 40);
@@ -137,24 +154,24 @@ describe("sorteo, respaldo y elección (§4.5, QA B-03, B-08, B-09)", () => {
   });
 
   it("n = 0 en el locus del nivel → pasa al siguiente de orden_respaldo con n ≥ 2 (sorteo con su clave y el mismo nivel)", () => {
-    const c = creature({ cola: keyId("llama|cola|2423") });
-    assert.equal(variantCandidates(geneMove(c, "cola", P), P).length, 0);
-    const o = variantOffer(c, 15, new Set(), P)!;
-    const next = (["cabeza", "cuerpo", "extremidades"] as const).find((L) => variantCandidates(geneMove(c, L, P), P).length >= 2)!;
+    const c = creature({ cuerpo: keyId("sombra|cuerpo|4214") }); // escudo en el tope: sin variante justa
+    assert.equal(variantCandidates(geneMove(c, "cuerpo", P), P).length, 0);
+    const o = variantOffer(c, 25, new Set(), P)!;
+    const next = (["cola", "cabeza", "extremidades"] as const).find((L) => variantCandidates(geneMove(c, L, P), P).length >= 2)!;
     assert.equal(o.locus, next);
-    assert.deepEqual(o, variantOffer(c, 15, new Set(), P));
-    const direct = moveVariants(geneMove(c, next, P), 15, P)!;
+    assert.deepEqual(o, variantOffer(c, 25, new Set(), P));
+    const direct = moveVariants(geneMove(c, next, P), 25, P)!;
     assert.deepEqual([o.A.change, o.B?.change], [direct.A.change, direct.B?.change]);
   });
 
   it("n = 1 y nada mejor → solo A; nada → null (el nivel solo revela)", () => {
-    const c = creature({ cabeza: keyId("llama|cabeza|2332") });
-    assert.equal(variantCandidates(geneMove(c, "cabeza", P), P).length, 1);
-    const taken = new Set<LocusId>(["cola", "cuerpo", "extremidades"]);
-    const o = variantOffer(c, 20, taken, P)!;
-    assert.equal(o.locus, "cabeza");
+    const c = creature({ cuerpo: keyId("voltio|cuerpo|1241") });
+    assert.equal(variantCandidates(geneMove(c, "cuerpo", P), P).length, 1);
+    const taken = new Set<LocusId>(["cola", "cabeza", "extremidades"]);
+    const o = variantOffer(c, 25, taken, P)!;
+    assert.equal(o.locus, "cuerpo");
     assert.equal(o.B, null);
-    assert.equal(variantOffer(c, 20, new Set<LocusId>(LOCUS_IDS), P), null);
+    assert.equal(variantOffer(c, 25, new Set<LocusId>(LOCUS_IDS), P), null);
   });
 
   /** Partida con un ánima de nivel `level` hecha de la criatura dada. */

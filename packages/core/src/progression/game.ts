@@ -390,7 +390,8 @@ export interface BattleReport {
  * progresión §2.2, §3.3, §4.2, §5.2 — aplica el final del combate. `end` = estado final del
  * combate, o "huida" (también cerrar a mitad). Victoria: cada ánima de tu equipo (también las
  * apagadas; nunca el acompañante) recibe la suma entera; derrota: floor(suma de las apagadas /
- * divisor_derrota); huida: 0. El empate (límite de turnos) cuenta como derrota (ver notas).
+ * divisor_derrota); huida: 0. El empate (límite de turnos) y el doble KO cuentan como derrota
+ * (D-072/I-05: `result !== "A"`; ver notas).
  * Victoria: +faroles_por_victoria y esencia por salvaje (con topes). Sin tiradas.
  */
 export function applyBattleResult(game: GameState, enc: Encounter, end: BattleState | "huida", cfg: ProgressionConfig): { game: GameState; encounter: Encounter; report: BattleReport } {
@@ -531,6 +532,8 @@ export function throwLantern(game: GameState, enc: Encounter, i: number, cfg: Pr
     const m = g.contadores.nacimientos + 1;
     anima = makeAnima(g, { ...w.creature, id: animaId(m), birth: m }, "captura", enc.zone, w.level, cfg, name);
     g = addAnima({ ...g, contadores: { ...g.contadores, nacimientos: m } }, anima, cfg);
+    // D-072/N-03 (sustituye I-07): la atrapada entra sola en el equipo si hay hueco (equipo < equipo_max)
+    if (g.equipo.length < cfg.collection.teamMax) g = { ...g, equipo: [...g.equipo, anima.id] };
     state = "atrapada";
   } else if (attempts >= cfg.catching.maxAttempts) state = "escapada";
   const wilds = enc.wilds.map((x, j) => (j === i ? { ...x, attempts, state } : x));

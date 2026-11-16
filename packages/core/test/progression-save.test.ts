@@ -64,7 +64,7 @@ function shortGame(seed: string): { game: GameState; trace: string[] } {
 
 // Vector dorado de progresión v0.1. Si falla, ha cambiado el algoritmo, el orden de tiradas, la IA,
 // una config o el formato de guardado: rompe partidas guardadas y repeticiones.
-const GOLDEN = { encounters: 5, hash: "8e737661ba73987952e3830d42568874" };
+const GOLDEN = { encounters: 5, hash: "b095dc951f1d7f0d8b3f7c4ea5108150" };
 
 describe("guardado (§7)", () => {
   const { game } = shortGame("guardado");
@@ -92,6 +92,8 @@ describe("guardado (§7)", () => {
     ["equipo vacío", (g) => (g.equipo = []), /equipo/],
     ["ánimas repetidas", (g) => g.animas.push(g.animas[0]), /repetid/],
     ["nivel_max_alcanzado bajo", (g) => (g.nivel_max_alcanzado = 0), /nivel_max_alcanzado/],
+    ["nombre solo de espacios (N-06)", (g) => (g.animas[0].nombre = "   "), /vacío/],
+    ["familia inventada en el códice (N-06)", (g) => g.codex.familias.push("dragon"), /familia desconocida/],
     ["nacimiento > contador", (g) => (g.contadores.nacimientos = 0), /nacimiento/],
   ];
   for (const [name, patch, re] of reject) {

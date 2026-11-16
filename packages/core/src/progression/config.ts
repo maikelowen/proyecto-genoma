@@ -3,7 +3,8 @@
  * Función pura: recibe el JSON ya parseado y la config de combate + movimientos
  * (con la genética dentro) y devuelve una `ProgressionConfig` inmutable. No lee ficheros.
  */
-import { arr, bool, checkId, dataKeys, fail, int, num, obj, str } from "../combat/parse.ts";
+import { arr, bool, checkId, dataKeys, fail, int, num, obj, onlyKeys, str } from "../combat/parse.ts";
+import { validatePlacement } from "../combat/placement.ts";
 import type { BattleConfig, SideSizeRules } from "../combat/combatant.ts";
 import { CONDITION_IDS, MODIFIER_IDS, OFFENSIVE_STATUS_IDS, POSITIVE_STATUS_IDS } from "../moves/config.ts";
 import { LOCUS_IDS, type FamilyId, type GeneticsConfig, type LocusId } from "../genetics/types.ts";
@@ -58,6 +59,8 @@ export interface ProgressionConfig {
     readonly seedPrefix: string;
     readonly draws: number;
     readonly slack: number;
+    /** D-072: un punto efectivo más que el original como máximo (un paso de redondeo). */
+    readonly tolerancePoints: number;
     readonly tolerance: number;
   };
   readonly resources: {
@@ -131,11 +134,14 @@ function increasing(xs: readonly number[], path: string): void {
  */
 export function parseProgressionConfig(raw: unknown, battle: BattleConfig): ProgressionConfig {
   const r = obj(raw, "progresion");
+  // QA N-02 (como Q-03 en combate): una errata en una clave no puede pasar en silencio
+  onlyKeys(r, ["version", "depende_de", "niveles", "experiencia", "desbloqueos", "variantes", "recursos", "atrapar", "resonancia", "coleccion", "nombres", "mundo", "ia_salvaje", "combate_salvaje", "guardado", "validacion_config", "escenarios_sim", "criterios_sim"], "progresion");
   const G = battle.moves.genetics;
   const C = battle.combat;
   const M = battle.moves;
   const version = str(r["version"], "version");
   const dep = obj(r["depende_de"], "depende_de");
+  onlyKeys(dep, ["genetica", "movimientos", "combate"], "depende_de");
   const verOf = (file: unknown, path: string): string => {
     const m = /\.v(\d+\.\d+)\.json$/.exec(str(file, path));
     if (!m) fail(path, "se esperaba '<nombre>.vX.Y.json'");
@@ -152,6 +158,7 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
 
   // §4.1 niveles
   const nv = obj(r["niveles"], "niveles");
+  onlyKeys(nv, ["nivel_max", "xp_total", "nivel_eco_al_nacer", "nivel_inicial"], "niveles");
   const maxLevel = int(nv["nivel_max"], "niveles.nivel_max", 1);
   const xpTotal = intList(nv["xp_total"], "niveles.xp_total", 0);
   if (xpTotal.length !== maxLevel) fail("niveles.xp_total", `longitud ${xpTotal.length} ≠ nivel_max ${maxLevel}`);
@@ -162,6 +169,7 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
 
   // §4.2 experiencia
   const ex = obj(r["experiencia"], "experiencia");
+  onlyKeys(ex, ["base", "por_nivel", "reparto", "divisor_derrota"], "experiencia");
   exact(ex["reparto"], "completo", "experiencia.reparto", "§4.2");
   const xp = {
     base: int(ex["base"], "experiencia.base", 0),
@@ -171,11 +179,13 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
 
   // §4.3 desbloqueos y §8 huecos
   const de = obj(r["desbloqueos"], "desbloqueos");
+  onlyKeys(de, ["hueco_gratis_locus", "huecos_pago", "nivel_madurar", "revelar_ocultos"], "desbloqueos");
   const freeLocus = locus(de["hueco_gratis_locus"], "desbloqueos.hueco_gratis_locus");
   if (M.free === null || M.free.locus !== freeLocus) fail("desbloqueos.hueco_gratis_locus", "debe ser el locus del gratis de movimientos");
   const paidSlots = arr(de["huecos_pago"], "desbloqueos.huecos_pago").map((x, i): PaidSlotRule => {
     const p = `desbloqueos.huecos_pago[${i}]`;
     const o = obj(x, p);
+    onlyKeys(o, ["hueco", "nivel", "locus_por_defecto"], p);
     const slot = int(o["hueco"], `${p}.hueco`, 1, 3);
     if (slot !== i + 1) fail(`${p}.hueco`, `debe ser ${i + 1}`);
     const dl = locus(o["locus_por_defecto"], `${p}.locus_por_defecto`);
@@ -189,6 +199,7 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
   if (new Set(paidSlots.map((p) => p.defaultLocus)).size !== 3) fail("desbloqueos.huecos_pago", "loci de pago distintos");
   const matureLevel = int(de["nivel_madurar"], "desbloqueos.nivel_madurar", 1, maxLevel);
   const ro = obj(de["revelar_ocultos"], "desbloqueos.revelar_ocultos");
+  onlyKeys(ro, ["niveles", "orden"], "desbloqueos.revelar_ocultos");
   const revealLevels = intList(ro["niveles"], "desbloqueos.revelar_ocultos.niveles", 1, maxLevel);
   increasing(revealLevels, "desbloqueos.revelar_ocultos.niveles");
   const revealOrder = arr(ro["orden"], "desbloqueos.revelar_ocultos.orden").map((x, i) => hiddenPos(x, `desbloqueos.revelar_ocultos.orden[${i}]`));
@@ -197,6 +208,7 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
 
   // §4.5 variantes
   const va = obj(r["variantes"], "variantes");
+  onlyKeys(va, ["niveles", "locus_por_nivel", "orden_respaldo", "ejes", "piezas_excluidas", "prefijo_semilla", "tiradas", "eleccion_definitiva", "conmutar_con_original", "heredable", "holgura_puntos", "tolerancia_puntos", "tolerancia", "guardar_como"], "variantes");
   const vLevels = intList(va["niveles"], "variantes.niveles", 1, maxLevel);
   increasing(vLevels, "variantes.niveles");
   const lpl = obj(va["locus_por_nivel"], "variantes.locus_por_nivel");
@@ -233,12 +245,15 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
     seedPrefix: str(va["prefijo_semilla"], "variantes.prefijo_semilla"),
     draws,
     slack: num(va["holgura_puntos"], "variantes.holgura_puntos", 0),
+    tolerancePoints: num(va["tolerancia_puntos"], "variantes.tolerancia_puntos", 0),
     tolerance: num(va["tolerancia"], "variantes.tolerancia", 0),
   };
 
   // §3.3 y §5.2 recursos
   const re = obj(r["recursos"], "recursos");
+  onlyKeys(re, ["faroles_iniciales", "faroles_por_victoria", "faroles_max", "esencia_inicial", "esencia_por_salvaje", "esencia_max"], "recursos");
   const eps = obj(re["esencia_por_salvaje"], "recursos.esencia_por_salvaje");
+  onlyKeys(eps, ["base", "divisor_nivel"], "recursos.esencia_por_salvaje");
   const resources = {
     lanternsStart: int(re["faroles_iniciales"], "recursos.faroles_iniciales", 0),
     lanternsPerWin: int(re["faroles_por_victoria"], "recursos.faroles_por_victoria", 0),
@@ -253,6 +268,7 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
 
   // §3.2 atrapar (enteros, QA B-07)
   const at = obj(r["atrapar"], "atrapar");
+  onlyKeys(at, ["base_pct", "bono_vida_pct", "penal_nivel_pct", "penal_pureza_pct", "c100_min", "c100_rango", "pct_min", "pct_max", "bono_reintento_pct", "intentos_max_por_salvaje", "tiradas_por_intento"], "atrapar");
   const catching = {
     basePct: int(at["base_pct"], "atrapar.base_pct", 0, 100),
     lifeBonusPct: int(at["bono_vida_pct"], "atrapar.bono_vida_pct", 0, 100),
@@ -270,12 +286,15 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
 
   // §5 resonancia
   const rs = obj(r["resonancia"], "resonancia");
+  onlyKeys(rs, ["coste_base", "coste_por_eco_previo", "tiradas_por_resonancia"], "resonancia");
   const resonance = { baseCost: int(rs["coste_base"], "resonancia.coste_base", 0), costPerEcho: int(rs["coste_por_eco_previo"], "resonancia.coste_por_eco_previo", 0) };
   if (int(rs["tiradas_por_resonancia"], "resonancia.tiradas_por_resonancia") !== G.inheritance.drawsPerChild) fail("resonancia.tiradas_por_resonancia", `debe ser ${G.inheritance.drawsPerChild} (genética)`);
 
   // §6 colección
   const co = obj(r["coleccion"], "coleccion");
+  onlyKeys(co, ["tamano_max", "equipo_max", "equipo_min", "liberar", "nombre_max_caracteres"], "coleccion");
   const li = obj(co["liberar"], "coleccion.liberar");
+  onlyKeys(li, ["activo", "esencia_base", "divisor_nivel", "nivel_minimo"], "coleccion.liberar");
   const collection = {
     max: int(co["tamano_max"], "coleccion.tamano_max", 1),
     teamMax: int(co["equipo_max"], "coleccion.equipo_max", 1, C.teamSize),
@@ -292,6 +311,7 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
 
   // §1.4 nombres
   const no = obj(r["nombres"], "nombres");
+  onlyKeys(no, ["prefijos", "sufijos", "tiradas"], "nombres");
   const names = {
     prefixes: arr(no["prefijos"], "nombres.prefijos").map((x, i) => str(x, `nombres.prefijos[${i}]`)),
     suffixes: arr(no["sufijos"], "nombres.sufijos").map((x, i) => str(x, `nombres.sufijos[${i}]`)),
@@ -302,7 +322,9 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
 
   // §2 mundo
   const mu = obj(r["mundo"], "mundo");
+  onlyKeys(mu, ["zonas", "encuentro", "iniciales", "acompanante", "personajes", "nombres_provisionales"], "mundo");
   const en = obj(mu["encuentro"], "mundo.encuentro");
+  onlyKeys(en, ["grupo_max", "tiradas_por_salvaje_extra", "tiradas_por_encuentro", "salvaje_puro", "id_temporal", "birth_temporal"], "mundo.encuentro");
   const groupMax = int(en["grupo_max"], "mundo.encuentro.grupo_max", 1, C.teamSize);
   const extraDraws = int(en["tiradas_por_salvaje_extra"], "mundo.encuentro.tiradas_por_salvaje_extra");
   if (extraDraws !== 2) fail("mundo.encuentro.tiradas_por_salvaje_extra", "deben ser 2 (familia y nivel, §2.3)");
@@ -310,7 +332,9 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
   // validacion_config.formula_tiradas_encuentro: 1 + grupo_max · (extra + salvaje.tiradas_por_criatura)
   const expected = 1 + groupMax * (extraDraws + G.wild.drawsPerCreature);
   if (drawsPerEncounter !== expected) fail("mundo.encuentro.tiradas_por_encuentro", `${drawsPerEncounter} ≠ fórmula ${expected}`);
-  const regex = str(obj(r["validacion_config"], "validacion_config")["regex_ids"], "validacion_config.regex_ids");
+  const vc = obj(r["validacion_config"], "validacion_config");
+  onlyKeys(vc, ["regex_ids", "formula_tiradas_encuentro"], "validacion_config");
+  const regex = str(vc["regex_ids"], "validacion_config.regex_ids");
   if (regex !== "^[a-z0-9_]+$") fail("validacion_config.regex_ids", "debe ser ^[a-z0-9_]+$");
   const family = (v: unknown, path: string, baseOnly: boolean): FamilyId => {
     const f = str(v, path);
@@ -320,6 +344,7 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
   const zones = arr(mu["zonas"], "mundo.zonas").map((x, i): Zone => {
     const p = `mundo.zonas[${i}]`;
     const z = obj(x, p);
+    onlyKeys(z, ["id", "nombre", "nivel_min", "nivel_max", "grupo_pesos", "familias_pesos", "desbloqueo_nivel", "provisional"], p);
     const id = str(z["id"], `${p}.id`);
     checkId(id, `${p}.id`);
     const minL = int(z["nivel_min"], `${p}.nivel_min`, 1, maxLevel);
@@ -346,9 +371,11 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
   });
   if (zones.length === 0 || new Set(zones.map((z) => z.id)).size !== zones.length) fail("mundo.zonas", "lista no vacía con ids distintos");
   const ini = obj(mu["iniciales"], "mundo.iniciales");
+  onlyKeys(ini, ["familias", "puras"], "mundo.iniciales");
   const starterFamilies = arr(ini["familias"], "mundo.iniciales.familias").map((x, i) => family(x, `mundo.iniciales.familias[${i}]`, true));
   if (starterFamilies.length !== 3) fail("mundo.iniciales.familias", "deben ser 3 (§1.3)");
   const ac = obj(mu["acompanante"], "mundo.acompanante");
+  onlyKeys(ac, ["activo", "semilla", "familia", "nivel", "mientras_animas_menos_de"], "mundo.acompanante");
   const world = {
     zones: Object.freeze(zones),
     groupMax,
@@ -367,11 +394,14 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
   };
 
   // §2.5 IA salvaje
-  const modo = str(obj(r["ia_salvaje"], "ia_salvaje")["modo"], "ia_salvaje.modo");
+  const ia = obj(r["ia_salvaje"], "ia_salvaje");
+  onlyKeys(ia, ["modo"], "ia_salvaje");
+  const modo = str(ia["modo"], "ia_salvaje.modo");
   if (modo !== "instinto" && modo !== "referencia") fail("ia_salvaje.modo", "instinto | referencia");
 
   // §2.2 extensión de tamaño de bando
   const cs = obj(r["combate_salvaje"], "combate_salvaje");
+  onlyKeys(cs, ["tamano_min", "colocaciones_por_tamano", "colocacion_ia_por_tamano", "curacion_tras_combate"], "combate_salvaje");
   exact(cs["curacion_tras_combate"], "completa", "combate_salvaje.curacion_tras_combate", "§2.2");
   const minSize = int(cs["tamano_min"], "combate_salvaje.tamano_min", 1, C.teamSize);
   const cpt = obj(cs["colocaciones_por_tamano"], "combate_salvaje.colocaciones_por_tamano");
@@ -393,7 +423,11 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
     }
     placementsBySize[n] = Object.freeze(shapes);
     const ap = `combate_salvaje.colocacion_ia_por_tamano.${n}`;
-    aiPlacementBySize[n] = Object.freeze(intList(cia[String(n)], ap, 1, C.slots));
+    const aiPlace = intList(cia[String(n)], ap, 1, C.slots);
+    // QA N-05: la colocación de la IA tiene que ser válida para ese tamaño de bando
+    const bad = validatePlacement(aiPlace, C, n, { minSize, placementsBySize: placementsBySize as Record<number, readonly string[]>, aiPlacementBySize: {} });
+    if (bad !== null) fail(ap, bad);
+    aiPlacementBySize[n] = Object.freeze(aiPlace);
   }
   if (dataKeys(cpt).length !== C.teamSize - minSize + 1) fail("combate_salvaje.colocaciones_por_tamano", `claves ${minSize}..${C.teamSize}`);
   if (dataKeys(cia).length !== C.teamSize - minSize) fail("combate_salvaje.colocacion_ia_por_tamano", `claves ${minSize}..${C.teamSize - 1}`);
@@ -401,6 +435,7 @@ export function parseProgressionConfig(raw: unknown, battle: BattleConfig): Prog
 
   // §7 guardado
   const gu = obj(r["guardado"], "guardado");
+  onlyKeys(gu, ["clave_almacen", "formato", "version_formato", "flujos_rng"], "guardado");
   const streams = arr(gu["flujos_rng"], "guardado.flujos_rng").map((x, i) => str(x, `guardado.flujos_rng[${i}]`));
   if (streams.length !== STREAMS.length || streams.some((s, i) => s !== STREAMS[i])) fail("guardado.flujos_rng", `deben ser ${STREAMS.join(", ")}`);
   const save = {

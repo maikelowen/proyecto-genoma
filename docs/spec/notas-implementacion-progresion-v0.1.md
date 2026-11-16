@@ -17,11 +17,11 @@ Núcleo, 2026-11-16. Implementa `docs/spec/progresion-v0.1.md` con `config/progr
 | I-02 | `inicial.elegida` antes de elegir | `null`. Sin inicial, el equipo y la colección están vacíos. | La spec solo da 0/1/2. |
 | I-03 | Contador en la semilla | Se usa el valor **antes** de incrementarlo (encuentro 0 = el primero). Semilla: `` `${semilla}|${flujo}|${contador}` ``. | Así lo hace §5.3 (`resonancias` se incrementa después). Se aplica igual a encuentro, combate, farol y resonancia. |
 | I-04 | Ids de las iniciales | Temporales (`inicial-k`, birth 0). La elegida se copia con `a000001` y birth 1. | Mismo mecanismo que las capturas (QA B-04). |
-| I-05 | **Empate (límite de turnos)** | Cuenta como **derrota**: XP `floor(suma/2)` de las apagadas, sin faroles, sin esencia y sin atrapar. | La spec no lo define. Pasa en < 2 % de los combates. **Lo debe confirmar el diseñador.** |
+| I-05 | **Empate (límite de turnos) y doble KO** (D-072) | Cuenta como **derrota** (`result !== "A"`): XP `floor(suma/2)` de las apagadas, sin faroles, sin esencia y sin atrapar. | La spec no lo define. Pasa en < 2 % de los combates. **Lo debe confirmar el diseñador.** |
 | I-06 | `dn` de atrapar | Nivel actual de tus ánimas del equipo del encuentro, **después** de sumar la XP del combate (sin acompañante). | La pantalla de faroles aparece tras el reparto de XP. |
-| I-07 | Capturas y equipo | La atrapada **no** entra sola en el equipo; se usa `setTeam`. | §6.1: "se cambia fuera de combate". El jugador modelo del analista elige el equipo. |
+| I-07 | Capturas y equipo (D-072/N-03, sustituye a la decisión anterior) | La atrapada **entra sola al final del equipo** si tiene menos de `equipo_max` (3); los ecos no. `setTeam` sigue sirviendo para reordenar. | Sin esto, tras la primera captura la inicial peleaba sola (el acompañante se iba). El jugador modelo rehace el equipo antes de cada combate, así que no cambia sus resultados. |
 | I-08 | "Orden de equipo" en la IA instinto | Orden de **casilla** (1–4). | El estado del combate solo conoce casillas. Con 1–2 salvajes coincide con el orden de equipo (casillas 1, 2). |
-| I-09 | Acompañante | Id `acompanante`, va el último del bando A. Con n = 2 y sin colocación del jugador queda en la casilla 2. Movimientos de nivel 10 (4). | La spec no fija el sitio. |
+| I-09 | Acompañante (D-073: `mientras_animas_menos_de` = 3) | Lucha mientras la colección tenga menos de 3 ánimas. Id `acompanante`, va el último del bando A. Con n = 2 y sin colocación del jugador queda en la casilla 2. Movimientos de nivel 10 (4). | La spec no fija el sitio. |
 | I-10 | Pieza "ninguno" | `{eje, pieza: "ninguno"}` en los tres ejes (también condición). | Un solo valor. Se guarda tal cual (QA B-08). |
 | I-11 | Respaldo de variantes (QA B-09) | n ≥ 2: primero el locus del nivel y después `orden_respaldo` (sin repetirlo). n = 1: el primero de `orden_respaldo`. Las ofertas pendientes se calculan en orden de nivel y cada una reserva su locus. | "El siguiente" se lee como el siguiente que cumpla en ese orden. Reservar evita que dos niveles pendientes ofrezcan el mismo locus. |
 | I-12 | Elegir variante | `chooseVariant` guarda `{nivel, eje, pieza}` y **activa** la variante en su hueco (`variante: true`). `toggleVariant` vuelve al original. | Lo natural tras elegir. Se puede revertir gratis (§4.5). |
@@ -72,5 +72,15 @@ Queda para el cliente (§10.1): crear la semilla, `localStorage` (`cfg.save.stor
 ## 5. Tests y dorados
 
 - Ficheros nuevos: `progression-teams` (no regresión, bandos de 1 a 3, IA instinto, higiene), `progression-rules`, `progression-variants` y `progression-save`.
-- **Dorado nuevo:** partida `dorado-progresion` = inicial, 5 encuentros, 4 capturas y 1 resonancia (`encounters 5`, `hash 8e737661…`). Si cambia el algoritmo, una tirada, la IA, una config o el formato, hay que regenerarlo y decirlo.
-- Los dorados de combate y genética no cambian.
+- **Dorado nuevo:** partida `dorado-progresion` = inicial, 5 encuentros, 4 capturas y 1 resonancia (`encounters 5`, `hash b095dc95…` desde D-072/D-073; antes `8e737661…`). Si cambia el algoritmo, una tirada, la IA, una config o el formato, hay que regenerarlo y decirlo.
+- Los dorados de combate y genética y los hashes 3 contra 3 no cambian. **El dorado de progresión sí cambió** (solo ese): por `ia_salvaje.modo = "referencia"` los combates salvajes se juegan distinto (otro registro de turnos) y el hash de la partida lo recoge; el acompañante hasta 3 ánimas y la captura al equipo no alteran esta partida (el equipo se rehace con `setTeam`). Los 5 encuentros y las capturas siguen siendo 5.
+
+## 6. Ajustes tras la QA (D-072, D-073)
+
+- **N-01:** nueva clave `variantes.tolerancia_puntos` = 1 (obligatoria): candidato válido si `puntosEf(M) − holgura ≤ puntosEf(c) ≤ puntosEf(M) + 1` y, si añade una pieza en un eje vacío, su potencia baja. `tolerancia` (1e-9) queda como épsilon. Catálogo base: 2/72 genes con < 2 candidatas (`sombra|cuerpo|4214` con 0, `voltio|cuerpo|1241` con 1: escudos en el tope); salvajes al azar 57/2000 (2,9 %); 0 piezas gratis. Los tests de respaldo usan esos dos genes (nivel 25, locus cuerpo).
+- **N-02:** el parser rechaza claves desconocidas en todos los bloques parseados (`onlyKeys`); `escenarios_sim`, `criterios_sim`, `personajes` y `nombres_provisionales` se admiten sin mirar dentro (los leen el analista y el cliente).
+- **N-03:** capturar mete a la ánima en el equipo si `equipo.length < equipo_max`.
+- **N-05:** cada `colocacion_ia_por_tamano[n]` tiene que pasar `validatePlacement`.
+- **N-06 (parte barata):** `parseSave` rechaza nombres vacíos y familias inventadas en `codex.familias` y `linaje`. **No se hace:** exigir que la variante guardada sea la A o la B ofrecida (solo que sea candidata válida) ni rechazar claves extra en `criatura`.
+- **N-08:** el test de no regresión juega cada una de las 200 partidas con y sin `sides`.
+- **D-073:** `ia_salvaje.modo` = "referencia"; `grupo_pesos` del Cantil [0,05; 0,5; 0,45]; `mientras_animas_menos_de` = 3. Los simuladores (`sim/`) que dependían del modo por defecto deben fijarlo si quieren `instinto`.

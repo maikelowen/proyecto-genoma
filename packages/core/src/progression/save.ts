@@ -114,6 +114,11 @@ function parseGame(raw: unknown, cfg: ProgressionConfig): { game: GameState; not
   if (inicial.elegida === null && equipo.length > 0) bad("equipo", "equipo sin inicial");
   for (const id of equipo) if (!animas.some((x) => x.id === id)) bad("equipo", `'${id}' no está en la colección`);
 
+  // QA N-06: las familias del códice y del linaje son familias del catálogo (base o híbrida)
+  const knownFamily = (f: string, p: string): string => {
+    if (!cfg.genetics.baseFamilies.includes(f) && !cfg.genetics.hybridById.has(f)) bad(p, `familia desconocida '${f}'`);
+    return f;
+  };
   const cx = o(r["codex"], "codex");
   const codex = {
     genes: strs(cx["genes"], "codex.genes"),
@@ -122,14 +127,14 @@ function parseGame(raw: unknown, cfg: ProgressionConfig): { game: GameState; not
       const m = o(x, p);
       return { clave: s(m["clave"], `${p}.clave`), id: s(m["id"], `${p}.id`), resonancia: n(m["resonancia"], `${p}.resonancia`, 1, contadores.resonancias), animaId: s(m["animaId"], `${p}.animaId`) };
     }),
-    familias: strs(cx["familias"], "codex.familias"),
+    familias: strs(cx["familias"], "codex.familias").map((f, i) => knownFamily(f, `codex.familias[${i}]`)),
   };
   const linaje = a(r["linaje"], "linaje").map((x, i) => {
     const p = `linaje[${i}]`;
     const l = o(x, p);
     const genesD = a(l["genesD"], `${p}.genesD`).map((g, k) => s(g, `${p}.genesD[${k}]`));
     if (genesD.length !== LOCUS_IDS.length) bad(`${p}.genesD`, "deben ser 4");
-    return { id: s(l["id"], `${p}.id`), nombre: s(l["nombre"], `${p}.nombre`), familia: s(l["familia"], `${p}.familia`), genesD };
+    return { id: s(l["id"], `${p}.id`), nombre: s(l["nombre"], `${p}.nombre`), familia: knownFamily(s(l["familia"], `${p}.familia`), `${p}.familia`), genesD };
   });
   const rg = o(r["registro"], "registro");
   const registro = {
@@ -177,6 +182,7 @@ function parseAnima(v: unknown, p: string, births: number, cfg: ProgressionConfi
   if (id !== animaId(nacimiento)) bad(`${p}.id`, `debe ser ${animaId(nacimiento)}`);
   const nombre = s(x["nombre"], `${p}.nombre`);
   if ([...nombre].length > cfg.collection.nameMaxChars) bad(`${p}.nombre`, "demasiado largo");
+  if (nombre.trim() === "") bad(`${p}.nombre`, "vacío"); // QA N-06 (checkName lo rechaza al renombrar)
   const criatura = x["criatura"] as Creature;
   o(criatura, `${p}.criatura`);
   if (criatura.id !== id || criatura.birth !== nacimiento) bad(`${p}.criatura`, "id y nacimiento deben coincidir con los del ánima");

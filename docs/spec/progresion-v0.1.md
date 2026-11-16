@@ -64,7 +64,7 @@ Elegir zona → combate (1,5–2 min) → atrapar → repetir 5–6 veces → sa
 |---|---|---|---|---|
 | Prado de la Linde (`prado_linde`) | 1–3 | 70/30/0 % | brote, marea, llama (1 c/u) | siempre |
 | Marismas Quietas (`marismas_quietas`) | 5–10 | 30/50/20 % | marea, roca, voltio (1), brote (0,5) | un ánima tuya llega a nivel 5 |
-| Cantil del Farol Roto (`cantil_farol_roto`) | 10–16 | 10/60/30 % | sombra, voltio, roca (1), llama (0,5) | un ánima tuya llega a nivel 10 |
+| Cantil del Farol Roto (`cantil_farol_roto`) | 10–16 | 5/50/45 % (D-072/D-073; antes 10/60/30) | sombra, voltio, roca (1), llama (0,5) | un ánima tuya llega a nivel 10 |
 
 - Desbloqueo: `max(nivel de tus ánimas, nivel_max_alcanzado) ≥ desbloqueo_nivel`. Se guarda `nivel_max_alcanzado` para que liberar no cierre zonas.
 - Las seis familias base aparecen; las **híbridas y los genes mutados no salen nunca en estado salvaje** (GEN §2): solo por resonancia. Es el gran incentivo para resonar.
@@ -107,10 +107,10 @@ grupo = cri_0..cri_{g−1}
 **622 tiradas por encuentro** `[mundo.encuentro.tiradas_por_encuentro]` = 1 + 3·(2 + 205); el parser valida la fórmula `[validacion_config.formula_tiradas_encuentro]`. El combate usa otro flujo: `createRng(semilla | "combate" | n)` con el mismo `n`.
 
 ### 2.4 Acompañante del hechicero `[mundo.acompanante]`
-Mientras tengas menos de 2 ánimas, una ánima del hechicero (Sombra, nivel 10, fija para todas las partidas: `salvaje(createRng("acompanante|v0.1"), "sombra", puro = true)`) lucha en tu equipo. No recibe experiencia, no se atrapa, no resuena y no aparece en la colección. Motivo: sin ella, el primer combate sería 1 contra 1 con los mismos botones, casi a cara o cruz; perder el primer combate antes de atrapar nada es la peor entrada posible.
+Mientras tengas menos de 3 ánimas (D-072/D-073; antes 2: se queda hasta que el equipo sea de 3), una ánima del hechicero (Sombra, nivel 10, fija para todas las partidas: `salvaje(createRng("acompanante|v0.1"), "sombra", puro = true)`) lucha en tu equipo. No recibe experiencia, no se atrapa, no resuena y no aparece en la colección. Motivo: sin ella, el primer combate sería 1 contra 1 con los mismos botones, casi a cara o cruz; perder el primer combate antes de atrapar nada es la peor entrada posible.
 
 ### 2.5 IA salvaje "instinto" `[ia_salvaje]`
-Cada salvaje, en orden de equipo, elige el movimiento de pago **más caro** que pueda pagar con la energía que dejan las anteriores y que no esté descansando (empate: hueco menor); si no puede, su gratis. Nunca ahorra; si es la última ánima, usa un solo movimiento. **Objetivo, aliado protegido o curado: siempre el automático de COM** (V4: prioridad de fila, cura y escudo automáticos; QA B-13). Sin tiradas. Es más floja que la de referencia (ahorrar compensa, D-021) y **legible**: el jugador aprende que las salvajes "gastan en cuanto pueden". Plan B por config: `modo = "referencia"`.
+Cada salvaje, en orden de equipo, elige el movimiento de pago **más caro** que pueda pagar con la energía que dejan las anteriores y que no esté descansando (empate: hueco menor); si no puede, su gratis. Nunca ahorra; si es la última ánima, usa un solo movimiento. **Objetivo, aliado protegido o curado: siempre el automático de COM** (V4: prioridad de fila, cura y escudo automáticos; QA B-13). Sin tiradas. Es más floja que la de referencia (ahorrar compensa, D-021) y **legible**: el jugador aprende que las salvajes "gastan en cuanto pueden". Plan B por config: `modo = "referencia"`. **(D-072/D-073) La config vigente usa `modo = "referencia"`** (la de combate v0.5); `instinto` queda como alternativa por config.
 
 ---
 
@@ -161,7 +161,7 @@ Tope `[niveles.nivel_max]` = 30: la experiencia por encima de 4640 se descarta.
 ### 4.2 Ganar experiencia `[experiencia]`
 - Por cada salvaje apagada: `xp = 15 + 5·nivel_salvaje` (nivel 2 → 25; nivel 8 → 55; nivel 13 → 80).
 - **Victoria:** cada ánima de tu equipo (también las apagadas) recibe la **suma entera**, sin dividir. Motivo: llevar un eco recién nacido en el equipo debe hacerlo crecer al ritmo de los demás; dividir castigaría usar ecos, que es justo lo que queremos.
-- **Derrota:** `floor(suma de las salvajes que sí se apagaron / 2)` `[experiencia.divisor_derrota]`. **Huida:** 0.
+- **Derrota:** `floor(suma de las salvajes que sí se apagaron / 2)` `[experiencia.divisor_derrota]`. **Huida:** 0. **(D-072/I-05) El empate (límite de turnos) y el doble KO cuentan como derrota** (también sin faroles, esencia ni atrapar).
 - Ritmo (estimación): ~33 XP por combate en el Prado, ~100 en Marismas, ~175 en el Cantil. **Nivel 30 a los ~31 / 39 / 47 combates del favorito** con victorias del 100 % / 90-80-70 % / 80-70-55 % (QA, ≈ 5–8 sesiones).
 - Observación QA B-14: con XP completa, un eco madura en 1 combate del Cantil. **Se acepta**: madurar no está para frenar la resonancia (de eso se encargan la esencia y el límite de 5 ecos) sino para que el eco pelee al menos un poco antes de resonar. Se quita ese argumento de PR10.
 
@@ -214,7 +214,7 @@ Así, si `M` está en el **tope** (p. ej. escudo 300) o tiene holgura por redond
 Las alternativas se recorren en el orden de MOV (`orden_modificadores`, `orden_estados_*`, `orden_condiciones`), con "ninguno" al final; se excluye la pieza que ya tiene `M` y las de `[variantes.piezas_excluidas]`. Cada candidato se ensambla con `presupuesto[c]` de `M` con la fórmula de MOV §4.1 **sin respaldo** (función `assembleExact`; si no cabe, se descarta) y es válido si:
 1. cumple las reglas de validez de MOV §3 (incluido `fraccion_minima` y los topes);
 2. difiere de `M` en exactamente esa pieza;
-3. **`puntosEf(candidato) ≤ puntosEf(M)`** (con tolerancia 1e-9) y **`puntosEf(candidato) ≥ puntosEf(M) − holgura`**, `[variantes.holgura_puntos]` = 3: no gasta más que el original ni deja tirada una parte grande del presupuesto (3 puntos cubren el redondeo de `floor` sobre `fac·fEsc` ≤ 2,3 y el paso de 5 de potencia).
+3. **`puntosEf(candidato) ≤ puntosEf(M) + [variantes.tolerancia_puntos]`** (= 1, D-072/N-01: un paso de redondeo; antes 0) con épsilon 1e-9, **y si el candidato añade una pieza en un eje vacío, su potencia tiene que ser menor que la de `M`** (D-072: nunca una pieza gratis), y **`puntosEf(candidato) ≥ puntosEf(M) − holgura`**, `[variantes.holgura_puntos]` = 3: no gasta más que el original ni deja tirada una parte grande del presupuesto (3 puntos cubren el redondeo de `floor` sobre `fac·fEsc` ≤ 2,3 y el paso de 5 de potencia).
 
 Con la lista ordenada `C` (eje, luego orden de la pieza), `n = |C|`, y `rng = createRng("var|v0.1|" + clave del gen + "|" + nivel)`, **2 tiradas fijas** `[variantes.tiradas]`:
 ```
@@ -274,7 +274,7 @@ Con el Monte Carlo de economía del revisor (victorias supuestas), primera versi
 
 ### 6.1 Colección y equipo
 - Hasta `[tamano_max]` = 100 ánimas (estimación: ≈ 36 tras 3 sesiones). Llena: no se puede lanzar farol ni resonar hasta liberar.
-- **Equipo**: de 1 a 3 ánimas de la colección, en orden (el orden es el de la colocación propuesta). Se cambia fuera de combate. La inicial no tiene nada especial salvo su historia.
+- **Equipo**: de 1 a 3 ánimas de la colección, en orden (el orden es el de la colocación propuesta). Se cambia fuera de combate. La inicial no tiene nada especial salvo su historia. **(D-072/N-03) Una ánima atrapada entra sola al final del equipo si este tiene menos de 3**; los ecos no (decide el cliente).
 - Ficha de un ánima: nombre, familia, nivel y XP hasta el siguiente, pureza, aspecto, sus botones (los bloqueados con «nivel 3» / «nivel 10»), genes D y ocultos revelados (los demás como «?»), ecos (●●○○○), padres (si es eco) y origen («Atrapada en Marismas Quietas», «Eco de Brix y Luma», «Elegida en el santuario»).
 
 ### 6.2 Liberar `[coleccion.liberar]` (D-068: sí)

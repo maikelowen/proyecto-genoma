@@ -114,7 +114,22 @@ describe("config de progresión (§10.1)", () => {
     ["colocaciones de 3 ≠ combate", (r) => (r.combate_salvaje.colocaciones_por_tamano["3"] = ["2+1"]), /las de combate/],
     ["colocación de 2 mal formada", (r) => (r.combate_salvaje.colocaciones_por_tamano["2"] = ["0+2"]), /inválida/],
     ["flujos", (r) => r.guardado.flujos_rng.pop(), /flujos/],
+    ["colocación de la IA inválida (N-05)", (r) => (r.combate_salvaje.colocacion_ia_por_tamano["2"] = [3, 4]), /forma/],
+    ["colocación de la IA repetida (N-05)", (r) => (r.combate_salvaje.colocacion_ia_por_tamano["2"] = [1, 1]), /repetida/],
+    ["tolerancia_puntos negativa (D-072)", (r) => (r.variantes.tolerancia_puntos = -1), /rango/],
+    ["falta tolerancia_puntos (D-072)", (r) => delete r.variantes.tolerancia_puntos, /tolerancia_puntos/],
   ];
+  // QA N-02: una errata en una clave, en cualquiera de los bloques, se rechaza (no se queda con el valor por defecto en silencio)
+  const blocks: [string, (r: any) => any][] = [
+    ["raíz", (r) => r], ["depende_de", (r) => r.depende_de], ["niveles", (r) => r.niveles], ["experiencia", (r) => r.experiencia],
+    ["desbloqueos", (r) => r.desbloqueos], ["huecos_pago[0]", (r) => r.desbloqueos.huecos_pago[0]], ["revelar_ocultos", (r) => r.desbloqueos.revelar_ocultos],
+    ["variantes", (r) => r.variantes], ["recursos", (r) => r.recursos], ["esencia_por_salvaje", (r) => r.recursos.esencia_por_salvaje],
+    ["atrapar", (r) => r.atrapar], ["resonancia", (r) => r.resonancia], ["coleccion", (r) => r.coleccion], ["liberar", (r) => r.coleccion.liberar],
+    ["nombres", (r) => r.nombres], ["mundo", (r) => r.mundo], ["encuentro", (r) => r.mundo.encuentro], ["zonas[0]", (r) => r.mundo.zonas[0]],
+    ["iniciales", (r) => r.mundo.iniciales], ["acompanante", (r) => r.mundo.acompanante], ["ia_salvaje", (r) => r.ia_salvaje],
+    ["combate_salvaje", (r) => r.combate_salvaje], ["guardado", (r) => r.guardado], ["validacion_config", (r) => r.validacion_config],
+  ];
+  for (const [name, get] of blocks) bad.push([`errata de clave en ${name} (N-02)`, (r) => (get(r)["holgura_puntoss"] = 9), /clave desconocida/]);
   for (const [name, patch, re] of bad) {
     it(`rechaza: ${name}`, () => assert.throws(() => loadProg(patch), (e: unknown) => e instanceof ConfigError && re.test((e as Error).message)));
   }
@@ -176,14 +191,17 @@ describe("inicio, nombres y acompañante (§1.3, §1.4, §2.4)", () => {
     const rng = createRng("s|nombre|4");
     assert.equal(n1, P.names.prefixes[Math.floor(rng.next() * 16)]! + P.names.suffixes[Math.floor(rng.next() * 8)]!);
   });
-  it("acompañante: sombra pura de nivel 10 (4 movimientos), fijo, solo mientras tengas < 2 ánimas", () => {
+  it("acompañante: sombra pura de nivel 10 (4 movimientos), fijo, solo mientras tengas < 3 ánimas (D-073)", () => {
     const c = companionCombatant(P);
     assert.equal(c.family, "sombra");
     assert.equal(c.moves.length, 4);
     assert.deepEqual(companionCombatant(P), c);
     const g = started();
     assert.equal(companionJoins(g, P), true);
-    assert.equal(companionJoins(withAnimas(g, [g.animas[0]!, { ...g.animas[0]!, id: "a000002" }]), P), false);
+    const two = withAnimas(g, [g.animas[0]!, { ...g.animas[0]!, id: "a000002" }]);
+    assert.equal(companionJoins(two, P), true, "con 2 ánimas sigue acompañando (D-073)");
+    assert.equal(companionJoins(withAnimas(g, [...two.animas, { ...g.animas[0]!, id: "a000003" }]), P), false);
+    assert.equal(P.world.companion.whileFewerThan, 3);
   });
 });
 
@@ -240,6 +258,15 @@ describe("experiencia, recursos y combate (§2.2, §3.3, §4.2, §5.2)", () => {
     assert.equal(r.game.registro.victorias, 1);
     assert.throws(() => applyBattleResult(r.game, r.encounter, "huida", P), GameRuleError);
   });
+  it("empate (límite de turnos o doble KO) = derrota (D-072/I-05): media XP, sin faroles, sin esencia, sin atrapar", () => {
+    const { g, enc } = setup();
+    const draw = { ...fakeEnd(g, enc, "B"), result: "empate" as const };
+    const r = applyBattleResult(g, enc, draw, P);
+    assert.equal(r.report.outcome, "derrota");
+    assert.equal(r.game.recursos.faroles, g.recursos.faroles);
+    assert.equal(r.game.recursos.esencia, g.recursos.esencia);
+    assert.equal(catchChance(r.game, r.encounter, 0, P), null);
+  });
   it("derrota: floor(suma de las apagadas / 2); huida: 0; topes de faroles y esencia", () => {
     const { g, enc } = setup();
     const end = fakeEnd(g, enc, "B");
@@ -279,6 +306,27 @@ describe("atrapar (§3)", () => {
     assert.equal(catchPercent(0, 100, 16, 1, withQ(9450), 0, P), 25);
     assert.equal(catchPercent(100, 100, 1, 9, withQ(8550), 1, P), 95);
     assert.equal(catchPercent(80, 100, 5, 3, withQ(9000), 0, P), 63, "dn = 2 → −10");
+  });
+  it("la atrapada entra sola en el equipo si tiene menos de 3 (D-072/N-03); con 3, no", () => {
+    let g = started("farol-equipo");
+    assert.equal(g.equipo.length, 1);
+    const r = rollEncounter(g, "prado_linde", P);
+    g = applyBattleResult(r.game, r.encounter, fakeEnd(r.game, r.encounter, "A"), P).game;
+    const enc = applyBattleResult(r.game, r.encounter, fakeEnd(r.game, r.encounter, "A"), P).encounter;
+    const sizes: number[] = [];
+    for (let i = 0; i < 30 && sizes.length < 3; i++) {
+      g = { ...g, recursos: { ...g.recursos, faroles: 5 }, contadores: { ...g.contadores, faroles: g.contadores.faroles + 1 } };
+      const t = throwLantern(g, { ...enc, wilds: enc.wilds.map((w) => ({ ...w, attempts: 0, state: "libre" as const })) }, 0, P);
+      g = t.game;
+      if (t.caught) {
+        sizes.push(g.equipo.length);
+        assert.equal(g.equipo[g.equipo.length - 1] === t.anima!.id, g.equipo.length <= 3 && sizes.length <= 2);
+      }
+    }
+    assert.deepEqual(sizes, [2, 3, 3]);
+    assert.equal(g.animas.length, 4);
+    assert.equal(g.equipo.length, 3);
+    assert.ok(g.equipo.every((id) => g.animas.some((a) => a.id === id)));
   });
   it("flujo: 1 tirada (farol|k); atrapada → a00000m con su nivel; falla 2 veces → se escapa; bloqueos", () => {
     let g = started("farol");

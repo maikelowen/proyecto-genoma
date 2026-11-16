@@ -41,8 +41,10 @@ describe("no regresión 3 contra 3 (progresión §2.2, criterio obligatorio)", (
     for (let i = 0; i < 200; i++) {
       const pop = createWildPopulation(rng, GCFG, 6);
       const pl = i % 3 === 1 ? { A: [1, 3, 4], B: [2, 1, 3] } : {};
-      // con la extensión puesta (sides) y sin ella: las dos deben dar lo mismo
-      const r = runBattle(pop.slice(0, 3), pop.slice(3), `nr${i}`, i % 2 === 0 ? SIDES : B05, undefined, undefined, pl);
+      // con la extensión puesta (sides) y sin ella: las dos deben dar lo mismo (QA N-08: cada partida, en los dos modos)
+      const r = runBattle(pop.slice(0, 3), pop.slice(3), `nr${i}`, SIDES, undefined, undefined, pl);
+      const r2 = runBattle(pop.slice(0, 3), pop.slice(3), `nr${i}`, B05, undefined, undefined, pl);
+      assert.equal(r2.hash + ":" + battleHash(r2.final), r.hash + ":" + battleHash(r.final), `la partida ${i} difiere entre modos`);
       got.push(r.hash + ":" + battleHash(r.final));
     }
     assert.equal(got.length, hashes3v3.hashes.length);

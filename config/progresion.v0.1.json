@@ -1,5 +1,5 @@
 {
-  "_doc": "Configuración de progresión v0.1 (Fase 2, paso 1): colección, encuentros, atrapar, experiencia y niveles, resonancia en el juego, guardado. Fuente: docs/spec/progresion-v0.1.md. Todo número de la spec está aquí; si no coinciden, manda este fichero. Probabilidades en [0,1]. Los textos para el jugador son provisionales (nombres: decide Miguel). Actualizada con D-068 (variantes, liberar, equipos de 1 a 3, nombres provisionales). Revisada con D-070 y QA (docs/revisiones/qa-progresion-v0.1.md).",
+  "_doc": "Configuración de progresión v0.1 (Fase 2, paso 1): colección, encuentros, atrapar, experiencia y niveles, resonancia en el juego, guardado. Fuente: docs/spec/progresion-v0.1.md. Todo número de la spec está aquí; si no coinciden, manda este fichero. Probabilidades en [0,1]. Los textos para el jugador son provisionales (nombres: decide Miguel). Actualizada con D-068 (variantes, liberar, equipos de 1 a 3, nombres provisionales). Revisada con D-070 y QA (docs/revisiones/qa-progresion-v0.1.md). D-072/D-073: tolerancia de variantes, IA salvaje de referencia, Cantil 5/50/45 y acompañante hasta 3 ánimas.",
   "version": "0.1",
   "depende_de": {
     "_doc": "Configs vigentes que esta spec usa sin cambiarlas. Movimientos: catálogo reequilibrado v0.5 (D-069), gramática de movimientos v0.2 + v0.4.",
@@ -98,7 +98,7 @@
     }
   },
   "variantes": {
-    "_doc": "§4.5 (D-068, D-070). En cada nivel de 'niveles' se elige una de dos variantes del movimiento de gen del locus indicado. Variante = una pieza cambiada (tabla de ejes de la spec), mismo arquetipo y coste; válida si puntosEf(M) − holgura_puntos <= puntosEf(variante) <= puntosEf(M), con puntosEf contando topes y redondeos. 2 tiradas fijas, flujo createRng(prefijo_semilla + clave + '|' + nivel). n < 2 → respaldo. Elección definitiva, guardada como {eje, pieza}; conmutable con el original.",
+    "_doc": "§4.5 (D-068, D-070). En cada nivel de 'niveles' se elige una de dos variantes del movimiento de gen del locus indicado. Variante = una pieza cambiada (tabla de ejes de la spec), mismo arquetipo y coste; válida si puntosEf(M) − holgura_puntos <= puntosEf(variante) <= puntosEf(M) + tolerancia_puntos (D-072: un paso de redondeo), con puntosEf contando topes y redondeos, y si no añade una pieza sin perder potencia; `tolerancia` es solo el épsilon de comparación. 2 tiradas fijas, flujo createRng(prefijo_semilla + clave + '|' + nivel). n < 2 → respaldo. Elección definitiva, guardada como {eje, pieza}; conmutable con el original.",
     "niveles": [
       15,
       20,
@@ -130,6 +130,7 @@
     "conmutar_con_original": true,
     "heredable": false,
     "holgura_puntos": 3,
+    "tolerancia_puntos": 1,
     "tolerancia": 1e-9,
     "guardar_como": "eje_pieza"
   },
@@ -258,9 +259,9 @@
         "nivel_min": 10,
         "nivel_max": 16,
         "grupo_pesos": [
-          0.1,
-          0.6,
-          0.3
+          0.05,
+          0.5,
+          0.45
         ],
         "familias_pesos": {
           "sombra": 1,
@@ -296,7 +297,7 @@
       "semilla": "acompanante|v0.1",
       "familia": "sombra",
       "nivel": 10,
-      "mientras_animas_menos_de": 2
+      "mientras_animas_menos_de": 3
     },
     "personajes": [
       {
@@ -322,7 +323,7 @@
   },
   "ia_salvaje": {
     "_doc": "§2.5. 'instinto': cada salvaje, en orden de equipo, usa el movimiento de pago más caro que pueda pagar con la energía que dejan las anteriores y que no esté descansando (empate: hueco menor); si no, el gratis. Nunca ahorra; la última ánima usa un solo movimiento. 'referencia': la IA de referencia de combate v0.5. Sin tiradas. Objetivo, aliado protegido o curado: el automático de combate (QA B-13).",
-    "modo": "instinto"
+    "modo": "referencia"
   },
   "combate_salvaje": {
     "_doc": "§2.2 (D-068). Extensión de tamaño de equipo: cada bando 1..combate.equipo.tamano (que pasa a ser el máximo). No cambia reglas; 3 contra 3 debe dar hashes idénticos al motor anterior (criterios_sim.no_regresion_3v3).",
