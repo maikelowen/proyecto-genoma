@@ -32,7 +32,10 @@ Actualizado: 2026-11-14. Fuente de verdad: este fichero (el repositorio).
 - [x] **Núcleo de progresión** (e336c68; nucleo 304 k): 339 tests (~23 s, cerca del límite de 25 s); 200 partidas 3 contra 3 idénticas. Aviso: 7/72 genes con < 2 variantes (9,7 %, criterio ≤ 5 %).
 - [x] QA del núcleo (49ac604, aprobado con cambios), simulación con combate real (5cea644; normal 14/16) y ajustes D-072/D-073 (9555e10; 373 tests).
 - [ ] En marcha en paralelo: validación de v0.1.1 con semillas `prog04` (analista Sonnet → `docs/informes/progresion-v0.1.md`) y pantallas (cliente Sonnet → `npm run build:animas`, `docs/jugable/animas.html`). Si se corta: `git status`; reanudar con SendMessage.
-- [ ] Prueba del hito D-066.
+- [x] Pantallas del paso 1 en `jugable/animas.html` (2f50d46). Miguel: "esto no es el juego que esperaba" → **D-074 mundo caminable**.
+- [x] Spec mundo v0.1 (6b31f1d) y núcleo del mundo (320b596; 456 tests, ~24,5 s, en el límite).
+- [ ] En marcha: cliente del mundo con arte cuidado (Opus → `animas.html`) y QA corta del núcleo del mundo (→ `docs/revisiones/qa-mundo-v0.1.md`). Validación de progresión `prog04` del analista: sin noticia; comprobar `docs/informes/progresion-v0.1.md`.
+- [ ] Prueba del hito D-066 en el mundo caminable.
 - Vocabulario D-063 en los textos del combate: se hace con las pantallas nuevas.
 
 ## Pendientes menores
