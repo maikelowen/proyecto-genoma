@@ -17,6 +17,7 @@
     "sim:variantes": "node sim/variants/cli.ts",
     "sim:v04": "node sim/v04/cli.ts",
     "sim:v05": "node sim/v05/cli.ts",
+    "sim:progresion": "node sim/progresion/cli.ts",
     "build:combate": "node client/build-combate.mjs",
     "build:combate-v05": "node client/build-combate.mjs --v05",
     "build:galeria": "node client/viewer/galeria-v3.ts"
