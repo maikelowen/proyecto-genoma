@@ -5,7 +5,6 @@
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import rawMoves from "../../config/movimientos.v0.4.json" with { type: "json" };
 import rawGenetics from "../../config/genetica.v0.2.json" with { type: "json" };
 import {
   buildBattleConfig,
@@ -30,7 +29,9 @@ export type RawConfig = Record<string, any>;
 /** Config de combate: la v0.4 salvo que `SIM_COMBAT_CONFIG` (que heredan los hilos) apunte a otra (estudio v0.5). */
 export const COMBAT_PATH: string = process.env["SIM_COMBAT_CONFIG"] ?? "config/combate.v0.4.json";
 export const RAW_COMBAT: RawConfig = JSON.parse(readFileSync(COMBAT_PATH, "utf8")) as RawConfig;
-export const RAW_MOVES: RawConfig = rawMoves as RawConfig;
+/** Config de movimientos: la v0.4 salvo que `SIM_MOVES_CONFIG` (heredada por los hilos) apunte a otra (v0.5 con sales propias). */
+export const MOVES_PATH: string = process.env["SIM_MOVES_CONFIG"] ?? "config/movimientos.v0.4.json";
+export const RAW_MOVES: RawConfig = JSON.parse(readFileSync(MOVES_PATH, "utf8")) as RawConfig;
 export const RAW_GENETICS: RawConfig = rawGenetics as RawConfig;
 export const GCFG: GeneticsConfig = parseGeneticsConfig(RAW_GENETICS);
 

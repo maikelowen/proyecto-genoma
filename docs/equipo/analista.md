@@ -61,3 +61,8 @@
 - **Pareado de verdad:** misma semilla de equipos y de partida en todas las configs (`paired`), y un código de 4 caracteres por partida (`codes`) para calcular el error estándar de cada Δ por linealización partida a partida; con pareado, 12 000 partidas dan ± ≈ 1 pp en un Δ de primer KO.
 - Una config "base" que el parche deja igual que el fichero no pasa `checkVariants` de v04 ("ya vale"): v05 tiene su propia comprobación (huellas distintas + config parseada con los valores pedidos).
 - "Remontadas" y "primer KO" miden casi lo mismo (remontada ≈ 1 − primer KO, salvo empates con KO): no cuentan como dos pruebas independientes.
+
+## Lecciones (reequilibrio de familias v0.5)
+- `sim/v05/reequilibrio-buscar.ts` y `reequilibrio-validar.ts` reutilizan `sim/v04/salts.ts` con `SIM_COMBAT_CONFIG` + `SIM_MOVES_CONFIG` (el catálogo base se elige por variable de entorno) y `setBaseCombat` (parche `ambas` común a las variantes). Búsqueda de 6 sales ≈ 5 min con n-medida 200 / n-candidata 160; validación completa ≈ 2 min con 4 hilos.
+- Con n-medida 100 la búsqueda cambia de familia objetivo entre rondas (ruido); 200 converge antes. Las familias híbridas no se salan: se mueven solas al tocar sus componentes base (aquí llama sí es saltable).
+- El conteo "fuera de banda" de la base varía con N (3 en el informe v0.5 con 150/pareja, 4 con 300): cítalo con su N.

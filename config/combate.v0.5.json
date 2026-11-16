@@ -1,5 +1,5 @@
 {
-  "_doc": "Configuración de combate v0.5 (PROPUESTA, rama combate-v0.5). Fuente: docs/spec/combate-v0.5.md sobre combate-v0.4.md (con energía 3, D-052). Copia de combate.v0.4.json con: version 0.5, energia.pago_al_confirmar (D-054), variantes.ultima_anima (D-053/D-056), escenarios_sim.configs_v05 y criterios_sim.v05. Con energia.pago_al_confirmar = false y variantes.ultima_anima.activo = false el combate es exactamente v0.4 con energía 3. Movimientos: config/movimientos.v0.4.json (sin cambios).",
+  "_doc": "Configuración de combate v0.5 (PROPUESTA, rama combate-v0.5). Fuente: docs/spec/combate-v0.5.md sobre combate-v0.4.md (con energía 3, D-052). Copia de combate.v0.4.json con: version 0.5, energia.pago_al_confirmar (D-054), variantes.ultima_anima (D-053/D-056), escenarios_sim.configs_v05 y criterios_sim.v05. Con energia.pago_al_confirmar = false y variantes.ultima_anima.activo = false el combate es exactamente v0.4 con energía 3. Movimientos: config/movimientos.v0.5.json (v0.4 + 6 sales de reequilibrio de familias, docs/informes/combate-v0.5-reequilibrio.md).",
   "version": "0.5",
   "equipo": {
     "tamano": 3,

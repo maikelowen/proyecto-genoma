@@ -23,9 +23,12 @@ const baseSet = new Set(GCFG.baseFamilies as readonly string[]);
 const pairs: [string, string][] = [];
 for (let i = 0; i < fams.length; i++) for (let j = i + 1; j < fams.length; j++) pairs.push([fams[i]!, fams[j]!]);
 
+/** Parche de combate común a todas las variantes de la búsqueda (v0.5: la config `ambas`). */
+let baseCombat: Record<string, unknown> = {};
+export function setBaseCombat(c: Record<string, unknown>): void { baseCombat = c; }
 export function withSalts(salts: Record<string, string>): Variant {
-  const id = "s" + createHash("sha256").update(JSON.stringify(Object.entries(salts).sort())).digest("hex").slice(0, 10);
-  return { ...BASE, id, label: `sales ${id}`, salts };
+  const id = "s" + createHash("sha256").update(JSON.stringify([Object.entries(salts).sort(), baseCombat])).digest("hex").slice(0, 10);
+  return { ...BASE, id, label: `sales ${id}`, combat: baseCombat, salts };
 }
 
 export function currentSalts(extra: Record<string, string>): Record<string, string> {
