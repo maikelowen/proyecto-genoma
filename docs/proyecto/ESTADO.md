@@ -3,7 +3,7 @@
 Actualizado: 2026-11-14. Fuente de verdad: este fichero (el repositorio).
 
 ## Situación
-- **Fase 1 (prototipo de combate) en prueba.** Combate v0.4 publicado en https://maikelowen.github.io/proyecto-genoma/ y con **reglas congeladas** hasta el feedback de los amigos (D-045).
+- **Fase 1 cerrada (D-064)** sin feedback formal: a los amigos no les engancha el combate suelto; piden atrapar, subir de nivel, habilidades y apego. **Antes:** Combate v0.4 publicado en https://maikelowen.github.io/proyecto-genoma/ y con **reglas congeladas** hasta el feedback de los amigos (D-045).
 - **Arte v3 terminado y congelado** en la rama `arte-v3` (D-050); se fusiona tras la prueba.
 - **Desarrollo en Claude Code** (D-051); los chats del proyecto de Claude son para decisiones.
 - **Combate v0.5 terminado en la rama `combate-v0.5`** y en prueba solo por Miguel: https://maikelowen.github.io/proyecto-genoma/jugable/combate-v05.html. **Adoptado (D-060)**: llega a `main` tras el feedback, con un reequilibrio único.
@@ -27,11 +27,8 @@ Actualizado: 2026-11-14. Fuente de verdad: este fichero (el repositorio).
   - Coste real: agentes ≈ 730 k (disenador 117 k, nucleo 226 k, revisor 128 k, analista Sonnet 143 k, cliente Sonnet 115 k) + director ≈ 100 k. Por encima de los ~650 k previstos (el corte por límite obligó a reanudar tres agentes).
 
 ## Siguiente paso
-1. Hecho: enlace enviado a los amigos (13 nov, noche). **Miguel trae las respuestas** tal cual.
-2. **18 nov: cierre de la Fase 1** con las respuestas que haya y la nota de Miguel (D-061). Sin más ciclos de reglas antes (D-060).
-3. Mirar en el feedback: bola de nieve (si la hay: revisar D-054 o "Brasa") y si sobran rondas de ataque gratis (efecto de D-052).
-4. Tras el cierre: reequilibrio único y v0.5 a `main` (BACKLOG 4b); fusionar `arte-v3` (al fusionar, hay conflicto esperado en `client/combat/main.ts` y en `docs/jugable/combate.html`: conservar el SPOT en espejo de `main` y regenerar con `npm run build:combate`); aplicar el vocabulario D-063 a los textos.
-5. **Fase 2, paso 1** (D-062): colección + captura con farol + resonancia + guardado mínimo; hito: Miguel resuena 20 veces. Coste 1,0–1,3 M, tope 1,5 M.
+1. **Pasar a `main`** (D-064): fusionar `arte-v3` (conflicto esperado en `client/combat/main.ts` y `docs/jugable/combate.html`: conservar el SPOT en espejo de `main` y regenerar) y `combate-v0.5`; reequilibrio único de familias de v0.5 con sales (BACKLOG 4b); vocabulario D-063 en los textos.
+2. **Fase 2, paso 1** (D-062, D-065, D-066): hechicero + atrapar con farol + colección + resonancia + **subir de nivel** + guardado mínimo. Coste 1,3–1,6 M, tope 1,8 M. Hito: 3 sesiones de Miguel, 20 resonancias, un ánima a nivel alto, y 2 amigos 30 min sin que se lo pida.
 
 ## Pendientes menores
 - QA v0.5 M-01–M-05 (desempates de la IA, test de provocar en U10). QA R-01 (claves desconocidas en bloques antiguos de config) y R-02 (la IA de referencia no ve el provocar del turno); `placement.ts:61` con un 3 fijo; tests de provocador que cae a mitad de turno.
