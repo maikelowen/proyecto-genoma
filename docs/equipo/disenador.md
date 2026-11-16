@@ -54,3 +54,6 @@
 - Estado del jugador (nivel, huecos, habilidades) fuera del genoma: así la herencia y "mismo gen ⇒ mismo movimiento" no se tocan.
 - Variantes "sin más fuerza": defínelas como enumeración de cambios de una pieza con el mismo presupuesto y potencia ≤ original, con respaldo total (n = 0 → otro locus; n = 1 → "mantener"); así son deterministas con tiradas fijas y no tocan el catálogo.
 - Cualquier recompensa por "deshacerse" de algo (liberar) se compara con el coste de producirlo y con la renta del bucle normal; escríbelo en la spec como argumento anti-explotación.
+- "Mismo presupuesto" se mide en puntos efectivos (potencia final con tope y redondeo / potencia por punto), no en potencia: con topes u holguras, "potencia ≤ original" deja pasar piezas gratis (QA B-01).
+- Los criterios de ritmo se cumplen en todo el rango de victorias plausible (p. ej. 80/70/55 – 100 %), no solo en el caso medio; reutiliza el Monte Carlo del revisor si lee la config.
+- Probabilidades que ve el jugador: en enteros y en una sola función del núcleo, para que el % mostrado sea el usado.

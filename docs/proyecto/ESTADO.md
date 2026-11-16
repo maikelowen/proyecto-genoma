@@ -26,9 +26,14 @@ Actualizado: 2026-11-14. Fuente de verdad: este fichero (el repositorio).
   - Interfaz de varios pagos numerados y aviso de energía perdida; página `docs/jugable/combate-v05.html` (d46d99a; publicada sola en `main`, 61aa8c4). `combate.html` sin tocar.
   - Coste real: agentes ≈ 730 k (disenador 117 k, nucleo 226 k, revisor 128 k, analista Sonnet 143 k, cliente Sonnet 115 k) + director ≈ 100 k. Por encima de los ~650 k previstos (el corte por límite obligó a reanudar tres agentes).
 
-## Siguiente paso
-1. **Pasar a `main`** (D-064): fusionar `arte-v3` (conflicto esperado en `client/combat/main.ts` y `docs/jugable/combate.html`: conservar el SPOT en espejo de `main` y regenerar) y `combate-v0.5`; reequilibrio único de familias de v0.5 con sales (BACKLOG 4b); vocabulario D-063 en los textos.
-2. **Fase 2, paso 1** (D-062, D-065, D-066): hechicero + atrapar con farol + colección + resonancia + **subir de nivel** + guardado mínimo. Coste 1,3–1,6 M, tope 1,8 M. Hito: 3 sesiones de Miguel, 20 resonancias, un ánima a nivel alto, y 2 amigos 30 min sin que se lo pida.
+## Siguiente paso (punto de control 16 nov)
+- [x] v0.5 y `arte-v3` en `main`; juego principal en v0.5 con catálogo reequilibrado (D-064, D-069; QA aprobado).
+- [x] Spec `progresion-v0.1.md` + `config/progresion.v0.1.json` aceptada tras QA (D-067, D-068, D-070, D-071).
+- [ ] **Núcleo de progresión** (nucleo, Opus; 400–500 k con revisión): equipos de 1 a 3 (3 contra 3 idéntico), experiencia y niveles, desbloqueo de movimientos, variantes (`assembleExact`), atrapar, resonancia en juego, liberar, guardado. Si se corta: `git status` y `npm run check` antes de relanzar.
+- [ ] Revisión del núcleo + simulación de economía con combate real (analista Sonnet), en paralelo.
+- [ ] Pantallas (cliente): santuario de Arnal, encuentros y farol, Codex, resonancia, niveles y variantes.
+- [ ] Prueba del hito D-066.
+- Vocabulario D-063 en los textos del combate: se hace con las pantallas nuevas.
 
 ## Pendientes menores
 - QA v0.5 M-01–M-05 (desempates de la IA, test de provocar en U10). QA R-01 (claves desconocidas en bloques antiguos de config) y R-02 (la IA de referencia no ve el provocar del turno); `placement.ts:61` con un 3 fijo; tests de provocador que cae a mitad de turno.

@@ -1,5 +1,5 @@
 {
-  "_doc": "Configuración de progresión v0.1 (Fase 2, paso 1): colección, encuentros, atrapar, experiencia y niveles, resonancia en el juego, guardado. Fuente: docs/spec/progresion-v0.1.md. Todo número de la spec está aquí; si no coinciden, manda este fichero. Probabilidades en [0,1]. Los textos para el jugador son provisionales (nombres: decide Miguel). Actualizada con D-068 (variantes, liberar, equipos de 1 a 3, nombres provisionales).",
+  "_doc": "Configuración de progresión v0.1 (Fase 2, paso 1): colección, encuentros, atrapar, experiencia y niveles, resonancia en el juego, guardado. Fuente: docs/spec/progresion-v0.1.md. Todo número de la spec está aquí; si no coinciden, manda este fichero. Probabilidades en [0,1]. Los textos para el jugador son provisionales (nombres: decide Miguel). Actualizada con D-068 (variantes, liberar, equipos de 1 a 3, nombres provisionales). Revisada con D-070 y QA (docs/revisiones/qa-progresion-v0.1.md).",
   "version": "0.1",
   "depende_de": {
     "_doc": "Configs vigentes que esta spec usa sin cambiarlas. Movimientos: catálogo reequilibrado v0.5 (D-069), gramática de movimientos v0.2 + v0.4.",
@@ -46,11 +46,11 @@
     "nivel_inicial": 1
   },
   "experiencia": {
-    "_doc": "§4.2. Por cada ánima salvaje que se apaga: xp = base + por_nivel · nivel_salvaje. Victoria: cada ánima del equipo del jugador (también las apagadas) recibe la suma entera, sin dividir. Derrota: floor(fraccion_derrota · suma de las salvajes apagadas). Huida: 0. El acompañante no recibe nada.",
+    "_doc": "§4.2. Por cada ánima salvaje que se apaga: xp = base + por_nivel · nivel_salvaje. Victoria: cada ánima del equipo del jugador (también las apagadas) recibe la suma entera, sin dividir. Derrota: floor(suma de las salvajes apagadas / divisor_derrota). Huida: 0. El acompañante no recibe nada.",
     "base": 15,
     "por_nivel": 5,
-    "fraccion_derrota": 0.5,
-    "reparto": "completo"
+    "reparto": "completo",
+    "divisor_derrota": 2
   },
   "desbloqueos": {
     "_doc": "§4.3 y §8. Huecos de movimiento: hueco 0 = gratis (siempre el gen de extremidades, nunca se cambia). Huecos 1..3 = de pago; nivel en que se abre cada uno y locus que lo ocupa por defecto al abrirse. D-067: se empieza con gratis + 1 de pago.",
@@ -98,7 +98,7 @@
     }
   },
   "variantes": {
-    "_doc": "§4.5 (D-068). En cada nivel de 'niveles' se elige una de dos variantes del movimiento de gen del locus indicado. Variante = una pieza cambiada (eje), mismo arquetipo, coste y presupuesto, potencia por objetivo <= original * potencia_max_relativa. 2 tiradas fijas por par, flujo createRng(prefijo_semilla + clave + '|' + nivel). Elección definitiva; conmutable con el original.",
+    "_doc": "§4.5 (D-068, D-070). En cada nivel de 'niveles' se elige una de dos variantes del movimiento de gen del locus indicado. Variante = una pieza cambiada (tabla de ejes de la spec), mismo arquetipo y coste; válida si puntosEf(M) − holgura_puntos <= puntosEf(variante) <= puntosEf(M), con puntosEf contando topes y redondeos. 2 tiradas fijas, flujo createRng(prefijo_semilla + clave + '|' + nivel). n < 2 → respaldo. Elección definitiva, guardada como {eje, pieza}; conmutable con el original.",
     "niveles": [
       15,
       20,
@@ -124,41 +124,45 @@
     ],
     "piezas_excluidas": [],
     "_doc_piezas_excluidas": "Ids de pieza que nunca se usan en variantes (se rellena solo si la simulación encuentra variantes rotas).",
-    "potencia_max_relativa": 1,
     "prefijo_semilla": "var|v0.1|",
     "tiradas": 2,
     "eleccion_definitiva": true,
     "conmutar_con_original": true,
-    "heredable": false
+    "heredable": false,
+    "holgura_puntos": 3,
+    "tolerancia": 1e-9,
+    "guardar_como": "eje_pieza"
   },
   "recursos": {
     "_doc": "§3 y §5. Faroles y esencia: sin moneda ni compra. Topes de inventario.",
-    "faroles_iniciales": 5,
+    "faroles_iniciales": 6,
     "faroles_por_victoria": 1,
-    "faroles_max": 10,
+    "faroles_max": 12,
     "esencia_inicial": 30,
     "esencia_por_salvaje": {
       "_doc": "Por cada salvaje apagada, solo en victoria: base + floor(nivel / divisor_nivel).",
-      "base": 4,
+      "base": 5,
       "divisor_nivel": 2
     },
     "esencia_max": 999
   },
   "atrapar": {
-    "_doc": "§3. p1 = clamp(base + bono_vida·fraccion_vida_equipo − penal_nivel·max(0, nivel_salvaje − nivel_max_equipo) − penal_pureza·pureza_salvaje, p_min, p_max); p2 = min(p_max, p1 + bono_reintento). Probabilidades redondeadas a 2 decimales (r2) antes de comparar; atrapada si u < p. 1 tirada por intento. pureza_salvaje ∈ [0,1] = (calidadCriatura − 85,5) / 9.",
-    "base": 0.6,
-    "bono_vida": 0.25,
-    "penal_nivel": 0.05,
-    "penal_pureza": 0.15,
-    "p_min": 0.25,
-    "p_max": 0.95,
-    "bono_reintento": 0.2,
+    "_doc": "§3.2 (QA B-07). Enteros en porcentaje: pct1 = clamp(base_pct + floor(bono_vida_pct·SV/SM) − penal_nivel_pct·dn − floor(penal_pureza_pct·(c100 − c100_min)/c100_rango), pct_min, pct_max); pct2 = min(pct_max, pct1 + bono_reintento_pct); atrapada si floor(u·100) < pct. SV/SM = vida de tu equipo sin acompañante; dn sin acompañante; c100 = Math.round(calidadCriatura·100). 1 tirada por intento.",
+    "base_pct": 60,
+    "bono_vida_pct": 25,
+    "penal_nivel_pct": 5,
+    "penal_pureza_pct": 15,
+    "c100_min": 8550,
+    "c100_rango": 900,
+    "pct_min": 25,
+    "pct_max": 95,
+    "bono_reintento_pct": 20,
     "intentos_max_por_salvaje": 2,
     "tiradas_por_intento": 1
   },
   "resonancia": {
     "_doc": "§5. Coste en esencia = base + por_eco_previo · (crias_A + crias_B). Límite de ecos por ánima y edad mínima: genetica.v0.2 limites_sim (5 y 1). Requisito extra: nivel ≥ desbloqueos.nivel_madurar en los dos padres.",
-    "coste_base": 6,
+    "coste_base": 5,
     "coste_por_eco_previo": 1,
     "tiradas_por_resonancia": 280
   },
@@ -168,10 +172,11 @@
     "equipo_max": 3,
     "equipo_min": 1,
     "liberar": {
-      "_doc": "§6.2 (D-068: sí). Esencia = esencia_base + floor(nivel / divisor_nivel): nivel 1–4 → 1, 30 → 7. Nunca supera el coste mínimo de resonancia salvo a nivel ≥ 25. No se puede liberar la última ánima ni una del equipo.",
+      "_doc": "§6.2 (D-068, QA B-06). Por debajo de nivel_minimo no da nada; desde ahí esencia = esencia_base + floor(nivel / divisor_nivel) (5 → 2, 10 → 3, 30 → 7). No se puede liberar la última ánima ni una del equipo.",
       "activo": true,
       "esencia_base": 1,
-      "divisor_nivel": 5
+      "divisor_nivel": 5,
+      "nivel_minimo": 5
     },
     "nombre_max_caracteres": 16
   },
@@ -268,11 +273,13 @@
       }
     ],
     "encuentro": {
-      "_doc": "§2.3. Consumo fijo: 1 (tamaño del grupo) + grupo_max · (1 familia + 1 nivel + 205 salvaje) = 622. Se generan siempre 3 salvajes y se usan los primeros n.",
+      "_doc": "§2.3. Consumo fijo: 1 (tamaño del grupo) + grupo_max · (1 familia + 1 nivel + 205 salvaje) = 622. Se generan siempre 3 salvajes y se usan los primeros n. Las salvajes llevan id temporal y birth 0; al atraparlas reciben id = idAnima(++nacimientos) (QA B-04).",
       "grupo_max": 3,
       "tiradas_por_salvaje_extra": 2,
       "tiradas_por_encuentro": 622,
-      "salvaje_puro": false
+      "salvaje_puro": false,
+      "id_temporal": "w<encuentro>-<i>",
+      "birth_temporal": 0
     },
     "iniciales": {
       "_doc": "§1.3. Tres ánimas puras (todas sus genes de la familia), nivel 1, generadas del flujo |inicial|k (k = 0, 1, 2; 205 tiradas cada una).",
@@ -314,7 +321,7 @@
     }
   },
   "ia_salvaje": {
-    "_doc": "§2.5. 'instinto': cada salvaje, en orden de equipo, usa el movimiento de pago más caro que pueda pagar con la energía que dejan las anteriores y que no esté descansando (empate: hueco menor); si no, el gratis. Nunca ahorra; la última ánima usa un solo movimiento. 'referencia': la IA de referencia de combate v0.5. Sin tiradas.",
+    "_doc": "§2.5. 'instinto': cada salvaje, en orden de equipo, usa el movimiento de pago más caro que pueda pagar con la energía que dejan las anteriores y que no esté descansando (empate: hueco menor); si no, el gratis. Nunca ahorra; la última ánima usa un solo movimiento. 'referencia': la IA de referencia de combate v0.5. Sin tiradas. Objetivo, aliado protegido o curado: el automático de combate (QA B-13).",
     "modo": "instinto"
   },
   "combate_salvaje": {
@@ -380,7 +387,8 @@
     "_doc": "§9.2. Umbrales.",
     "resonancias_3_sesiones": {
       "mediana_min": 20,
-      "p10_min": 15
+      "p10_min": 15,
+      "_doc": "Se debe cumplir en todo el rango de victorias 80/70/55 – 100 %."
     },
     "resonancias_sesion_1": {
       "mediana_min": 2
@@ -394,8 +402,9 @@
       "mediana_max": 22
     },
     "combates_hasta_nivel_max": {
-      "mediana_min": 35,
-      "mediana_max": 70
+      "mediana_min": 28,
+      "mediana_max": 70,
+      "_doc": "QA B-15: con 100 % de victorias la mediana es 31; el mínimo vigila que el tope no llegue en 3 sesiones."
     },
     "atrapar_primer_intento": {
       "min": 0.6,
@@ -432,7 +441,9 @@
       "espejo_nivel30_max": 0.55,
       "pieza_gratis_max": 0.58,
       "sin_candidatos_max": 0.05,
-      "sin_candidatos_gratis_max": 0.15
+      "sin_candidatos_gratis_max": 0.15,
+      "puntos_efectivos_mayores_max": 0,
+      "sin_candidatos_max_doc": "n < 2 (respaldo)"
     },
     "liberar_fraccion_esencia_max": 0.15,
     "no_regresion_3v3": {
