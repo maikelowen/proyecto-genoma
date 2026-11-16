@@ -6,7 +6,7 @@
  * 3.ª en la 3 (forma "2+1"). La casilla que falta queda vacía (`null` en el estado).
  */
 import type { CombatConfig } from "./config.ts";
-import type { Combatant } from "./combatant.ts";
+import type { Combatant, SideSizeRules } from "./combatant.ts";
 
 /** Casilla (1–4) de cada alma del equipo, en orden. */
 export type Placement = readonly number[];
@@ -22,23 +22,26 @@ export function placementShape(placement: Placement, cfg: CombatConfig): string 
  * casillas enteras de 1 a `casillas`, sin repetir, y forma ∈ `equipo.colocaciones`.
  * Devuelve null si es válida o el motivo.
  */
-export function validatePlacement(placement: unknown, cfg: CombatConfig): string | null {
+export function validatePlacement(placement: unknown, cfg: CombatConfig, size: number = cfg.teamSize, sides?: SideSizeRules): string | null {
   if (!Array.isArray(placement)) return "la colocación no es una lista";
-  if (placement.length !== cfg.teamSize) return `deben ser ${cfg.teamSize} casillas`;
+  if (placement.length !== size) return `deben ser ${size} casillas`;
+  // progresión v0.1 §2.2: con un bando menor que `tamano`, las formas de `colocaciones_por_tamano[n]`
+  const shapes = size === cfg.teamSize ? cfg.placements : sides?.placementsBySize[size];
+  if (shapes === undefined) return `tamaño de bando ${size} no admitido`;
   for (const p of placement) if (!Number.isInteger(p) || p < 1 || p > cfg.slots) return `casilla inválida ${String(p)}`;
   if (new Set(placement).size !== placement.length) return "casilla repetida";
   const shape = placementShape(placement as number[], cfg);
-  if (!cfg.placements.includes(shape)) return `forma ${shape} no permitida (${cfg.placements.join(", ")})`;
+  if (!shapes.includes(shape)) return `forma ${shape} no permitida (${shapes.join(", ")})`;
   return null;
 }
 
 /** combate v0.4 §1 — todas las colocaciones válidas (24 con 3 almas), en orden lexicográfico. */
-export function allPlacements(cfg: CombatConfig): number[][] {
+export function allPlacements(cfg: CombatConfig, size: number = cfg.teamSize, sides?: SideSizeRules): number[][] {
   const out: number[][] = [];
   const cur: number[] = [];
   const rec = (): void => {
-    if (cur.length === cfg.teamSize) {
-      if (validatePlacement(cur, cfg) === null) out.push(cur.slice());
+    if (cur.length === size) {
+      if (validatePlacement(cur, cfg, size, sides) === null) out.push(cur.slice());
       return;
     }
     for (let p = 1; p <= cfg.slots; p++) {
@@ -58,7 +61,12 @@ export function allPlacements(cfg: CombatConfig): number[][] {
  * vida(1.ª) ≥ umbral_1_2 · vida(2.ª), "1+2" (1.ª en 1, 2.ª en 3, 3.ª en 4);
  * si no, "2+1" (1.ª en 1, 2.ª en 2, 3.ª en 3). Sin casilla vacía: orden del equipo.
  */
-export function referencePlacement(team: readonly Combatant[], cfg: CombatConfig): number[] {
+export function referencePlacement(team: readonly Combatant[], cfg: CombatConfig, sides?: SideSizeRules): number[] {
+  // progresión v0.1 §2.2 `[colocacion_ia_por_tamano]`: bando menor que `tamano` (1 → casilla 1; 2 → 1 y 2)
+  if (sides !== undefined && team.length < cfg.teamSize) {
+    const fixed = sides.aiPlacementBySize[team.length];
+    if (fixed !== undefined) return fixed.slice();
+  }
   const rule = cfg.ai.placement;
   if (rule === null || team.length !== 3) return team.map((_, i) => i + 1);
   const rank = team.map((c, i) => ({ hp: c.maxHp, i }));

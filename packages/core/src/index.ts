@@ -4,3 +4,4 @@ export type { Rng, RngState } from "./rng.ts";
 export * from "./genetics/index.ts";
 export * from "./moves/index.ts";
 export * from "./combat/index.ts";
+export * from "./progression/index.ts";

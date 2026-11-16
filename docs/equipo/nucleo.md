@@ -54,3 +54,7 @@
 - Un estado derivable ("última ánima" = una sola viva al empezar el turno) no se guarda en `FighterState`: se recalcula con una función pública que usan motor, IA y cliente.
 - Funciones viejas que necesitan la config para una regla nueva (`eligibleActors`, `restingMoves`): parámetro `cfg?` opcional; sin él, la regla de siempre (no rompe cliente ni simuladores).
 - Tests de desempate de la IA: añade el control con la palanca contraria ("minimo") para demostrar que de verdad había empate; y calcula λ antes de diseñar el caso (guardar energía puede valer más que el movimiento que quieres probar).
+- Progresión v0.1: antes de ampliar el motor, guarda los hashes de cientos de partidas (registro + estado final, con colocaciones variadas) con el motor viejo y rejuega con y sin la extensión. La ampliación va en un campo opcional de `BattleConfig` (`sides`) y parámetros opcionales; con el tamaño de siempre se ejecuta el código viejo.
+- El estado de partida que se guarda usa las claves de la spec tal cual (es un formato de datos, como la config): la ida y vuelta es `JSON.stringify` y no hace falta traducir nada.
+- Reglas "como mucho lo mismo" (puntos efectivos de las variantes): mídelas sobre el catálogo entero y sobre claves mutadas antes de entregar. Los recuentos (n < 2 por locus) son datos para el analista, no cosas que arreglar en el núcleo.
+- `npm run check` ronda ya los 23 s con progresión: el próximo módulo debe recortar tests lentos o avisar.

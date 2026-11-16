@@ -9,6 +9,21 @@ import type { CombatConfig, DerivedStatRule } from "./config.ts";
 export interface BattleConfig {
   readonly combat: CombatConfig;
   readonly moves: MovesConfig;
+  /**
+   * progresión v0.1 §2.2 (D-068) — bandos de `minSize` a `combat.teamSize` ánimas. Sin este
+   * campo, cada bando debe tener exactamente `teamSize` (lo de siempre). No cambia ninguna regla:
+   * con bandos de `teamSize` el motor no lo mira.
+   */
+  readonly sides?: SideSizeRules;
+}
+
+/** progresión v0.1 §2.2 `[combate_salvaje]` — colocaciones por tamaño de bando (las de `teamSize` son las de combate). */
+export interface SideSizeRules {
+  readonly minSize: number;
+  /** Formas "d+t" permitidas para cada tamaño menor que `teamSize`. */
+  readonly placementsBySize: Readonly<Record<number, readonly string[]>>;
+  /** Casillas de la IA (en orden de equipo) para cada tamaño menor que `teamSize`. */
+  readonly aiPlacementBySize: Readonly<Record<number, readonly number[]>>;
 }
 
 /** Parte estática de una criatura en combate (no cambia durante la partida). */

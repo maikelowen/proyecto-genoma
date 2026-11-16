@@ -594,13 +594,15 @@ export function energyLost(log: readonly (readonly BattleEvent[])[]): Record<Sid
 export function createBattle(teamA: readonly Combatant[], teamB: readonly Combatant[], cfg: BattleConfig, placementA?: Placement, placementB?: Placement): BattleState {
   const C = cfg.combat;
   const n = C.teamSize;
-  if (teamA.length !== n || teamB.length !== n) throw new RangeError(`createBattle: cada equipo debe tener ${n} criaturas`);
+  // progresión v0.1 §2.2 (D-068): con `cfg.sides`, cada bando tiene de `minSize` a `teamSize`; si no, exactamente `teamSize`
+  const minN = cfg.sides !== undefined ? cfg.sides.minSize : n;
+  for (const t of [teamA, teamB]) if (t.length < minN || t.length > n) throw new RangeError(`createBattle: cada equipo debe tener ${minN === n ? n : `de ${minN} a ${n}`} criaturas`);
   if (!C.damage.basicActive) {
     // combate v0.4 §2: cada alma necesita su movimiento gratis (coste 0)
     for (const c of [...teamA, ...teamB]) if (freeMoveSlot(c) === 0) throw new RangeError(`createBattle: '${c.id}' no tiene movimiento gratis (coste 0) y no hay golpe básico`);
   }
   const place = (team: readonly Combatant[], p: Placement | undefined): (Combatant | null)[] => {
-    const pl = p !== undefined && validatePlacement(p, C) === null ? p : referencePlacement(team, C);
+    const pl = p !== undefined && validatePlacement(p, C, team.length, cfg.sides) === null ? p : referencePlacement(team, C, cfg.sides);
     const slots: (Combatant | null)[] = [];
     for (let i = 0; i < C.slots; i++) slots.push(null);
     team.forEach((c, i) => { slots[(pl[i] as number) - 1] = c; });

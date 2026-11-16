@@ -4,7 +4,7 @@ export type { AiStatusId, PlacementRule, BasicEffect, BasicEffectStatusId, Comba
 export { buildBattleConfig, patchRawConfig } from "./patch.ts";
 export type { ConfigChanges } from "./patch.ts";
 export { buildCombatant, deriveStats, synergyGroups, withMove } from "./combatant.ts";
-export type { BattleConfig, Combatant } from "./combatant.ts";
+export type { BattleConfig, Combatant, SideSizeRules } from "./combatant.ts";
 export {
   actionCost,
   actionMove,
