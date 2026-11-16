@@ -30,8 +30,8 @@ Actualizado: 2026-11-14. Fuente de verdad: este fichero (el repositorio).
 - [x] v0.5 y `arte-v3` en `main`; juego principal en v0.5 con catálogo reequilibrado (D-064, D-069; QA aprobado).
 - [x] Spec `progresion-v0.1.md` + `config/progresion.v0.1.json` aceptada tras QA (D-067, D-068, D-070, D-071).
 - [x] **Núcleo de progresión** (e336c68; nucleo 304 k): 339 tests (~23 s, cerca del límite de 25 s); 200 partidas 3 contra 3 idénticas. Aviso: 7/72 genes con < 2 variantes (9,7 %, criterio ≤ 5 %).
-- [ ] Lanzados en paralelo: QA del núcleo (→ `docs/revisiones/qa-nucleo-progresion-v0.1.md`) y simulación de economía con combate real (analista Sonnet → `sim/progresion/`, `docs/informes/progresion-v0.1.md`). Si se corta: `git status` antes de relanzar; reanudar los agentes con SendMessage.
-- [ ] Pantallas (cliente): santuario de Arnal, encuentros y farol, Codex, resonancia, niveles y variantes.
+- [x] QA del núcleo (49ac604, aprobado con cambios), simulación con combate real (5cea644; normal 14/16) y ajustes D-072/D-073 (9555e10; 373 tests).
+- [ ] En marcha en paralelo: validación de v0.1.1 con semillas `prog04` (analista Sonnet → `docs/informes/progresion-v0.1.md`) y pantallas (cliente Sonnet → `npm run build:animas`, `docs/jugable/animas.html`). Si se corta: `git status`; reanudar con SendMessage.
 - [ ] Prueba del hito D-066.
 - Vocabulario D-063 en los textos del combate: se hace con las pantallas nuevas.
 
